@@ -1,0 +1,89 @@
+# History files
+.Rhistory
+.Rapp.history
+
+# R Project
+*.Rproj
+
+# Session Data files
+*.RData
+.RDataTmp
+
+# User-specific files
+.Ruserdata
+
+# Example code in package build process
+*-Ex.R
+
+# Output files from R CMD build
+/*.tar.gz
+
+# Output files from R CMD check
+/*.Rcheck/
+
+# RStudio files
+.Rproj.user/
+
+# produced vignettes
+vignettes/*.html
+vignettes/*.pdf
+
+# OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
+.httr-oauth
+
+# knitr and R markdown default cache directories
+*_cache/
+/cache/
+
+# Temporary files created by R markdown
+*.utf8.md
+*.knit.md
+
+# R Environment Variables
+.Renviron
+
+# pkgdown site
+docs/
+
+# translation temp files
+po/*~
+
+# RStudio Connect folder
+rsconnect/
+
+# RDS files
+*.rds
+
+# csv files
+*.csv
+!DAGs.functions.all.info-comparisons.csv
+!all_pos_sel_genes.csv
+!DAGCs_fully_annotated.csv
+!DAGCs_host_types.csv
+!Suppl_file_B-DAGCs.csv
+!DAGCs.KEGG.multi.sep.2.csv
+!DAGCs.KEGG.multi.sep.6-05.csv
+
+# html files
+*.html
+
+# TIFF files
+*.tiff
+
+# PDF files
+*.pdf
+
+# excel files
+*.xlsx
+
+# Figures
+../figures/
+
+# TRY data
+TRY-36881.txt
+
+# Variability profiles and pN/pS data
+data_imported/variability_profile_all_samples_M_sp_*
+data_imported/pNpS_sp_*
+
+*.DS_Store
