@@ -1,6 +1,6 @@
 # author : Jocelyn Lauzon
 # anvi'o version 8
-# This is a bash script
+# This bash script should be run on the command line.
 
 
 
