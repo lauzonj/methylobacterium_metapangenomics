@@ -7,11 +7,12 @@ These scripts cover all statistical analyses related to the article.
 
 Scripts should be run in the order listed below.
 
-# Bash scripts
+# Bash script description
 
+anvio.txt
+Covers all steps performed in anvi'o v8. Pangenome construction, metagenomics read mapping. Metapangenome statistics.
 
-
-# R scripts
+# R scripts descriptions
 
 
 
