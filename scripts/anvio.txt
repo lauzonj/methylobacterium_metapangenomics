@@ -1,0 +1,1842 @@
+# author : Jocelyn Lauzon
+# anvi'o version 8
+# This is a bash script
+
+
+
+
+
+
+
+-- Quality filtering of raw reads (phyllo)
+
+# In FileZilla, transfer file '25_samples.txt' to /data/users/jocelyn/msc_data/CERMO013
+
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013$ iu-gen-configs 25_samples.txt
+
+
+---- ABBA
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013$ nano ABBA_quality_filtering.sh
+
+for sample in `awk '{print $1}' 25_samples.txt | sed -n '12,16p'`
+do
+    if [ "$sample" == "sample" ]; then continue; fi
+    iu-filter-quality-minoche $sample.ini --ignore-deflines
+    gzip $sample-QUALITY_PASSED_R?.fastq
+done
+
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013$ bash ABBA_quality_filtering.sh
+
+
+---- ACSA
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013$ nano ACSA_quality_filtering.sh
+
+for sample in `awk '{print $1}' 25_samples.txt | sed -n '22,26p'`
+do
+    if [ "$sample" == "sample" ]; then continue; fi
+    iu-filter-quality-minoche $sample.ini --ignore-deflines
+    gzip $sample-QUALITY_PASSED_R?.fastq
+done
+
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013$ bash ACSA_quality_filtering.sh
+
+
+---- COCO
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013$ nano COCO_quality_filtering.sh
+
+for sample in `awk '{print $1}' 25_samples.txt | sed -n '2,6p'`
+do
+    if [ "$sample" == "sample" ]; then continue; fi
+    iu-filter-quality-minoche $sample.ini --ignore-deflines
+    gzip $sample-QUALITY_PASSED_R?.fastq
+done
+
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013$ bash COCO_quality_filtering.sh
+
+
+---- FAGR
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013$ nano FAGR_quality_filtering.sh
+
+for sample in `awk '{print $1}' 25_samples.txt | sed -n '17,21p'`
+do
+    if [ "$sample" == "sample" ]; then continue; fi
+    iu-filter-quality-minoche $sample.ini --ignore-deflines
+    gzip $sample-QUALITY_PASSED_R?.fastq
+done
+
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013$ bash FAGR_quality_filtering.sh
+
+
+---- THOC
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013$ nano THOC_quality_filtering.sh
+
+for sample in `awk '{print $1}' 25_samples.txt | sed -n '7,11p'`
+do
+    if [ "$sample" == "sample" ]; then continue; fi
+    iu-filter-quality-minoche $sample.ini --ignore-deflines
+    gzip $sample-QUALITY_PASSED_R?.fastq
+done
+
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013$ bash THOC_quality_filtering.sh
+
+
+-- Organize folders
+
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013$ mkdir filtered_metagenomes
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013$ mv *QUALITY_PASSED*.fastq.gz ./filtered_metagenomes
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013$ mv *.ini ./filtered_metagenomes
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013/filtered_metagenomes$ mkdir ini_files
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013/filtered_metagenomes$ mv *.ini ./ini_files
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013$ mv *-STATS.txt ./filtered_metagenomes
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013/filtered_metagenomes$ mkdir stats_files
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013/filtered_metagenomes$ mv *-STATS.txt ./stats_files
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013$ mkdir raw_metagenomes
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013$ mv JL_*.fastq.gz ./raw_metagenomes
+
+
+-- Transfer filtered reads from phyllo to betula
+
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013/filtered_metagenomes$ scp -r -v /data/users/jocelyn/msc_data/CERMO013/filtered_metagenomes/*QUALITY_PASSED*.fastq.gz jocelyn@betula.uqam.ca:/mnt/storage/jocelyn/msc/filtered_metagenomes/
+
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013/filtered_metagenomes$ scp -r -v ini_files jocelyn@betula.uqam.ca:/mnt/storage/jocelyn/msc/filtered_metagenomes/
+
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013/filtered_metagenomes$ scp -r -v stats_files jocelyn@betula.uqam.ca:/mnt/storage/jocelyn/msc/filtered_metagenomes/
+
+
+#########################################################################################################
+
+#### BACK TO BETULA SERVER
+
+-- Download Methylobacterium genomes
+
+---- NCBI genomes
+
+(base) jocelyn@betula:/mnt/storage/jocelyn$ mkdir ncbi_genomes/
+
+# With Filezilla, transfer meth_ncbi_genomes.txt from my computer to betula in folder ncbi_genomes/
+
+(base) jocelyn@betula:/mnt/storage/jocelyn/ncbi_genomes$ nano download_ncbi_genomes.sh
+
+for genome in $(awk '{print $1}' meth_ncbi_genomes.txt | awk 'NR>1')
+do
+        rsync --copy-links --recursive --times --verbose rsync://"$(grep ${genome} meth_ncbi_genomes.txt | awk '{print $3}')" ${genome}/
+done
+
+(base) jocelyn@betula:/mnt/storage/jocelyn/ncbi_genomes$ bash download_ncbi_genomes.sh
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn$ mv ncbi_genomes/ msc/meth_genomes/
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/meth_genomes/ncbi_genomes$ mv M_* ..
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/meth_genomes$ mkdir M_sp_006/
+
+# With Filezilla, transfer M. sp. 006 (strain GV094) genome in corresponding folder, from my computer to betula.
+
+---- Alessa genomes
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/meth_genomes$ mkdir alessa_genomes
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/meth_genomes/alessa_genomes$ nano alessa_genomes.sh
+
+mkdir M_adhaesivum
+mkdir M_aerolatum
+mkdir M_aquaticum
+mkdir M_cerastii
+mkdir M_frigidaeris
+mkdir M_goesingense
+mkdir M_gregans
+mkdir M_hispanicum
+mkdir M_iners
+mkdir M_isbiliense
+mkdir M_jeotgali
+mkdir M_komagatae
+mkdir M_longum
+mkdir M_marchantiae
+mkdir M_mesophilicum
+mkdir M_organophilum
+mkdir M_persicinum
+mkdir M_podarium
+mkdir M_suomiense
+mkdir M_tardum
+mkdir M_tarhaniae
+mkdir M_thuringiense
+mkdir M_trifolii
+mkdir M_variabile
+mkdir M_zatmanii
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/meth_genomes/alessa_genomes$ bash alessa_genomes.sh
+
+# With Filezilla, transfer Alessa's genomes in corresponding folders, from my computer to betula.
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/meth_genomes/alessa_genomes$ mv M_* ..
+
+
+#########################################################################################################
+
+
+-- Create contig.fa file
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/meth_genomes$ gunzip ./M_*/*_genomic.fna.gz
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc$ mkdir anvio_artifacts
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ nano create_contigs_dot_fa.sh
+
+for i in $(ls ../meth_genomes/M_*/*)
+do
+  	cat $i >> all_genomes.contigs.fa
+done
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ bash create_contigs_dot_fa.sh
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ grep ">" all_genomes.contigs.fa > all_genomes.contigs.deflines.txt
+
+
+---- Simplify deflines names
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ anvi-script-reformat-fasta all_genomes.contigs.fa -o all_genomes.contigs-fixed.fa -l 0 --simplify-names -r report_file --seq-type NT
+
+# ANVIO VERBOSE :
+WHAT WAS THERE
+===============================================
+Total num contigs ............................: 14,881
+Total num nucleotides ........................: 620,585,276
+
+WHAT WAS ASKED
+===============================================
+Simplify deflines? ...........................: Yes
+Add prefix to sequence names? ................: No
+Minimum length of contigs to keep ............: 0
+Max % gaps allowed ...........................: 100.00%
+Max num gaps allowed .........................: 1,000,000
+Exclude specific sequences? ..................: No
+Keep specific sequences? .....................: No
+Enforce sequence type? .......................: Yes, enforce 'NT'
+
+WHAT HAPPENED
+===============================================
+Contigs removed ..............................: 0 (0.00% of all)
+Nucleotides removed ..........................: 0 (0.00% of all)
+Nucleotides modified .........................: 1,192 (0.00019% of all)
+Deflines simplified ..........................: True
+
+
+#########################################################################################################
+
+
+-- Generate anvio CONTIGS.db
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ anvi-gen-contigs-database -f all_genomes.contigs-fixed.fa -o all_genomes-CONTIGS.db -n "Methylobacterium_104_species_genomes" -T 7
+
+# ANVIO VERBOSE :
+Result .......................................: Prodigal (v2.6.3) has identified 597777 genes.
+
+CONTIGS DB CREATE REPORT
+===============================================
+Split Length .................................: 20,000
+K-mer size ...................................: 4
+Skip gene calling? ...........................: False
+External gene calls provided? ................: False
+Ignoring internal stop codons? ...............: False
+Splitting pays attention to gene calls? ......: True
+Contigs with at least one gene call ..........: 14688 of 14881 (98.7%)                                                         
+Contigs database .............................: A new database, all_genomes-CONTIGS.db, has been created.
+Number of contigs ............................: 14,881
+Number of splits .............................: 36,204
+Total number of nucleotides ..................: 620,585,276
+Gene calling step skipped ....................: False
+Splits broke genes (non-mindful mode) ........: False
+Desired split length (what the user wanted) ..: 20,000
+Average split length (what anvi'o gave back) .: 21,191
+
+
+
+#########################################################################################################
+
+
+-- Identify archaeal and bacterial single-copy core genes (SCGs)
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ anvi-run-hmms -c all_genomes-CONTIGS.db -T 6
+
+
+#########################################################################################################
+
+
+-- Assign functions to genes
+
+
+---- COG 
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ anvi-run-ncbi-cogs -c all_genomes-CONTIGS.db -T 6
+
+# ANVIO VERBOSE :
+
+DIAMOND VIEW
+===============================================
+Diamond  tabular output file .................: /tmp/tmpbzvq19mg/diamond-search-results.txt                                    
+COG version ..................................: COG20
+COG data source ..............................: The anvi'o default.
+COG base directory ...........................: /home/jocelyn/mambaforge/envs/anvio8/lib/python3.10/site-packages/anvio/data/misc/COG
+Gene functions ...............................: 973,485 function calls from 3 sources (COG20_PATHWAY, COG20_FUNCTION,          
+                                                COG20_CATEGORY) for 437,630 unique gene calls have been added to the contigs
+                                                database.
+
+---- KEGG
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ anvi-run-kegg-kofams -c all_genomes-CONTIGS.db --kegg-data-dir /mnt/storage/jocelyn/kegg_data/ -T 6
+
+# ANVIO VERBOSE :
+Number of raw hits in table file .............: 15,913,915
+Number of weak hits removed by HMMER parser ..: 0
+Number of hits in annotation dict  ...........: 15,913,915
+Number of weak hits removed by KOfam parser ..: 15,627,869
+Number of hits remaining in annotation dict  .: 286,046
+
+WARNING
+===============================================
+Anvi'o will now re-visit genes without KOfam annotations to see if potentially
+valid functional annotations were missed. These genes will be annotated with a
+KO only if all KOfam hits to this gene with e-value <= 1e-05 and bitscore >
+(0.75 * KEGG threshold) are hits to the same KO. Just so you know what is going
+on here. If this sounds like A Very Bad Idea to you, then please feel free to
+turn off this behavior with the flag --skip-bitscore-heuristic or to change the
+e-value/bitscore parameters (see the help page for more info).
+
+Number of decent hits added back after relaxing bitscore threshold : 33,682
+Total number of hits in annotation dictionary after adding these back : 319,728
+Gene functions ...............................: 319,728 function calls from 1 source (KOfam) for 306,904 unique gene calls have
+                                                been added to the contigs database.
+Gene functions ...............................: 65,673 function calls from 1 source (KEGG_Module) for 63,950 unique gene calls
+                                                have been added to the contigs database.
+Gene functions ...............................: 65,673 function calls from 1 source (KEGG_Class) for 63,950 unique gene calls
+                                                have been added to the contigs database.
+Gene functions ...............................: 319,342 function calls from 1 source (KEGG_BRITE) for 306,523 unique gene calls
+                                                have been added to the contigs database.
+
+---- Pfams
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ anvi-run-pfams -c all_genomes-CONTIGS.db --pfam-data-dir /mnt/storage/jocelyn/pfam_data/ -T 6
+
+# ANVIO VERBOSE :
+Number of raw hits in table file .............: 903,198
+Number of weak hits removed by HMMER parser ..: 0
+Number of hits in annotation dict  ...........: 903,198
+Gene functions ...............................: 903,198 function calls from 1 source (Pfam) for 449,538 unique gene calls have been added
+                                                to the contigs database.
+
+---- CAZyme
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ anvi-run-cazymes -c all_genomes-CONTIGS.db --cazyme-data-dir /mnt/storage/jocelyn/cazyme_data/ -T 6
+
+# ANVIO VERBOSE :
+Number of raw hits in table file .............: 36,140
+Number of weak hits removed by HMMER parser ..: 0
+Number of hits in annotation dict  ...........: 36,140
+Gene functions ...............................: 36,140 function calls from 1 source (CAZyme) for 13,950 unique gene calls have been
+                                                added to the contigs database.
+
+---- eggNOG
+
+# eggNOG functions have been assigned and added to the large metapangenomic data table after all other following steps.
+# See end of this script.
+
+
+#########################################################################################################
+
+
+-- Get contigs.db info
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ anvi-db-info -c all_genomes-CONTIGS.db
+
+
+# ANVIO VERBOSE :
+DB Info (no touch)
+===============================================
+Database Path ................................: all_genomes-CONTIGS.db
+description ..................................: [Not found, but it's OK]
+db_type ......................................: contigs (variant: unknown)
+version ......................................: 21
+
+
+DB Info (no touch also)
+===============================================
+project_name .................................: Methylobacterium_104_species_genomes
+contigs_db_hash ..............................: hash4083ba8a
+split_length .................................: 20000
+kmer_size ....................................: 4
+num_contigs ..................................: 14881
+total_length .................................: 620585276
+num_splits ...................................: 36204
+gene_level_taxonomy_source ...................: None
+genes_are_called .............................: 1
+external_gene_calls ..........................: 0
+external_gene_amino_acid_seqs ................: 0
+skip_predict_frame ...........................: 0
+splits_consider_gene_calls ...................: 1
+scg_taxonomy_was_run .........................: 0
+scg_taxonomy_database_version ................: None
+trna_taxonomy_was_run ........................: 0
+trna_taxonomy_database_version ...............: None
+creation_date ................................: 1712148083.69972
+modules_db_hash ..............................: a2b5bde358bb
+gene_function_sources ........................: COG20_FUNCTION,COG20_CATEGORY,KEGG_Module,KOfam,KEGG_Class,CAZyme,COG20_PATHWAY,KEGG_BRITE,Pfam
+
+
+AVAILABLE GENE CALLERS
+===============================================
+* 'prodigal' (597,777 gene calls)
+* 'Ribosomal_RNA_23S' (202 gene calls)
+* 'Ribosomal_RNA_16S' (199 gene calls)
+
+
+AVAILABLE FUNCTIONAL ANNOTATION SOURCES
+===============================================
+* CAZyme (36,140 annotations)
+* COG20_CATEGORY (437,630 annotations)
+* COG20_FUNCTION (437,630 annotations)
+* COG20_PATHWAY (98,225 annotations)
+* KEGG_BRITE (319,342 annotations)
+* KEGG_Class (65,673 annotations)
+* KEGG_Module (65,673 annotations)
+* KOfam (319,728 annotations)
+* Pfam (903,198 annotations)
+
+
+AVAILABLE HMM SOURCES
+===============================================
+* 'Archaea_76' (76 models with 3,718 hits)
+* 'Bacteria_71' (71 models with 7,452 hits)
+* 'Protista_83' (83 models with 364 hits)
+* 'Ribosomal_RNA_12S' (1 model with 0 hits)
+* 'Ribosomal_RNA_16S' (3 models with 199 hits)
+* 'Ribosomal_RNA_18S' (1 model with 0 hits)
+* 'Ribosomal_RNA_23S' (2 models with 202 hits)
+* 'Ribosomal_RNA_28S' (1 model with 0 hits)
+* 'Ribosomal_RNA_5S' (5 models with 0 hits)
+
+
+#########################################################################################################
+
+
+-- Build a Bowtie2 database from contigs fasta
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ bowtie2-build all_genomes.contigs-fixed.fa all_genomes.contigs-fixed-bowtie2-db --threads 6
+
+
+#########################################################################################################
+
+
+-- Organize folders
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn$ mkdir anvio_analysis
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/anvio_analysis$ mkdir ACSA ABBA COCO FAGR THOC
+
+
+#########################################################################################################
+
+
+-- Mapping ABBA metagenomes on contigs
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ABBA$ nano ABBA_samples.txt
+
+ABBA_M11
+ABBA_M12
+ABBA_M13
+ABBA_M14
+ABBA_M15
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ABBA$ nano ABBA_mapping.sh
+
+for sample in `awk '{print $1}' ABBA_samples.txt`
+do
+    if [ "$sample" == "sample" ]; then continue; fi
+    # do the bowtie mapping to get the SAM file:
+    bowtie2 --threads 6 \
+            -x ../../anvio_artifacts/all_genomes.contigs-fixed-bowtie2-db \
+            -1 ../../filtered_metagenomes/$sample-QUALITY_PASSED_R1.fastq.gz \
+            -2 ../../filtered_metagenomes/$sample-QUALITY_PASSED_R2.fastq.gz \
+            --no-unal \
+            -S $sample.sam
+
+    # convert the resulting SAM file to a BAM file:
+    samtools view -F 4 -bS $sample.sam > $sample-RAW.bam
+
+    # sort and index the BAM file:
+    samtools sort $sample-RAW.bam -o $sample.bam
+    samtools index $sample.bam
+
+    # remove temporary files:
+    rm $sample.sam $sample-RAW.bam
+done
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ABBA$ bash ABBA_mapping.sh
+
+
+#########################################################################################################
+
+
+-- Mapping ACSA metagenomes on contigs
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ACSA$ nano ACSA_samples.txt
+
+ACSA_M21
+ACSA_M22
+ACSA_M23
+ACSA_M24
+ACSA_M25
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ACSA$ nano ACSA_mapping.sh
+
+for sample in `awk '{print $1}' ACSA_samples.txt`
+do
+    if [ "$sample" == "sample" ]; then continue; fi
+    # do the bowtie mapping to get the SAM file:
+    bowtie2 --threads 6 \
+            -x ../../anvio_artifacts/all_genomes.contigs-fixed-bowtie2-db \
+            -1 ../../filtered_metagenomes/$sample-QUALITY_PASSED_R1.fastq.gz \
+            -2 ../../filtered_metagenomes/$sample-QUALITY_PASSED_R2.fastq.gz \
+            --no-unal \
+            -S $sample.sam
+
+    # convert the resulting SAM file to a BAM file:
+    samtools view -F 4 -bS $sample.sam > $sample-RAW.bam
+
+    # sort and index the BAM file:
+    samtools sort $sample-RAW.bam -o $sample.bam
+    samtools index $sample.bam
+
+    # remove temporary files:
+    rm $sample.sam $sample-RAW.bam
+done
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ACSA$ bash ACSA_mapping.sh
+
+
+#########################################################################################################
+
+
+-- Mapping COCO metagenomes on contigs (on phyllo)
+
+# Transfer files and directories from betula to phyllo
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc$ scp -r -v anvio_artifacts/ jocelyn@phyllo.uqam.ca:/data/users/jocelyn/msc_data/CERMO013/
+
+# Create directories for analysis
+(base) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013$ mkdir anvio_analysis
+(base) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013/anvio_analysis$ mkdir COCO
+
+
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013/anvio_analysis/COCO$ nano COCO_samples.txt
+
+COCO_M01
+COCO_M02
+COCO_M03
+COCO_M04
+COCO_M05
+
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013/anvio_analysis/COCO$ nano COCO_mapping.sh
+
+for sample in `awk '{print $1}' COCO_samples.txt`
+do
+    if [ "$sample" == "sample" ]; then continue; fi
+    # do the bowtie mapping to get the SAM file:
+    bowtie2 --threads 6 \
+            -x ../../anvio_artifacts/all_genomes.contigs-fixed-bowtie2-db \
+            -1 ../../filtered_metagenomes/$sample-QUALITY_PASSED_R1.fastq.gz \
+            -2 ../../filtered_metagenomes/$sample-QUALITY_PASSED_R2.fastq.gz \
+            --no-unal \
+            -S $sample.sam
+
+    # convert the resulting SAM file to a BAM file:
+    samtools view -F 4 -bS $sample.sam > $sample-RAW.bam
+
+    # sort and index the BAM file:
+    samtools sort $sample-RAW.bam -o $sample.bam
+    samtools index $sample.bam
+
+    # remove temporary files:
+    rm $sample.sam $sample-RAW.bam
+done
+
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013/anvio_analysis/COCO$ bash COCO_mapping.sh
+
+
+#########################################################################################################
+
+
+-- Mapping FAGR metagenomes on contigs (on phyllo)
+
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013/anvio_analysis$ mkdir FAGR
+
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013/anvio_analysis/FAGR$ nano FAGR_samples.txt
+
+FAGR_M16
+FAGR_M17
+FAGR_M18
+FAGR_M19
+FAGR_M20
+
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013/anvio_analysis/FAGR$ nano FAGR_mapping.sh
+
+for sample in `awk '{print $1}' FAGR_samples.txt`
+do
+    if [ "$sample" == "sample" ]; then continue; fi
+    # do the bowtie mapping to get the SAM file:
+    bowtie2 --threads 6 \
+            -x ../../anvio_artifacts/all_genomes.contigs-fixed-bowtie2-db \
+            -1 ../../filtered_metagenomes/$sample-QUALITY_PASSED_R1.fastq.gz \
+            -2 ../../filtered_metagenomes/$sample-QUALITY_PASSED_R2.fastq.gz \
+            --no-unal \
+            -S $sample.sam
+
+    # convert the resulting SAM file to a BAM file:
+    samtools view -F 4 -bS $sample.sam > $sample-RAW.bam
+
+    # sort and index the BAM file:
+    samtools sort $sample-RAW.bam -o $sample.bam
+    samtools index $sample.bam
+
+    # remove temporary files:
+    rm $sample.sam $sample-RAW.bam
+done
+
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013/anvio_analysis/FAGR$ bash FAGR_mapping.sh
+
+
+#########################################################################################################
+
+
+-- Mapping THOC metagenomes on contigs
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/THOC$ nano THOC_samples.txt
+
+THOC_M06
+THOC_M07
+THOC_M08
+THOC_M09
+THOC_M10
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/THOC$ nano THOC_mapping.sh
+
+for sample in `awk '{print $1}' THOC_samples.txt`
+do
+    if [ "$sample" == "sample" ]; then continue; fi
+    # do the bowtie mapping to get the SAM file:
+    bowtie2 --threads 6 \
+            -x ../../anvio_artifacts/all_genomes.contigs-fixed-bowtie2-db \
+            -1 ../../filtered_metagenomes/$sample-QUALITY_PASSED_R1.fastq.gz \
+            -2 ../../filtered_metagenomes/$sample-QUALITY_PASSED_R2.fastq.gz \
+            --no-unal \
+            -S $sample.sam
+
+    # convert the resulting SAM file to a BAM file:
+    samtools view -F 4 -bS $sample.sam > $sample-RAW.bam
+
+    # sort and index the BAM file:
+    samtools sort $sample-RAW.bam -o $sample.bam
+    samtools index $sample.bam
+
+    # remove temporary files:
+    rm $sample.sam $sample-RAW.bam
+done
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/THOC$ bash THOC_mapping.sh
+
+
+#########################################################################################################
+
+
+-- Profiling ABBA mapping results, and merging profiles
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ABBA$ nano ABBA_profiling.sh
+
+for sample in `awk '{print $1}' ABBA_samples.txt`
+do
+    if [ "$sample" == "sample" ]; then continue; fi
+
+    anvi-profile -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+                 -i $sample.bam \
+                 -M 1000 \
+		 --profile-SCVs \
+                 --num-threads 3 \
+	         --write-buffer-size-per-thread 500 \
+                 -o $sample
+done
+
+anvi-merge */PROFILE.db -o ABBA-MERGED -c ../../anvio_artifacts/all_genomes-CONTIGS.db --enforce-hierarchical-clustering
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ABBA$ bash ABBA_profiling.sh
+
+
+# ANVIO VERBOSE (in part) :
+Number of sequences in the contigs DB .............: 14,881
+Number of contigs to be conisdered (after -M) .....: 11,755
+Number of splits ..................................: 33,078
+Number of nucleotides .............................: 619,031,269
+
+
+#########################################################################################################
+
+
+-- Profiling ACSA mapping results, and merging profiles
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ACSA$ nano ACSA_profiling.sh
+
+for sample in `awk '{print $1}' ACSA_samples.txt`
+do
+    if [ "$sample" == "sample" ]; then continue; fi
+
+    anvi-profile -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+                 -i $sample.bam \
+                 -M 1000 \
+		 --profile-SCVs \
+                 --num-threads 3 \
+	         --write-buffer-size-per-thread 500 \
+                 -o $sample
+done
+
+anvi-merge */PROFILE.db -o ACSA-MERGED -c ../../anvio_artifacts/all_genomes-CONTIGS.db --enforce-hierarchical-clustering
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ACSA$ bash ACSA_profiling.sh
+
+
+#########################################################################################################
+
+
+-- Profiling COCO mapping results, and merging profiles (on phyllo)
+
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013/anvio_analysis/COCO$ nano COCO_profiling.sh
+
+for sample in `awk '{print $1}' COCO_samples.txt`
+do
+    if [ "$sample" == "sample" ]; then continue; fi
+
+    anvi-profile -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+                 -i $sample.bam \
+                 -M 1000 \
+		 --profile-SCVs \
+                 --num-threads 3 \
+	         --write-buffer-size-per-thread 500 \
+                 -o $sample
+done
+
+anvi-merge */PROFILE.db -o COCO-MERGED -c ../../anvio_artifacts/all_genomes-CONTIGS.db --enforce-hierarchical-clustering
+
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013/anvio_analysis/COCO$ bash COCO_profiling.sh
+
+
+#########################################################################################################
+
+
+-- Profiling FAGR mapping results, and merging profiles (on phyllo)
+
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013/anvio_analysis/FAGR$ nano FAGR_profiling.sh
+
+for sample in `awk '{print $1}' FAGR_samples.txt`
+do
+    if [ "$sample" == "sample" ]; then continue; fi
+
+    anvi-profile -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+                 -i $sample.bam \
+                 -M 1000 \
+		 --profile-SCVs \
+                 --num-threads 3 \
+	         --write-buffer-size-per-thread 500 \
+                 -o $sample
+done
+
+anvi-merge */PROFILE.db -o FAGR-MERGED -c ../../anvio_artifacts/all_genomes-CONTIGS.db --enforce-hierarchical-clustering
+
+(anvio8) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013/anvio_analysis/FAGR$ bash FAGR_profiling.sh
+
+
+#########################################################################################################
+
+
+-- Profiling THOC mapping results, and merging profiles
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/THOC$ nano THOC_profiling.sh
+
+for sample in `awk '{print $1}' THOC_samples.txt`
+do
+    if [ "$sample" == "sample" ]; then continue; fi
+
+    anvi-profile -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+                 -i $sample.bam \
+                 -M 1000 \
+		 --profile-SCVs \
+                 --num-threads 3 \
+	         --write-buffer-size-per-thread 500 \
+                 -o $sample
+done
+
+anvi-merge */PROFILE.db -o THOC-MERGED -c ../../anvio_artifacts/all_genomes-CONTIGS.db --enforce-hierarchical-clustering
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/THOC$ bash THOC_profiling.sh
+
+
+#########################################################################################################
+
+
+-- Transfer COCO and FAGR mapping and profiling outputs from phyllo to betula
+
+(base) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013/anvio_analysis$ scp -r -v COCO jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/
+(base) jocelyn@phyllo:/data/users/jocelyn/msc_data/CERMO013/anvio_analysis$ scp -r -v FAGR jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/
+
+
+#########################################################################################################
+
+-- Collection building (contigs mode)
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ mkdir collection_building_contigs
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ cp report_file collection_building_contigs
+
+# With filezilla, transfer file 'species_and_original_contigs.txt' from local computer to betula 'collection_building_contigs' directory.
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/collection_building_contigs$ paste report_file species_and_original_contigs.txt > report_contigs_sp.txt
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/collection_building_contigs$ cut -f 1,3 report_contigs_sp.txt > contigs_and_species_names.txt
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/collection_building_contigs$ rm report_contigs_sp.txt
+
+
+#########################################################################################################
+
+-- Import collection
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ABBA$ anvi-import-collection ../../anvio_artifacts/collection_building_contigs/contigs_and_species_names.txt -c ../../anvio_artifacts/all_genomes-CONTIGS.db -p ABBA-MERGED/PROFILE.db -C Methylobacterium_Species_for_ABBA --contigs-mode
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ACSA$ anvi-import-collection ../../anvio_artifacts/collection_building_contigs/contigs_and_species_names.txt -c ../../anvio_artifacts/all_genomes-CONTIGS.db -p ACSA-MERGED/PROFILE.db -C Methylobacterium_Species_for_ACSA --contigs-mode
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/COCO$ anvi-import-collection ../../anvio_artifacts/collection_building_contigs/contigs_and_species_names.txt -c ../../anvio_artifacts/all_genomes-CONTIGS.db -p COCO-MERGED/PROFILE.db -C Methylobacterium_Species_for_COCO --contigs-mode
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/FAGR$ anvi-import-collection ../../anvio_artifacts/collection_building_contigs/contigs_and_species_names.txt -c ../../anvio_artifacts/all_genomes-CONTIGS.db -p FAGR-MERGED/PROFILE.db -C Methylobacterium_Species_for_FAGR --contigs-mode
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/THOC$ anvi-import-collection ../../anvio_artifacts/collection_building_contigs/contigs_and_species_names.txt -c ../../anvio_artifacts/all_genomes-CONTIGS.db -p THOC-MERGED/PROFILE.db -C Methylobacterium_Species_for_THOC --contigs-mode
+
+
+#########################################################################################################
+
+-- Summarize collections
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ABBA$ anvi-summarize -c ../../anvio_artifacts/all_genomes-CONTIGS.db -p ABBA-MERGED/PROFILE.db -C Methylobacterium_Species_for_ABBA --init-gene-coverages -o ABBA_PROFILE-SUMMARY
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ACSA$ anvi-summarize -c ../../anvio_artifacts/all_genomes-CONTIGS.db -p ACSA-MERGED/PROFILE.db -C Methylobacterium_Species_for_ACSA --init-gene-coverages -o ACSA_PROFILE-SUMMARY
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/COCO$ anvi-summarize -c ../../anvio_artifacts/all_genomes-CONTIGS.db -p COCO-MERGED/PROFILE.db -C Methylobacterium_Species_for_COCO --init-gene-coverages -o COCO_PROFILE-SUMMARY
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/FAGR$ anvi-summarize -c ../../anvio_artifacts/all_genomes-CONTIGS.db -p FAGR-MERGED/PROFILE.db -C Methylobacterium_Species_for_FAGR --init-gene-coverages -o FAGR_PROFILE-SUMMARY
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/THOC$ anvi-summarize -c ../../anvio_artifacts/all_genomes-CONTIGS.db -p THOC-MERGED/PROFILE.db -C Methylobacterium_Species_for_THOC --init-gene-coverages -o THOC_PROFILE-SUMMARY
+
+# ANVIO VERBOSE, SAME EXACT ERROR I GOT FOR EVERY GENOME :
+A WARNING RELATED TO HMMs IN (genome_name)
+===============================================
+While anvi'o was trying to finalize HMM hits associated with splits of interest,
+it realized that there were one or more HMM hits that spanned through multiple
+splits yet not all of those splits were among the splits of interest. This can
+happen if you refined a contig by excluding some of its splits either manually
+during binning or automatically during whatever black magic you were engaged in.
+Anvi'o does not judge. But In these situations anvi'o excludes the entire HMM
+hit from being reported to be on the safe side. Some HMM hits coming from 3 HMM
+sources ("Ribosomal_RNA_16S, Ribosomal_RNA_23S"), will not appear
+in your downstream analyses (including in your `anvi-summarize` outputs). If you
+are really really interested in those partial HMM hits and sequences associated
+with them, there are multiple ways to recover them (one of the best way to do it
+involves the use of `anvi-split` and re-running HMMs in your final bins). Please
+feel free to reach out to the anvi'o community for ideas.
+
+
+#########################################################################################################
+
+
+-- Setup R Studio on Betula
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc$ mkdir R_analysis
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/R_analysis$ mkdir detection_and_coverage
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/R_analysis/detection_and_coverage$ mkdir data
+
+# With Filezilla, transfer files 'detection.csv', 'mean_coverage.csv', and 'std_coverage from local computer to betula directory /mnt/storage/jocelyn/msc/R_analysis/detection_and_coverage/data
+
+# UPDATE ON 240425. THE FOLDER jocelyn@betula:/mnt/storage/jocelyn/msc/R_analysis/detection_and_coverage/ WAS DELETED
+
+# ALSO, THE jocelyn@betula:/mnt/storage/jocelyn/msc/R_analysis FOLDER WAS RENAMED TO 'R_workspaces'
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc$ mv R_analysis/ R_workspaces/
+
+# Create new directory for R projects
+
+(base) jocelyn@betula:~$ mkdir msc
+(base) jocelyn@betula:~/msc$ mkdir R_analysis
+
+# Setting up Github on betula
+
+(base) jocelyn@betula:~$ git config --global user.email "jocelyn.lauzon@gmail.com"
+(base) jocelyn@betula:~$ git config --global user.name "lauzonj"
+
+# Generating a new SSH key
+Reference : https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent
+(base) jocelyn@betula:~$ ssh-keygen -t ed25519 -C "jocelyn.lauzon@gmail.com"
+Enter passphrase (empty for no passphrase): betula
+
+# verbose:
+Your identification has been saved in /home/jocelyn/.ssh/id_ed25519
+Your public key has been saved in /home/jocelyn/.ssh/id_ed25519.pub
+The key fingerprint is:
+SHA256:baSHZFV1eMjM/y9qEmshDUWlqgd/La4EfXxmbHKg71c jocelyn.lauzon@gmail.com
+The key's randomart image is:
++--[ED25519 256]--+
+|         .ooo=.o.|
+|         ...  *..|
+|        o.+    o |
+|       +.O o    .|
+|      o SoB B   .|
+|       =.=+O  E .|
+|      . +.++..  .|
+|       o ++.o . .|
+|        .oo+.. . |
++----[SHA256]-----+
+
+# Adding a new SSH key to your account
+Reference : https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account#about-addition-of-ssh-keys-to-your-account
+(base) jocelyn@betula:~$ cd .ssh/
+(base) jocelyn@betula:~/.ssh$ nano id_ed25519.pub 
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFQs6WFqSEx460rGxrQ45Z8wxZWUFOz3OYlqF0db1aAW jocelyn.lauzon@gmail.com
+
+
+#########################################################################################################
+
+
+-- Detection and coverage analyses
+
+# On Github
+
+- Create a new private repository ('msc_detection_coverage') with a read me file, gitignore template : R, no license
+- Copy Code > SSH : git@github.com:lauzonj/msc_detection_coverage.git
+
+# On RStudio Server 
+
+- Create a New project > Version Control > Git : Repository URL : SSH address, Project directory name : same as repository name ('msc_detection_coverage'), Create project as subdirectory of : ~/msc/R_analysis
+
+R PROJECT
+~/msc/R_analysis/msc_detection_coverage/msc_detection_coverage.Rproj
+
+- In this project, create R script 'detection_and_coverage.R'
+
+
+OOOO
+O   O
+O    O
+O    O
+O   O  
+OOOO 
+O O
+O  O
+O   O
+O    O
+O     O
+
+
+#########################################################################################################
+
+-- Generate genome databases (one per tree species)
+
+--> https://dutter.github.io/projects/oral_metapan#step-2---mapping
+
+# In Excel, create and export 5 files 'TREE_internal_genomes.txt' (TREE = ABBA, ACSA, COCO, FAGR and THOC).
+# With Filezilla, transfer these files to betula directory /mnt/storage/jocelyn/msc/anvio_artifacts
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ anvi-gen-genomes-storage -i ABBA_internal_genomes.txt -o Methylobacterium-ABBA-GENOMES.db
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ anvi-gen-genomes-storage -i ACSA_internal_genomes.txt -o Methylobacterium-ACSA-GENOMES.db
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ anvi-gen-genomes-storage -i COCO_internal_genomes.txt -o Methylobacterium-COCO-GENOMES.db
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ anvi-gen-genomes-storage -i FAGR_internal_genomes.txt -o Methylobacterium-FAGR-GENOMES.db
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ anvi-gen-genomes-storage -i THOC_internal_genomes.txt -o Methylobacterium-THOC-GENOMES.db
+
+
+# ANVIO VERBOSE (for all) :
+Number of gene calls .........................: 594,077
+Number of partial gene calls .................: 14,226
+
+# The fact that only 594 077 gene calls are used is due to the fact that I chose to exclude contigs < 1000 nt at profiling step (-3700 gene calls) and that rRNA gene calls were not taken during anvi-summarize (-401 gene calls).
+
+
+#########################################################################################################
+
+-- Generate PANgenome databases (one per tree species)
+
+
+# First, to clear space on betula disk, I removed filtered_metagenomes/ directory (that was imported from phyllo and is still there).
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc$ rm -r filtered_metagenomes/
+
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ nano tree_species.txt
+
+ABBA
+ACSA
+COCO
+FAGR
+THOC
+
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ nano gen_pangenomes.sh
+
+for tree in `awk '{print $1}' tree_species.txt`
+do
+    if [ "$tree" == "tree" ]; then continue; fi
+
+    anvi-pan-genome -g Methylobacterium-$tree-GENOMES.db \
+		    --minbit 0.5 \
+		    --mcl-inflation 10 \
+		    --additional-params-for-seq-search "--masking 0 --sensitive" \
+		    -n Methylobacterium-$tree-PAN \
+ 		    -o Methylobacterium-$tree-PAN/ \
+		    --enforce-hierarchical-clustering -T 6 \
+		    --I-know-this-is-not-a-good-idea
+done
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ bash gen_pangenomes.sh
+
+
+# ANVIO VERBOSE:
+Min percent identity .........................: 0.0
+Minbit .......................................: 0.5
+Filtered search results ......................: 39,042,806 edges stored
+MCL input ....................................: /mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN/mcl-input.txt
+
+MCL
+===============================================
+MCL inflation ................................: 10.0
+MCL output ...................................: /mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN/mcl-clusters.txt
+Number of MCL clusters .......................: 70,695
+
+(# My note: Of all 70 695 gene clusters, 33 698 are non-singletons, and 36 997 are singletons.)
+
+
+#########################################################################################################
+
+
+-- Generate the METAPANgenome (one per tree species)
+
+
+---- Make copies of the PAN.db
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ cp Methylobacterium-ABBA-PAN-PAN.db Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ACSA-PAN$ cp Methylobacterium-ACSA-PAN-PAN.db Methylobacterium-ACSA-PAN-PAN-metapan-d0_5-f0_25.db
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-COCO-PAN$ cp Methylobacterium-COCO-PAN-PAN.db Methylobacterium-COCO-PAN-PAN-metapan-d0_5-f0_25.db
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-FAGR-PAN$ cp Methylobacterium-FAGR-PAN-PAN.db Methylobacterium-FAGR-PAN-PAN-metapan-d0_5-f0_25.db
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-THOC-PAN$ cp Methylobacterium-THOC-PAN-PAN.db Methylobacterium-THOC-PAN-PAN-metapan-d0_5-f0_25.db
+
+
+---- Generate metapangenomes 
+
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ anvi-meta-pan-genome -i ../ABBA_internal_genomes.txt -g ../Methylobacterium-ABBA-GENOMES.db -p Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db --fraction-of-median-coverage 0.25 --min-detection 0.5
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ACSA-PAN$ anvi-meta-pan-genome -i ../ACSA_internal_genomes.txt -g ../Methylobacterium-ACSA-GENOMES.db -p Methylobacterium-ACSA-PAN-PAN-metapan-d0_5-f0_25.db --fraction-of-median-coverage 0.25 --min-detection 0.5
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-COCO-PAN$ anvi-meta-pan-genome -i ../COCO_internal_genomes.txt -g ../Methylobacterium-COCO-GENOMES.db -p Methylobacterium-COCO-PAN-PAN-metapan-d0_5-f0_25.db --fraction-of-median-coverage 0.25 --min-detection 0.5
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-FAGR-PAN$ anvi-meta-pan-genome -i ../FAGR_internal_genomes.txt -g ../Methylobacterium-FAGR-GENOMES.db -p Methylobacterium-FAGR-PAN-PAN-metapan-d0_5-f0_25.db --fraction-of-median-coverage 0.25 --min-detection 0.5
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-THOC-PAN$ anvi-meta-pan-genome -i ../THOC_internal_genomes.txt -g ../Methylobacterium-THOC-GENOMES.db -p Methylobacterium-THOC-PAN-PAN-metapan-d0_5-f0_25.db --fraction-of-median-coverage 0.25 --min-detection 0.5
+
+
+#########################################################################################################
+
+
+-- Generate and import collection for ABBA metapangenome
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ anvi-get-sequences-for-gene-clusters -g ../Methylobacterium-ABBA-GENOMES.db -p Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db --max-num-genomes-gene-cluster-occurs 1 -o singletons_gc
+
+# ANVIO VERBOSE :
+All gene clusters (70695) ....................: GC_00065566, GC_00026818, GC_00035365, (... 70692 more (`--debug` will show all))
+Gene clusters that passed the filter (38190) .: GC_00065566, GC_00056396, GC_00035365, (... 38187 more (`--debug` will show all))
+Genes clusters that failed the filter (32505) : GC_00019282, GC_00026818, GC_00001014, (... 32502 more (`--debug` will show all))
+
+INFO
+===============================================
+Your filters resulted in 38190 gene clusters that contain a total of 3971760
+genes. for downstream analyses. Just so you know.
+
+Sequence type ................................: Amino acid                                                                                     
+Num sequences reported .......................: 39,777
+Output FASTA file ............................: singletons_gc
+
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ anvi-get-sequences-for-gene-clusters -g ../Methylobacterium-ABBA-GENOMES.db -p Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db --min-num-genomes-gene-cluster-occurs 104 -o core_gc
+
+# ANVIO VERBOSE :
+All gene clusters (70695) ....................: GC_00004776, GC_00032246, GC_00061717, (... 70692 more (`--debug` will show all))
+Gene clusters that passed the filter (1149) ..: GC_00000867, GC_00001312, GC_00000332, (... 1146 more (`--debug` will show all))
+Genes clusters that failed the filter (69546) : GC_00004776, GC_00032246, GC_00061717, (... 69543 more (`--debug` will show all))
+
+INFO
+===============================================
+Your filters resulted in 1149 gene clusters that contain a total of 119496
+genes. for downstream analyses. Just so you know.
+
+Sequence type ................................: Amino acid                                                                                     
+Num sequences reported .......................: 130,111
+Output FASTA file ............................: core_gc
+
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ anvi-get-sequences-for-gene-clusters -g ../Methylobacterium-ABBA-GENOMES.db -p Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db --min-num-genomes-gene-cluster-occurs 2 --max-num-genomes-gene-cluster-occurs 103 -o accessory_gc
+
+# ANVIO VERBOSE :
+All gene clusters (70695) ....................: GC_00003372, GC_00024356, GC_00034165, (... 70692 more (`--debug` will show all))
+Gene clusters that passed the filter (31356) .: GC_00003372, GC_00024356, GC_00011049, (... 31353 more (`--debug` will show all))
+Genes clusters that failed the filter (39339) : GC_00034165, GC_00047552, GC_00052968, (... 39336 more (`--debug` will show all))
+
+INFO
+===============================================
+Your filters resulted in 31356 gene clusters that contain a total of 3261024
+genes. for downstream analyses. Just so you know.
+
+Sequence type ................................: Amino acid                                                                                     
+Num sequences reported .......................: 424,165
+Output FASTA file ............................: accessory_gc
+
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ grep -o -P '.{0,0}GC_.{0,8}' singletons_gc | sort -u > singletons_gc.txt
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ sed -i "s/$/\tsingleton/" singletons_gc.txt
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ grep -o -P '.{0,0}GC_.{0,8}' accessory_gc | sort -u > accessory_gc.txt
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ sed -i "s/$/\taccessory/" accessory_gc.txt
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ grep -o -P '.{0,0}GC_.{0,8}' core_gc | sort -u > core_gc.txt
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ sed -i "s/$/\tcore/" core_gc.txt
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ for i in core_gc.txt accessory_gc.txt singletons_gc.txt; do cat $i >> i.txt; done
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ sort i.txt > gene_clusters.txt
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ rm i.txt
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ cp gene_clusters.txt ..
+
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ anvi-import-collection gene_clusters.txt -p Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db -C core_accessory_singleton_gc
+
+
+#########################################################################################################
+
+
+-- Import collection for ACSA, COCO, FAGR and THOC metapangenomes
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ACSA-PAN$ anvi-import-collection ../gene_clusters.txt -p Methylobacterium-ACSA-PAN-PAN-metapan-d0_5-f0_25.db -C core_accessory_singleton_gc
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-COCO-PAN$ anvi-import-collection ../gene_clusters.txt -p Methylobacterium-COCO-PAN-PAN-metapan-d0_5-f0_25.db -C core_accessory_singleton_gc
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-FAGR-PAN$ anvi-import-collection ../gene_clusters.txt -p Methylobacterium-FAGR-PAN-PAN-metapan-d0_5-f0_25.db -C core_accessory_singleton_gc
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-THOC-PAN$ anvi-import-collection ../gene_clusters.txt -p Methylobacterium-THOC-PAN-PAN-metapan-d0_5-f0_25.db -C core_accessory_singleton_gc
+
+
+#########################################################################################################
+
+-- Summarize the metapangenomes (one per tree species)
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ anvi-summarize -g ../Methylobacterium-ABBA-GENOMES.db -p Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db -C core_accessory_singleton_gc -o Methylobacterium-ABBA-METAPAN-SUMMARY
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ACSA-PAN$ anvi-summarize -g ../Methylobacterium-ACSA-GENOMES.db -p Methylobacterium-ACSA-PAN-PAN-metapan-d0_5-f0_25.db -C core_accessory_singleton_gc -o Methylobacterium-ACSA-METAPAN-SUMMARY
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-COCO-PAN$ anvi-summarize -g ../Methylobacterium-COCO-GENOMES.db -p Methylobacterium-COCO-PAN-PAN-metapan-d0_5-f0_25.db -C core_accessory_singleton_gc -o Methylobacterium-COCO-METAPAN-SUMMARY
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-FAGR-PAN$ anvi-summarize -g ../Methylobacterium-FAGR-GENOMES.db -p Methylobacterium-FAGR-PAN-PAN-metapan-d0_5-f0_25.db -C core_accessory_singleton_gc -o Methylobacterium-FAGR-METAPAN-SUMMARY
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-THOC-PAN$ anvi-summarize -g ../Methylobacterium-THOC-GENOMES.db -p Methylobacterium-THOC-PAN-PAN-metapan-d0_5-f0_25.db -C core_accessory_singleton_gc -o Methylobacterium-THOC-METAPAN-SUMMARY
+
+
+#########################################################################################################
+
+
+-- Combine metapangenomes visuals
+
+# Code adapted from https://dutter.github.io/projects/oral_metapan#step-4---pangenome-and-metapangenome-construction
+
+
+---- Create new tree species list in phylogenetic order
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ nano tree_species_in_order.txt 
+
+ABBA
+THOC
+FAGR
+COCO
+ACSA
+
+
+---- Export misc items and layers
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ nano export_misc_data.sh 
+
+for tree in `awk '{print $1}' tree_species_in_order.txt`
+do
+    anvi-export-misc-data -p Methylobacterium-$tree-PAN/Methylobacterium-$tree-PAN-PAN-metapan-d0_5-f0_25.db -t items -o $tree-items.txt
+    anvi-export-misc-data -p Methylobacterium-$tree-PAN/Methylobacterium-$tree-PAN-PAN-metapan-d0_5-f0_25.db -t layers -o $tree-layers.txt
+done
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ bash export_misc_data.sh 
+
+
+---- Create new directory and rearrange files
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ mkdir ALL_TREE_METAPANGENOME
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ mv tree_species_in_order.txt ALL_TREE_METAPANGENOME
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ mv *-items.txt ALL_TREE_METAPANGENOME
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ mv *-layers.txt ALL_TREE_METAPANGENOME
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ cp Methylobacterium-ABBA-PAN/Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db ALL_TREE_METAPANGENOME
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME$ mv Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db Methylobacterium-all-tree-METAPAN.db
+
+
+---- Modify new METAPAN.db
+
+# delete the unprocessed columns from ABBA so don't end up with two sets of ABBA metagenomes (formatted + unformatted)
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME$ anvi-delete-misc-data -p Methylobacterium-all-tree-METAPAN.db -t layers --keys-to-remove $(head -1 ABBA-layers.txt | cut -f11- - | tr '\t' ',')
+
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME$ nano metapan_modif.sh
+
+#!/bin/bash
+
+for tree in `awk '{print $1}' tree_species_in_order.txt`
+do
+
+# select metapan rings from items data and add tree species as prefix
+awk -F"\t" -v tree=$tree 'BEGIN{tree=toupper(tree)}; NR==1{print $1 FS tree"-"$9 FS tree"-"$10 FS tree"-"$11 FS tree"-"$12} NR>1 {print $1 FS $9 FS $10 FS $11 FS $12}' $tree-items.txt > $tree-items.tmp
+
+# prepend capitalized site ID before each metagenome's coverage of the genomes
+cut -d' ' -f1,11- $tree-layers.txt | sed "s/SRS/\U$tree-SRS/g" > $tree-layers.tmp
+
+# trim off junk from SRS filenames in header
+sed -i"" 's/_DENOVO_DUPLICATES_MARKED_TRIMMED//g' $tree-layers.tmp
+
+# import this data back into the all-tree-METAPAN.db
+anvi-import-misc-data -p Methylobacterium-all-tree-METAPAN.db -t items $tree-items.tmp
+anvi-import-misc-data -p Methylobacterium-all-tree-METAPAN.db -t layers $tree-layers.tmp
+
+done
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME$ bash metapan_modif.sh
+
+
+ANVIO VERBOSE :
+
+[...]
+Data keys already in db ......................: total_length, gc_content, percent_completion, percent_redundancy, num_genes, avg_gene_length,
+                                                num_genes_per_kb, singleton_gene_clusters, num_gene_clusters
+
+
+Config Error: Some of the data keys in your new data are already in the database. If you want 
+              to replace them with the ones in your new data input use the `--just-do-it`     
+              flag, and watch anvi'o make an exception just for you and complain about nothin'
+              for this once.                                                                  
+
+# This should be ok since those columns are the same whatever the host tree species.
+# IMPORTANT NOTE : items/columns 'ECGs_and_EAGs.*' are the same than 'ABBA.ECGs_and_EAGs.*'
+
+
+# Open R project
+
+~/msc/R_analysis/msc_detection_coverage/msc_detection_coverage.Rproj
+
+Create new script 'all-tree-metapan-data.R' for building all tree metapangenomes (with median coverage layers per tree species).
+
+{r}
+
+# Script taken and adapted from https://dutter.github.io/projects/oral_metapan#step-4---pangenome-and-metapangenome-construction
+
+# calculate and export the median coverage for each genome for each site, 
+# as well as combine the per-sample coverages for a heatmap
+
+ABBA <- read.csv("/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME/ABBA-layers.tmp", sep = "\t", header = T)
+THOC <- read.csv("/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME/THOC-layers.tmp", sep = "\t", header = T)
+FAGR <- read.csv("/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME/FAGR-layers.tmp", sep = "\t", header = T)
+COCO <- read.csv("/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME/COCO-layers.tmp", sep = "\t", header = T)
+ACSA <- read.csv("/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME/ACSA-layers.tmp", sep = "\t", header = T)
+
+# save genome ids for later
+genomeIDs <- ABBA[,1]
+
+# get just the coverages
+ABBA <- ABBA[,grep("ABBA", colnames(ABBA))]
+THOC <- THOC[,grep("THOC", colnames(THOC))]
+FAGR <- FAGR[,grep("FAGR", colnames(FAGR))]
+COCO <- COCO[,grep("COCO", colnames(COCO))]
+ACSA <- ACSA[,grep("ACSA", colnames(ACSA))]
+
+# get the median for each row=genome
+ABBA <- apply(ABBA, 1, median)
+THOC <- apply(THOC, 1, median)
+FAGR <- apply(FAGR, 1, median)
+COCO <- apply(COCO, 1, median)
+ACSA <- apply(ACSA, 1, median)
+
+# save to import into anvio
+write.table(cbind(layers=as.character(genomeIDs), ABBA_MEDIAN=ABBA, THOC_MEDIAN=THOC, FAGR_MEDIAN=FAGR, COCO_MEDIAN=COCO, ACSA_MEDIAN=ACSA), "tree_species_median.tsv", sep = "\t", col.names = T, row.names = F, quote=F)
+
+{/r}
+
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME$ cp /home/jocelyn/msc/R_analysis/msc_detection_coverage/tree_species_median.tsv .
+
+
+---- Import median coverage layer in all-tree-METAPAN.db 
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME$ anvi-import-misc-data -p Methylobacterium-all-tree-METAPAN.db -t layers tree_species_median.tsv
+
+
+---- Visualize FINAL METAPANGENOME
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME$ anvi-display-pan -g ../Methylobacterium-ABBA-GENOMES.db -p Methylobacterium-all-tree-METAPAN.db 
+
+
+#########################################################################################################
+
+
+-- Summarize FINAL METAPANGENOME
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME$ anvi-summarize -g ../Methylobacterium-ABBA-GENOMES.db -p Methylobacterium-all-tree-METAPAN.db -C core_accessory_singleton_gc -o Methylobacterium-ALL-TREE-METAPAN-SUMMARY
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME/Methylobacterium-ALL-TREE-METAPAN-SUMMARY$ gunzip Methylobacterium-ABBA-PAN_gene_clusters_summary.txt.gz
+
+# The summary of this operation will be used to build the large metapangenomic data table in R script 'data_preparation.Rmd'.
+
+
+#########################################################################################################
+
+
+-- Analyses in R
+
+---- Import metaphlan results in R (merged abundance table of genera
+
+# The code to create 'merged_genera_table.txt' is in 'metaphlan_script_phyllo.txt'.
+
+# Copy 'merged_genera_table.txt' file from phyllo to betula
+(base) jocelyn@phyllo:/data/users/jocelyn/msc_data/metaphlan/rarefied_data_results/profile_files$ scp -r -v merged_genera_table.txt jocelyn@betula.uqam.ca:/mnt/storage/jocelyn/msc/metaphlan
+
+
+---- Export functions from contigs db for analyzing functions related to missing 25 gene calls in pangenome
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ anvi-export-functions -c all_genomes-CONTIGS.db -o all_functions.txt
+
+
+R PROJECT
+~/msc/R_analysis/msc_detection_coverage/msc_detection_coverage.Rproj
+
+- In this project, create R markdown 'data_preparation.Rmd'
+
+
+OOOO
+O   O
+O    O
+O    O
+O   O  
+OOOO 
+O O
+O  O
+O   O
+O    O
+O     O
+
+
+#########################################################################################################
+
+AFTER BETULA CRASH, RESETUP GIT AND GITHUB ON BETULA
+
+# Installing Git
+(base) jocelyn@betula:~$ sudo apt install git
+(base) jocelyn@betula:~$ git --version
+
+# Setting up Github on betula
+
+(base) jocelyn@betula:~$ git config --global user.email "jocelyn.lauzon@gmail.com"
+(base) jocelyn@betula:~$ git config --global user.name "lauzonj"
+
+# Generating a new SSH key
+Reference : https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent
+(base) jocelyn@betula:~$ ssh-keygen -t ed25519 -C "jocelyn.lauzon@gmail.com"
+Enter passphrase (empty for no passphrase): betula
+
+# verbose:
+Generating public/private ed25519 key pair.
+Enter file in which to save the key (/home/jocelyn/.ssh/id_ed25519): 
+Created directory '/home/jocelyn/.ssh'.
+Enter passphrase (empty for no passphrase): 
+Enter same passphrase again: 
+Your identification has been saved in /home/jocelyn/.ssh/id_ed25519
+Your public key has been saved in /home/jocelyn/.ssh/id_ed25519.pub
+The key fingerprint is:
+SHA256:o99dEbUCHc2o7Y8d/pVpbg29nOsr9HKZJYUAUbcNHM8 jocelyn.lauzon@gmail.com
+The key's randomart image is:
++--[ED25519 256]--+
+|          o=ooO..|
+|            o+.X.|
+|            ooooE|
+|           . .o..|
+|        S   . .o |
+|       . .   ooo=|
+|      .     . O*X|
+|       . . . =o&o|
+|        . . . *==|
++----[SHA256]-----+
+
+# Adding a new SSH key to your account
+Reference : https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account#about-addition-of-ssh-keys-to-your-account
+(base) jocelyn@betula:~$ cd .ssh/
+(base) jocelyn@betula:~/.ssh$ nano id_ed25519.pub 
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFQs6WFqSEx460rGxrQ45Z8wxZWUFOz3OYlqF0db1aAW jocelyn.lauzon@gmail.com
+
+
+#########################################################################################################
+
+---- eggNOG functions
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ anvi-get-sequences-for-gene-calls -c all_genomes-CONTIGS.db --get-aa-sequences -o all_amino-acid-sequences.fa
+
+# With Filezilla, transfer the file 'all_amino-acid-sequences.fa' to local computer. 
+# On local computer, use TextEdit to make files containing 100000 sequences or less so that it is accepted by eggNOG-mapper.
+# Files created :
+amino-acid-sequences-0-99999.fa
+amino-acid-sequences-100000-199999.fa
+amino-acid-sequences-200000-299999.fa
+amino-acid-sequences-300000-399999.fa
+amino-acid-sequences-400000-499999.fa
+amino-acid-sequences-500000-597776.fa
+
+# With Filezilla, transfer those six files to /mnt/storage/jocelyn/msc/anvio_artifacts
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ gzip amino-acid-*.fa
+
+# With Filezilla, transfer those six .gz files back to local computer.
+
+# Manually rename the files, adding a '-02' to make sure to distinguish the files from the previous batch sent to eggNOG mapper web.
+
+amino-acid-sequences-0-99999-02.fa.gz
+amino-acid-sequences-100000-199999-02.fa.gz
+amino-acid-sequences-200000-299999-02.fa.gz
+amino-acid-sequences-300000-399999-02.fa.gz
+amino-acid-sequences-400000-499999-02.fa.gz
+amino-acid-sequences-500000-597776-02.fa.gz
+
+# Give those 6 '-02.fa.gz' files to eggNOG-mapper, website : http://eggnog-mapper.embl.de/
+# Processed on July 14+, 2024, with default setup options. See screencaps 'eggNOG_mapper_default_options'.
+
+# 11 Output files, for each .fa.gz files, named :
+emapper.err
+emapper.out
+info.txt
+out.emapper.annotations
+out.emapper.annotations.xlsx
+out.emapper.decorated.gff
+out.emapper.hits
+out.emapper.orthologs
+out.emapper.seed_orthologs
+queries.fasta
+queries.raw
+
+# On Betula, prepare folders for eggNOG files
+
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ mkdir eggNOG-mapper-outputs
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs$ mkdir 0-99999
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs$ mkdir 100000-199999
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs$ mkdir 200000-299999
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs$ mkdir 300000-399999
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs$ mkdir 400000-499999
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs$ mkdir 500000-597776
+
+# Download all eggNOG output files
+
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs/0-99999$ wget -r -np -nH --cut-dirs=1 http://eggnog-mapper.embl.de/MM_6dzxftmf/
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs/100000-199999$ wget -r -np -nH --cut-dirs=1 http://eggnog-mapper.embl.de/MM_oz1ayens/
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs/200000-299999$ wget -r -np -nH --cut-dirs=1 http://eggnog-mapper.embl.de/MM_aialjeaf/
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs/300000-399999$ wget -r -np -nH --cut-dirs=1 http://eggnog-mapper.embl.de/MM_62u7gvj9/
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs/400000-499999$ wget -r -np -nH --cut-dirs=1 http://eggnog-mapper.embl.de/MM_kvtw_fuj/
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs/500000-597776$ wget -r -np -nH --cut-dirs=1 http://eggnog-mapper.embl.de/MM_2el5xaf1/
+
+
+
+# Transfer 6 'out.emapper.annotations' files on local computer, then :
+# with TextEdit, make one big file 'all_out.emapper.annotations' containing all gene calls functions. 
+
+# Import 'all_out.emapper.annotations' to /mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs/
+
+
+#########################################################################################################
+
+# Pangenome statistics
+
+Runs mOTUpan on your gene clusters to estimate whether they are core or accessory.
+
+Function : anvi-script-compute-bayesian-pan-core
+Uses:
+pan-db 			Methylobacterium-ABBA-PAN/
+genomes-storage-db 	Methylobacterium-ABBA-GENOMES.db
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ mkdir anvio_core_pan_genome
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ cp Methylobacterium-ABBA-PAN-PAN.db ../anvio_core_pan_genome/
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ cp Methylobacterium-ABBA-GENOMES.db anvio_core_pan_genome/
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/anvio_core_pan_genome$ pip install mOTUlizer
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/anvio_core_pan_genome$ anvi-script-compute-bayesian-pan-core -p Methylobacterium-ABBA-PAN-PAN.db -g Methylobacterium-ABBA-GENOMES.db -o core_pan_genome -T 6
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/anvio_core_pan_genome$ cp core_pan_genome core_pan_genome_table
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/anvio_core_pan_genome$ sed -i '1,11d' core_pan_genome_table
+
+
+
+#########################################################################################################
+
+# Exporting gene clusters distances
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ anvi-export-items-order -p Methylobacterium-ABBA-PAN-PAN.db --name frequency (newick; distance: euclidean, clustering: ward)
+
+
+#########################################################################################################
+
+
+-- Selection analyses on M. sp. 018
+
+
+---- Generate variability profiles ('variability-profile-txt') for each host_species samples
+
+# Get exact collection ID and bin name of interest (genomes names)  
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-show-collections-and-bins -p ABBA/ABBA-MERGED/PROFILE.db
+
+# Collection ID : Methylobacterium_Species_for_ABBA (or TREE) 
+# Bin name : M_sp_018
+
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ABBA$ anvi-gen-variability-profile -p ABBA-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_ABBA -b M_sp_018 --engine CDN -o var_cdn_sp_018_ABBA
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ACSA$ anvi-gen-variability-profile -p ACSA-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_ACSA -b M_sp_018 --engine CDN -o var_cdn_sp_018_ACSA
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/COCO$ anvi-gen-variability-profile -p COCO-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_COCO -b M_sp_018 --engine CDN -o var_cdn_sp_018_COCO
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/FAGR$ anvi-gen-variability-profile -p FAGR-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_FAGR -b M_sp_018 --engine CDN -o var_cdn_sp_018_FAGR
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/THOC$ anvi-gen-variability-profile -p THOC-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_THOC -b M_sp_018 --engine CDN -o var_cdn_sp_018_THOC
+
+
+
+# OUTPUT VERBOSE BELOW
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ABBA$ anvi-gen-variability-profile -p ABBA-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_ABBA -b M_sp_018 --engine CDN -o var_cdn_sp_018_ABBA
+Contigs DB ....................................................: Initialized: ../../anvio_artifacts/all_genomes-CONTIGS.db (v. 21)
+Samples available .............................................: ABBA_M11, ABBA_M12, ABBA_M13, ABBA_M14, ABBA_M15
+Variability data ..............................................: 1,181,550 entries in 36,204 splits across 5 samples
+Number of Split name(s) of interest ...........................: 317
+Entries after split name(s) of interest filter ................: 105,840 (1,075,710 were removed) [4353 genes remaining]
+Total number of variable positions in samples .................: ABBA_M11: 3934; ABBA_M12: 47756; ABBA_M13: 15892; ABBA_M14: 33503; ABBA_M15:
+                                                                 4755
+
+WARNING
+================================================================
+Only some comprehensive variability metrics can be computed without `--quince-
+mode`
+
+Num entries reported ..........................................: 105,840
+Output File ...................................................: var_cdn_sp_018_ABBA
+Num CDN positions reported ....................................: 79,169
+
+✓ anvi-gen-variability-profile took 0:00:32.648323
+
+
+
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ACSA$ anvi-gen-variability-profile -p ACSA-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_ACSA -b M_sp_018 --engine CDN -o var_cdn_sp_018_ACSA
+Contigs DB ....................................................: Initialized: ../../anvio_artifacts/all_genomes-CONTIGS.db (v. 21)
+Samples available .............................................: ACSA_M21, ACSA_M22, ACSA_M23, ACSA_M24, ACSA_M25
+Variability data ..............................................: 458,663 entries in 36,204 splits across 5 samples
+Number of Split name(s) of interest ...........................: 317
+Entries after split name(s) of interest filter ................: 109,055 (349,608 were removed) [4767 genes remaining]
+Total number of variable positions in samples .................: ACSA_M21: 33163; ACSA_M22: 6797; ACSA_M23: 1440; ACSA_M24: 27434; ACSA_M25:
+                                                                 40221
+
+WARNING
+================================================================
+Only some comprehensive variability metrics can be computed without `--quince-
+mode`
+
+Num entries reported ..........................................: 109,055
+Output File ...................................................: var_cdn_sp_018_ACSA
+Num CDN positions reported ....................................: 81,948
+
+✓ anvi-gen-variability-profile took 0:00:17.681687
+
+
+
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/COCO$ anvi-gen-variability-profile -p COCO-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_COCO -b M_sp_018 --engine CDN -o var_cdn_sp_018_COCO
+Contigs DB ....................................................: Initialized: ../../anvio_artifacts/all_genomes-CONTIGS.db (v. 21)
+Samples available .............................................: COCO_M01, COCO_M02, COCO_M03, COCO_M04, COCO_M05
+Variability data ..............................................: 4,290,440 entries in 36,204 splits across 5 samples                             
+Number of Split name(s) of interest ...........................: 317
+Entries after split name(s) of interest filter ................: 1,087,268 (3,203,172 were removed) [5367 genes remaining]                       
+Total number of variable positions in samples .................: COCO_M01: 222273; COCO_M02: 251466; COCO_M03: 284308; COCO_M04: 77348; COCO_M05:
+                                                                 251873
+                                                                                                                                                 
+WARNING
+================================================================
+Only some comprehensive variability metrics can be computed without `--quince-
+mode`
+
+Num entries reported ..........................................: 1,087,268                                                                       
+Output File ...................................................: var_cdn_sp_018_COCO
+Num CDN positions reported ....................................: 452,758
+
+✓ anvi-gen-variability-profile took 0:02:04.254729
+
+
+
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/FAGR$ anvi-gen-variability-profile -p FAGR-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_FAGR -b M_sp_018 --engine CDN -o var_cdn_sp_018_FAGR
+Contigs DB ....................................................: Initialized: ../../anvio_artifacts/all_genomes-CONTIGS.db (v. 21)
+Samples available .............................................: FAGR_M16, FAGR_M17, FAGR_M18, FAGR_M19, FAGR_M20
+Variability data ..............................................: 922,537 entries in 36,204 splits across 5 samples
+Number of Split name(s) of interest ...........................: 317
+Entries after split name(s) of interest filter ................: 217,560 (704,977 were removed) [5006 genes remaining]
+Total number of variable positions in samples .................: FAGR_M16: 79923; FAGR_M17: 75581; FAGR_M18: 3271; FAGR_M19: 46668; FAGR_M20:
+                                                                 12117
+
+WARNING
+================================================================
+Only some comprehensive variability metrics can be computed without `--quince-
+mode`
+
+Num entries reported ..........................................: 217,560
+Output File ...................................................: var_cdn_sp_018_FAGR
+Num CDN positions reported ....................................: 137,569
+
+✓ anvi-gen-variability-profile took 0:00:29.964055
+
+
+
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/THOC$ anvi-gen-variability-profile -p THOC-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_THOC -b M_sp_018 --engine CDN -o var_cdn_sp_018_THOC
+Contigs DB ....................................................: Initialized: ../../anvio_artifacts/all_genomes-CONTIGS.db (v. 21)               
+Samples available .............................................: THOC_M06, THOC_M07, THOC_M08, THOC_M09, THOC_M10                                
+Variability data ..............................................: 1,410,128 entries in 36,204 splits across 5 samples                             
+Number of Split name(s) of interest ...........................: 317
+Entries after split name(s) of interest filter ................: 240,639 (1,169,489 were removed) [4840 genes remaining]                         
+Total number of variable positions in samples .................: THOC_M06: 4967; THOC_M07: 45553; THOC_M08: 11342; THOC_M09: 102736; THOC_M10:
+                                                                 76041
+                                                                                                                                                 
+WARNING
+================================================================
+Only some comprehensive variability metrics can be computed without `--quince-
+mode`
+
+Num entries reported ..........................................: 240,639                                                                         
+Output File ...................................................: var_cdn_sp_018_THOC
+Num CDN positions reported ....................................: 159,325
+
+✓ anvi-gen-variability-profile took 0:00:41.168501
+
+
+
+---- Import 5 var. profiles in R to combine
+
+# See script 'selection.Rmd'.
+
+
+---- pN/pS ratio (M.Sc.)
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_018.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db -o pNpS_sp_018 --min-coverage 10
+
+
+---- pN/pS ratio (article)
+
+The '-o pNpS_sp_018-03' is the best setting, to be used for other Methylo species.
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_018.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0.05 --min-coverage 10 --minimum-num-variants 10 --comparison consensus -o pNpS_sp_018-03
+
+
+
+Below are tests :
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_018.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0.05 --min-coverage 10 --minimum-num-variants 10 --comparison popular_consensus -o pNpS_sp_018-02
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_018.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0.05 --min-coverage 10 --comparison popular_consensus -o pNpS_sp_018-04
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_018.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-coverage 10 --comparison consensus -o pNpS_sp_018-05
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_018.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0.05 --min-coverage 10 --comparison consensus -o pNpS_sp_018-06
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_018.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0.05 --min-coverage 10 --minimum-num-variants 20 --comparison consensus -o pNpS_sp_018-07
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_018.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0 --min-coverage 10 --minimum-num-variants 20 --comparison consensus -o pNpS_sp_018-08
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_018.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0 --min-coverage 10 --minimum-num-variants 30 --comparison consensus -o pNpS_sp_018-09
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_018.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0.05 --min-coverage 10 --minimum-num-variants 15 --comparison consensus -o pNpS_sp_018-10
+
+
+#########################################################################################################
+
+
+-- Selection analyses on M. sp. 021
+
+
+---- Generate variability profiles ('variability-profile-txt') for each host_species samples
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ABBA$ anvi-gen-variability-profile -p ABBA-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_ABBA -b M_sp_021 --engine CDN -o var_cdn_sp_021_ABBA
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ACSA$ anvi-gen-variability-profile -p ACSA-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_ACSA -b M_sp_021 --engine CDN -o var_cdn_sp_021_ACSA
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/COCO$ anvi-gen-variability-profile -p COCO-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_COCO -b M_sp_021 --engine CDN -o var_cdn_sp_021_COCO
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/FAGR$ anvi-gen-variability-profile -p FAGR-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_FAGR -b M_sp_021 --engine CDN -o var_cdn_sp_021_FAGR
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/THOC$ anvi-gen-variability-profile -p THOC-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_THOC -b M_sp_021 --engine CDN -o var_cdn_sp_021_THOC
+
+
+---- Import 5 var. profiles in R to combine
+
+# See script 'selection.Rmd'.
+
+
+---- pN/pS ratio (M.Sc.)
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_021.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db -o pNpS_sp_021 --min-coverage 10
+
+
+---- pN/pS ratio (article)
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_021.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0.05 --min-coverage 10 --minimum-num-variants 10 --comparison consensus -o pNpS_sp_021-03
+
+
+
+#########################################################################################################
+
+
+-- Selection analyses on M. sp. 022
+
+
+---- Generate variability profiles ('variability-profile-txt') for each host_species samples
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ABBA$ anvi-gen-variability-profile -p ABBA-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_ABBA -b M_sp_022 --engine CDN -o var_cdn_sp_022_ABBA
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ACSA$ anvi-gen-variability-profile -p ACSA-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_ACSA -b M_sp_022 --engine CDN -o var_cdn_sp_022_ACSA
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/COCO$ anvi-gen-variability-profile -p COCO-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_COCO -b M_sp_022 --engine CDN -o var_cdn_sp_022_COCO
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/FAGR$ anvi-gen-variability-profile -p FAGR-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_FAGR -b M_sp_022 --engine CDN -o var_cdn_sp_022_FAGR
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/THOC$ anvi-gen-variability-profile -p THOC-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_THOC -b M_sp_022 --engine CDN -o var_cdn_sp_022_THOC
+
+
+---- Import 5 var. profiles in R to combine
+
+# See script 'selection.Rmd'.
+
+
+---- pN/pS ratio (M.Sc.)
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_022.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db -o pNpS_sp_022 --min-coverage 10
+
+
+---- pN/pS ratio (article)
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_022.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0.05 --min-coverage 10 --minimum-num-variants 10 --comparison consensus -o pNpS_sp_022-03
+
+
+#########################################################################################################
+
+
+-- Selection analyses on M. sp. 024
+
+---- Generate variability profiles ('variability-profile-txt') for each host_species samples
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ABBA$ anvi-gen-variability-profile -p ABBA-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_ABBA -b M_sp_024 --engine CDN -o var_cdn_sp_024_ABBA
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ACSA$ anvi-gen-variability-profile -p ACSA-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_ACSA -b M_sp_024 --engine CDN -o var_cdn_sp_024_ACSA
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/COCO$ anvi-gen-variability-profile -p COCO-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_COCO -b M_sp_024 --engine CDN -o var_cdn_sp_024_COCO
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/FAGR$ anvi-gen-variability-profile -p FAGR-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_FAGR -b M_sp_024 --engine CDN -o var_cdn_sp_024_FAGR
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/THOC$ anvi-gen-variability-profile -p THOC-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_THOC -b M_sp_024 --engine CDN -o var_cdn_sp_024_THOC
+
+
+---- Import 5 var. profiles in R to combine
+
+# See script 'selection.Rmd'.
+
+
+---- pN/pS ratio (M.Sc.)
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_024.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db -o pNpS_sp_024 --min-coverage 10
+
+
+---- pN/pS ratio (article)
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_024.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0.05 --min-coverage 10 --minimum-num-variants 10 --comparison consensus -o pNpS_sp_024-03
+
+
+#########################################################################################################
+
+
+-- Metabolism completeness analyses
+
+
+--- By Methylobacterium species
+
+
+---- ABBA
+
+By Methylobacterium species
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-estimate-metabolism -c ../anvio_artifacts/all_genomes-CONTIGS.db -p ./ABBA/ABBA-MERGED/PROFILE.db -C Methylobacterium_Species_for_ABBA -O ABBA_by_species --output-modes modules --add-coverage --kegg-data-dir /mnt/storage/jocelyn/KEGG
+
+
+---- ACSA
+
+By Methylobacterium species
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-estimate-metabolism -c ../anvio_artifacts/all_genomes-CONTIGS.db -p ./ACSA/ACSA-MERGED/PROFILE.db -C Methylobacterium_Species_for_ACSA -O ACSA_by_species --output-modes modules --add-coverage --kegg-data-dir /mnt/storage/jocelyn/KEGG
+
+
+---- COCO
+
+By Methylobacterium species
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-estimate-metabolism -c ../anvio_artifacts/all_genomes-CONTIGS.db -p ./COCO/COCO-MERGED/PROFILE.db -C Methylobacterium_Species_for_COCO -O COCO_by_species --output-modes modules --add-coverage --kegg-data-dir /mnt/storage/jocelyn/KEGG
+
+
+---- FAGR
+
+By Methylobacterium species
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-estimate-metabolism -c ../anvio_artifacts/all_genomes-CONTIGS.db -p ./FAGR/FAGR-MERGED/PROFILE.db -C Methylobacterium_Species_for_FAGR -O FAGR_by_species --output-modes modules --add-coverage --kegg-data-dir /mnt/storage/jocelyn/KEGG
+
+
+---- THOC
+
+By Methylobacterium species
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-estimate-metabolism -c ../anvio_artifacts/all_genomes-CONTIGS.db -p ./THOC/THOC-MERGED/PROFILE.db -C Methylobacterium_Species_for_THOC -O THOC_by_species --output-modes modules --add-coverage --kegg-data-dir /mnt/storage/jocelyn/KEGG
+
+
+
+--- For all genes mapped to the Methylobacterium pangenome, for only one host, to get the module levels' order
+
+
+anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-estimate-metabolism -c ../anvio_artifacts/all_genomes-CONTIGS.db -p ./ABBA/ABBA-MERGED/PROFILE.db -O ABBA_metapan --output-modes modules --add-coverage --kegg-data-dir /mnt/storage/jocelyn/KEGG
+
+
+
+--- For all genes mapped to the Methylobacterium pangenome, for all host species (NOT DONE YET!)
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ nano estim-metabol.sh
+
+anvi-estimate-metabolism -c ../anvio_artifacts/all_genomes-CONTIGS.db -p ./ABBA/ABBA-MERGED/PROFILE.db -O ABBA_metapan --output-modes modules --add-coverage --kegg-data-dir /mnt/storage/jocelyn/KEGG
+
+anvi-estimate-metabolism -c ../anvio_artifacts/all_genomes-CONTIGS.db -p ./ACSA/ACSA-MERGED/PROFILE.db -O ACSA_metapan --output-modes modules --add-coverage --kegg-data-dir /mnt/storage/jocelyn/KEGG
+
+anvi-estimate-metabolism -c ../anvio_artifacts/all_genomes-CONTIGS.db -p ./COCO/COCO-MERGED/PROFILE.db -O COCO_metapan --output-modes modules --add-coverage --kegg-data-dir /mnt/storage/jocelyn/KEGG
+
+anvi-estimate-metabolism -c ../anvio_artifacts/all_genomes-CONTIGS.db -p ./FAGR/FAGR-MERGED/PROFILE.db -O FAGR_metapan --output-modes modules --add-coverage --kegg-data-dir /mnt/storage/jocelyn/KEGG
+
+anvi-estimate-metabolism -c ../anvio_artifacts/all_genomes-CONTIGS.db -p ./THOC/THOC-MERGED/PROFILE.db -O THOC_metapan --output-modes modules --add-coverage --kegg-data-dir /mnt/storage/jocelyn/KEGG
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ bash estim-metabol.sh
