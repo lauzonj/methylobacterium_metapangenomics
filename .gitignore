@@ -79,9 +79,6 @@ rsconnect/
 # Figures
 ../figures/
 
-# TRY data
-TRY-36881.txt
-
 # Variability profiles and pN/pS data
 data_imported/variability_profile_all_samples_M_sp_*
 data_imported/pNpS_sp_*
