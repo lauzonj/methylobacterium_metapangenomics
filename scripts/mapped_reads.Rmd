@@ -1,0 +1,350 @@
+---
+title: "mapped_reads_raref"
+output: html_document
+date: "2024-04-24"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+################################################################################
+
+# Libraries
+```{r}
+library(rstatix)
+library(fitdistrplus)
+library(ggplot2)
+library(extrafont)
+```
+
+################################################################################
+
+# Import data
+```{r}
+reads.data <- read.delim("../data_imported/nb_reads.txt", header = TRUE, sep = "\t", dec = ",", row.names = 1)
+```
+
+
+################################################################################
+
+# Inspect distributions
+
+## Raw pairs
+```{r}
+hist(reads.data$raw_pairs, breaks = 25)
+descdist(reads.data$raw_pairs, discrete = FALSE)
+fit.norm <- fitdist(reads.data$raw_pairs, "norm")
+plot(fit.norm)
+shapiro.test(reads.data$raw_pairs)
+```
+Raw pairs data is normally distributed.
+
+## Filtered pairs 
+```{r}
+hist(reads.data$filtered_pairs, breaks = 25)
+descdist(reads.data$filtered_pairs, discrete = FALSE)
+fit.norm <- fitdist(reads.data$filtered_pairs, "norm")
+plot(fit.norm)
+shapiro.test(reads.data$filtered_pairs)
+```
+Filtered pairs data is normally distributed.
+
+## Mapped reads
+```{r}
+hist(reads.data$mapped_reads, breaks = 25)
+descdist(reads.data$mapped_reads, discrete = FALSE)
+fit.norm <- fitdist(reads.data$mapped_reads, "norm")
+plot(fit.norm)
+shapiro.test(reads.data$mapped_reads)
+fit.lnorm <- fitdist(reads.data$mapped_reads, "lnorm")
+plot(fit.lnorm)
+fit.lnorm$aic
+# test
+fit.norm.log <- fitdist(log(reads.data$mapped_reads), "norm")
+plot(fit.norm.log)
+fit.norm.log$aic
+shapiro.test(log(reads.data$mapped_reads))
+```
+Mapped reads data is log-normal distributed. Log transformation is normal.
+
+## Mapped reads %
+```{r}
+hist(reads.data$mapped_reads_., breaks = 25)
+descdist(reads.data$mapped_reads_., discrete = FALSE)
+fit.norm <- fitdist(reads.data$mapped_reads_., "norm")
+plot(fit.norm)
+shapiro.test(reads.data$mapped_reads_.)
+fit.lnorm <- fitdist(reads.data$mapped_reads_., "lnorm")
+plot(fit.lnorm)
+fit.lnorm$aic
+# test
+fit.norm.log <- fitdist(log(reads.data$mapped_reads_.), "norm")
+plot(fit.norm.log)
+fit.norm.log$aic
+shapiro.test(log(reads.data$mapped_reads_.))
+```
+Mapped reads % data is log-normal distributed. Log transformation is normal.
+
+
+################################################################################
+
+# Filtered pairs ~ host species
+
+Import metadata
+```{r}
+metadata <- read.delim("/mnt/storage/jocelyn/msc/msc_detection_coverage/data_imported/samples_metadata.txt", header = TRUE, sep = "\t", dec = ".", row.names = 1)
+metadata <- metadata %>% arrange(row.names(.))
+metadata <- metadata %>% mutate(across(c(plant_clade,plant_order,plant_family,host_species,plot,tree,leaf_wash_batch,extraction_batch), as.factor))
+reads.data$host_species <- metadata$host_species
+metadata$host_species <- factor(x = metadata$host_species, levels = c("ABBA","THOC","ACSA","FAGR","COCO"))
+reads.data$host_species <- factor(x = reads.data$host_species, levels = c("ABBA","THOC","ACSA","FAGR","COCO"))
+```
+
+Check if number of quality filtered reads differ by host species
+```{r}
+summary(lm(reads.data$filtered_pairs ~ metadata$host_species))
+anova(lm(reads.data$filtered_pairs ~ metadata$host_species))
+plot(lm(reads.data$filtered_pairs ~ metadata$host_species))
+plot(reads.data$filtered_pairs ~ metadata$host_species)
+```
+
+ggplot
+```{r}
+reads.data.ggplot <- reads.data
+reads.data.ggplot$host_species <- metadata$host_species
+reads.data.ggplot$filtered_pairs <- reads.data.ggplot$filtered_pairs/1000000
+
+ggplot(reads.data.ggplot, aes(x = host_species, y = filtered_pairs)) +
+geom_boxplot(alpha = 1, aes(fill = host_species), show.legend = FALSE, outlier.shape = NA)+
+geom_point(aes(color = host_species), 
+           position = position_jitter(0.075), 
+           shape = 16, 
+           size = 3, show.legend = FALSE)+
+#ylim(50,125)+
+#scale_fill_manual(values=c("turquoise1","red1", "gold1","orchid1","limegreen"))+
+#scale_fill_manual(values=c("#3471A9","#CC1E81","#343776","#E17A3C","#1EA670"))+
+#scale_fill_manual(values=c("#4797E4","#CA0E78","#6104BB","#F39635","#1EA670"))+
+scale_fill_manual(values=c("#63AFF9","#1EA670","#CA0E78","#F39635","#6104BB"))+
+#scale_fill_manual(values=c("#63B9F9","#CA0E78","#6903CC","#F39635","#1EA670"))+
+#scale_color_manual(values=c("turquoise1","red1", "gold1","orchid1","limegreen"))+
+scale_color_manual(values=c("black","black","black","black","black"))+
+labs(x = "Host Species", 
+     y = "Filtered read pairs (M)")+
+scale_x_discrete(labels = c("ABBA" = "A. balsamea", "THOC" = "T. occidentalis","ACSA" = "A. Saccharum", "FAGR" = "F. grandifolia", "COCO" = "C. cornuta"))+
+theme_bw()+
+theme(text = element_text(family = "Arial"),
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 11, angle = 0, 
+                                 hjust = 0.5, vjust = 0, face = "italic"),
+      axis.text.y = element_text(color = "black", size = 11, angle = 0, 
+                                 hjust = 0, vjust = 0.5),  
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, 
+                                 hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, 
+                                 hjust = 0.5, vjust = 2, face = "bold")
+      )
+ggsave("../figures/filtered_read_pairs_by_host.tiff", width = 6, height = 4)
+```
+
+# Conclusion
+Number of filtered reads differ according to host species. ACSA has less reads than
+other host species.
+
+
+################################################################################
+
+# Mapped reads ~ host species
+
+Check if number of mapped reads differ by host species
+```{r}
+# Non transformed data (non normal distribution of variable)
+summary(lm(reads.data$mapped_reads ~ metadata$host_species))
+anova(lm(reads.data$mapped_reads ~ metadata$host_species))
+plot(reads.data$mapped_reads ~ metadata$host_species)
+plot(lm(reads.data$mapped_reads ~ metadata$host_species))
+hist(residuals(lm(reads.data$mapped_reads ~ metadata$host_species)), breaks = 50)
+shapiro.test(residuals(lm(reads.data$mapped_reads ~ metadata$host_species)))
+# Residuals of this model are not normal.
+
+# Log transformed data (normal distribution of variable)
+summary(lm(log(reads.data$mapped_reads) ~ metadata$host_species))
+anova(lm(log(reads.data$mapped_reads) ~ metadata$host_species))
+plot(log(reads.data$mapped_reads) ~ metadata$host_species)
+plot(lm(log(reads.data$mapped_reads) ~ metadata$host_species))
+hist(residuals(lm(log(reads.data$mapped_reads) ~ metadata$host_species)), breaks = 50)
+shapiro.test(residuals(lm(log(reads.data$mapped_reads) ~ metadata$host_species)))
+# Residuals of this model are not normal.
+
+# Kruskal-Wallis test (non parametric, because assumptions of ANOVA are not met)
+kruskal.test(reads.data$mapped_reads ~ metadata$host_species)
+kruskal_effsize(reads.data, mapped_reads ~ host_species)
+```
+
+ggplot
+```{r}
+reads.data.ggplot$mapped_reads <- reads.data.ggplot$mapped_reads/1000000
+
+ggplot(reads.data.ggplot, aes(x = host_species, y = mapped_reads)) +
+geom_boxplot(alpha = 1, aes(fill = host_species), show.legend = FALSE, outlier.shape = NA)+
+geom_point(aes(color = host_species), 
+           position = position_jitter(0.075), 
+           shape = 16, 
+           size = 3, show.legend = FALSE)+
+scale_fill_manual(values=c("#63AFF9","#1EA670","#CA0E78","#F39635","#6104BB"))+
+scale_color_manual(values=c("black","black","black","black","black"))+
+labs(x = "Host Species", 
+     y = "Reads mapped to pangenome (M)")+
+scale_x_discrete(labels = c("ABBA" = "A. balsamea", "THOC" = "T. occidentalis","ACSA" = "A. Saccharum", "FAGR" = "F. grandifolia", "COCO" = "C. cornuta"))+
+theme_bw()+
+theme(text = element_text(family = "Arial"),
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 11, angle = 0, 
+                                 hjust = 0.5, vjust = 0, face = "italic"),
+      axis.text.y = element_text(color = "black", size = 11, angle = 0, 
+                                 hjust = 0, vjust = 0.5),  
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, 
+                                 hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, 
+                                 hjust = 0.5, vjust = 2, face = "bold")
+      )
+ggsave("../figures/mapped_reads_by_host.tiff", width = 6, height = 4)
+```
+
+# Conclusion
+Number of mapped reads to Methylobacterium differ according to host species. COCO has more Methylobacterium reads than other host species.
+
+################################################################################
+
+# % Mapped reads ~ host species
+
+Check if % of mapped reads differ by host species
+```{r}
+# Non transformed data (non normal distribution of variable)
+summary(lm(reads.data$mapped_reads_. ~ metadata$host_species))
+anova(lm(reads.data$mapped_reads_. ~ metadata$host_species))
+plot(reads.data$mapped_reads_. ~ metadata$host_species)
+plot(lm(reads.data$mapped_reads_. ~ metadata$host_species))
+hist(residuals(lm(reads.data$mapped_reads_. ~ metadata$host_species)), breaks = 50)
+shapiro.test(residuals(lm(reads.data$mapped_reads_. ~ metadata$host_species)))
+# Residuals of this model are not normal.
+
+# Log transformed data (normal distribution of variable)
+summary(lm(log(reads.data$mapped_reads_.) ~ metadata$host_species))
+anova(lm(log(reads.data$mapped_reads_.) ~ metadata$host_species))
+plot(log(reads.data$mapped_reads_.) ~ metadata$host_species)
+plot(lm(log(reads.data$mapped_reads_.) ~ metadata$host_species))
+hist(residuals(lm(log(reads.data$mapped_reads_.) ~ metadata$host_species)), breaks = 50)
+shapiro.test(residuals(lm(log(reads.data$mapped_reads_.) ~ metadata$host_species)))
+# Residuals of this model are not normal.
+
+# Kruskal-Wallis test (non parametric, because assumptions of ANOVA are not met)
+kruskal.test(reads.data$mapped_reads_. ~ metadata$host_species)
+kruskal_effsize(reads.data, mapped_reads_. ~ host_species)
+```
+
+ggplot 
+```{r}
+ggplot(reads.data.ggplot, aes(x = host_species, y = mapped_reads_.)) +
+geom_boxplot(alpha = 1, aes(fill = host_species), show.legend = FALSE, outlier.shape = NA)+
+geom_point(aes(color = host_species), 
+           position = position_jitter(0.075), 
+           shape = 16, 
+           size = 3, show.legend = FALSE)+
+scale_fill_manual(values=c("#63AFF9","#1EA670","#CA0E78","#F39635","#6104BB"))+
+scale_color_manual(values=c("black","black","black","black","black"))+
+labs(x = "Host Species", 
+     y = "Methylobacterium reads (%)")+
+scale_x_discrete(labels = c("ABBA" = "A. balsamea", "THOC" = "T. occidentalis","ACSA" = "A. Saccharum", "FAGR" = "F. grandifolia", "COCO" = "C. cornuta"))+
+theme_bw()+
+theme(text = element_text(family = "Arial"),
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 11, angle = 0, 
+                                 hjust = 0.5, vjust = 0, face = "italic"),
+      axis.text.y = element_text(color = "black", size = 11, angle = 0, 
+                                 hjust = 0, vjust = 0.5),  
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, 
+                                 hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, 
+                                 hjust = 0.5, vjust = 2, face = "bold")
+      )
+ggsave("../figures/percent_reads_mapped_by_host.tiff", width = 6, height = 4)
+```
+
+
+################################################################################
+
+# Mapped reads ~ filtered reads
+
+## Correlation
+I predict a linear relation because as filtered reads increases, number of mapped reads should 
+linearly increase (unlike number of species detected with increasing sampling effort).
+So I will use Pearson's r and log-transform mapped reads data.
+```{r}
+cor.test(x = reads.data$filtered_pairs, y = log(reads.data$mapped_reads), 
+         method = "pearson")
+cor.test(x = reads.data$filtered_pairs, y = reads.data$mapped_reads, 
+         method = "spearman")
+
+# Verify if I can use p-value for the above test. answer = yes, because models assumptions are met.
+hist(residuals(lm(log(reads.data$mapped_reads) ~ reads.data$filtered_pairs)), breaks = 50)
+shapiro.test(residuals(lm(log(reads.data$mapped_reads) ~ reads.data$filtered_pairs)))
+plot(lm(log(reads.data$mapped_reads) ~ reads.data$filtered_pairs))
+
+# r coefficient for individual host species. do not use p-values since number of samples
+# is too low to verify linear model's assumptions.
+cor.test(x = reads.data$filtered_pairs[1:5], y = log(reads.data$mapped_reads[1:5]), 
+         method = "pearson")
+cor.test(x = reads.data$filtered_pairs[6:10], y = log(reads.data$mapped_reads[6:10]), 
+         method = "pearson")
+cor.test(x = reads.data$filtered_pairs[11:15], y = log(reads.data$mapped_reads[11:15]), 
+         method = "pearson")
+cor.test(x = reads.data$filtered_pairs[16:20], y = log(reads.data$mapped_reads[16:20]), 
+         method = "pearson")
+cor.test(x = reads.data$filtered_pairs[21:25], y = log(reads.data$mapped_reads[21:25]), 
+         method = "pearson")
+```
+
+
+## Models (NO NEED TO USE MODELS!)
+Mapped reads ~ Filtered pair (on a sample basis, each point is a sample)
+Linear model to test correlation between number of mapped reads and number of filtered pairs
+```{r}
+summary(lm(log(reads.data$mapped_reads) ~ reads.data$filtered_pairs)) # All samples
+anova(lm(log(reads.data$mapped_reads) ~ reads.data$filtered_pairs))
+summary(lm(log(reads.data$mapped_reads[1:5]) ~ reads.data$filtered_pairs[1:5])) # ABBA
+summary(lm(log(reads.data$mapped_reads[6:10]) ~ reads.data$filtered_pairs[6:10])) # ACSA
+summary(lm(log(reads.data$mapped_reads[11:15]) ~ reads.data$filtered_pairs[11:15])) # COCO
+summary(lm(log(reads.data$mapped_reads[16:20]) ~ reads.data$filtered_pairs[16:20])) # FAGR
+summary(lm(log(reads.data$mapped_reads[21:25]) ~ reads.data$filtered_pairs[21:25])) # THOC
+```
+
+
+## Plots
+```{r}
+par(mfrow=c(3,2), mar = c(4.1, 4.1, 1.1, 2.1)) # mar:bottom,left,top,right
+plot(log(reads.data$mapped_reads) ~ reads.data$filtered_pairs) # All samples
+plot(log(reads.data$mapped_reads[1:5]) ~ reads.data$filtered_pairs[1:5]) # ABBA
+plot(log(reads.data$mapped_reads[6:10]) ~ reads.data$filtered_pairs[6:10]) # ACSA
+plot(log(reads.data$mapped_reads[11:15]) ~ reads.data$filtered_pairs[11:15]) # COCO
+plot(log(reads.data$mapped_reads[16:20]) ~ reads.data$filtered_pairs[16:20]) # FAGR
+plot(log(reads.data$mapped_reads[21:25]) ~ reads.data$filtered_pairs[21:25]) # THOC
+```
+
+################################################################################
+
+# CONCLUSION
+Overall, there seems to be no statistical correlation between the number of mapped reads to Methylobacterium genomes and the number of filtered reads from samples. This would mean that sequencing depth did not affect the mapping results.
+In our experiment, sequencing was thus deep enough.
+
+But there is a tendency in ABBA samples, and maybe THOC samples, for a larger number of mapped reads with increasing number of filtered reads.
+
+Furthermore, regarding the results of 'Filtered reads ~ host species' and 'Mapped reads ~ host species' sections above, rarefaction might be needed before statistical analyses (for all bacteria genera composition and Methylobacterium species composition). To see if possible and how.
+
+################################################################################
