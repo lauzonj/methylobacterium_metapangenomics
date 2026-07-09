@@ -1,18 +1,13 @@
 # methylobacterium_metapangenomics
 
-Scripts for "Metapangenomics reveals host-driven adaptation of Methylobacterium to the phyllosphere"
+R scripts for "Metapangenomics reveals host-driven adaptation of Methylobacterium to the phyllosphere"
 Script author: Jocelyn Lauzon, Département des sciences biologiques, Université du Québec à Montréal
 
-These scripts cover all statistical analyses related to the article.
+These R markdown scripts cover all statistical analyses related to the article.
 
 Scripts should be run in the order listed below.
 
-## Bash script description
-
-anvio.txt
-Covers all steps performed in anvi'o v8. Pangenome construction, metagenomics read mapping. Metapangenome statistics.
-
-## R scripts descriptions
+## R markdown scripts descriptions
 
 
 
