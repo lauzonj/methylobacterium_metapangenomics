@@ -9,13 +9,14 @@ Scripts should be run in the order listed below.
 
 ## R markdown scripts descriptions
 
-
-
-
-
 mapped_reads.Rmd
-Investigate if sequencing was deep enough = yes.
-mapped reads ~ filtered_reads
+Tests for
+paired-end reads ~ host species
+% mapped reads ~ host species
+
+
+
+
 
 genome_cov_homogeneity.Rmd
 Investigate homogeneity of genome coverage and detection = ok.
