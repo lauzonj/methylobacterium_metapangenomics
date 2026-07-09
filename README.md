@@ -1,7 +1,7 @@
 # methylobacterium_metapangenomics
 
 Scripts for "Metapangenomics reveals host-driven adaptation of Methylobacterium to the phyllosphere"
-Author: Jocelyn Lauzon, Département des sciences biologiques, Université du Québec à Montréal
+Script author: Jocelyn Lauzon, Département des sciences biologiques, Université du Québec à Montréal
 
 These scripts cover all statistical analyses related to the article.
 
