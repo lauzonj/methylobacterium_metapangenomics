@@ -7,6 +7,13 @@ These R markdown scripts cover all statistical analyses related to the article.
 
 Scripts should be run in the order listed below.
 
+## Bash script?
+
+Include it?
+How did I do the nb_reads.txt table?
+What are the output files of anvio I used in R scripts?
+
+
 ## R markdown scripts descriptions
 
 mapped_reads.Rmd
