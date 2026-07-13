@@ -1,0 +1,104 @@
+---
+title: "genomes_coverages"
+output: html_document
+date: "2024-07-09"
+---
+
+-################################################################################
+
+# Libraries
+```{r}
+library(tidyverse)
+```
+
+-################################################################################
+
+# Import data
+
+Import anvio mean genome coverage data
+```{r}
+genome.mean.cov <- read.delim("../data/anvio_outputs/ABBA/ABBA_PROFILE-SUMMARY/bins_across_samples/mean_coverage.txt", header = T, sep = "\t", dec = ".")
+genome.mean.cov <- merge(genome.mean.cov, read.delim("../data/anvio_outputs/ACSA/ACSA_PROFILE-SUMMARY/bins_across_samples/mean_coverage.txt", header = T, sep = "\t", dec = "."), by = "bins")
+genome.mean.cov <- merge(genome.mean.cov, read.delim("../data/anvio_outputs/COCO/COCO_PROFILE-SUMMARY/bins_across_samples/mean_coverage.txt", header = T, sep = "\t", dec = "."), by = "bins")
+genome.mean.cov <- merge(genome.mean.cov, read.delim("../data/anvio_outputs/FAGR/FAGR_PROFILE-SUMMARY/bins_across_samples/mean_coverage.txt", header = T, sep = "\t", dec = "."), by = "bins")
+genome.mean.cov <- merge(genome.mean.cov, read.delim("../data/anvio_outputs/THOC/THOC_PROFILE-SUMMARY/bins_across_samples/mean_coverage.txt", header = T, sep = "\t", dec = "."), by = "bins")
+colnames(genome.mean.cov)[1] <- "species"
+rownames(genome.mean.cov) <- genome.mean.cov$species
+genome.mean.cov <- genome.mean.cov[,-1]
+```
+
+Import anvio genome detection data
+```{r}
+genome.detect <- read.delim("../data/anvio_outputs/ABBA/ABBA_PROFILE-SUMMARY/bins_across_samples/detection.txt", header = T, sep = "\t", dec = ".")
+genome.detect <- merge(genome.detect, read.delim("../data/anvio_outputs/ACSA/ACSA_PROFILE-SUMMARY/bins_across_samples/detection.txt", header = T, sep = "\t", dec = "."), by = "bins")
+genome.detect <- merge(genome.detect, read.delim("../data/anvio_outputs/COCO/COCO_PROFILE-SUMMARY/bins_across_samples/detection.txt", header = T, sep = "\t", dec = "."), by = "bins")
+genome.detect <- merge(genome.detect, read.delim("../data/anvio_outputs/FAGR/FAGR_PROFILE-SUMMARY/bins_across_samples/detection.txt", header = T, sep = "\t", dec = "."), by = "bins")
+genome.detect <- merge(genome.detect, read.delim("../data/anvio_outputs/THOC/THOC_PROFILE-SUMMARY/bins_across_samples/detection.txt", header = T, sep = "\t", dec = "."), by = "bins")
+colnames(genome.detect)[1] <- "species"
+rownames(genome.detect) <- genome.detect$species
+genome.detect <- genome.detect[,-1]
+```
+
+-################################################################################
+
+# Distribution plots
+
+## Detection all samples
+
+Arrange data
+```{r}
+all.detect <- as.data.frame(c(genome.detect$ABBA_M11,genome.detect$ABBA_M12,genome.detect$ABBA_M13,genome.detect$ABBA_M14,genome.detect$ABBA_M15,genome.detect$ACSA_M21,genome.detect$ACSA_M22,genome.detect$ACSA_M23,genome.detect$ACSA_M24,genome.detect$ACSA_M25,genome.detect$COCO_M01,genome.detect$COCO_M02,genome.detect$COCO_M03,genome.detect$COCO_M04,genome.detect$COCO_M05,genome.detect$FAGR_M16,genome.detect$FAGR_M17,genome.detect$FAGR_M18,genome.detect$FAGR_M19,genome.detect$FAGR_M20,genome.detect$THOC_M06,genome.detect$THOC_M07,genome.detect$THOC_M08,genome.detect$THOC_M09,genome.detect$THOC_M10))
+colnames(all.detect) <- "detect"
+```
+
+Inspect outliers of log transformed data distribution
+```{r}
+all.detect$detect.log <- log(all.detect$detect)
+hist(all.detect$detect.log, breaks = 200)
+mean <- mean(all.detect$detect.log)
+sd <- sd(all.detect$detect.log)
+all.detect$z <- (all.detect$detect.log - mean)/sd
+# Get detection value of z >= 1.96, and number of genomes
+min(all.detect$detect[all.detect$z >= 1.96])
+length(all.detect$detect[all.detect$z >= 1.96])
+```
+
+Plot non transformed data
+```{r}
+ggplot(all.detect, aes(x = detect)) +
+    geom_histogram(binwidth = 0.001, fill = "black") +
+    geom_vline(xintercept = 0.34, color = "red") + # value at z > 1.96
+    labs(x = "Horizontal coverage (proportion of nucleotides covered ≥ 1X)", y = "Number of genomes") +
+    theme_bw()+
+    theme(text = element_text(),
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 16, angle = 0, hjust = 0.5, vjust = 0),
+      axis.text.y = element_text(color = "black", size = 16, angle = 0, hjust = 0, vjust = 0.5),  
+      axis.title.x = element_text(color = "black", size = 20, angle = 0, hjust = 0.5, vjust = -0.4, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 20, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
+      )
+ggsave("../figures/figure_S1A_genome_horizontal_cov_hist_all_samples.pdf", width = 12, height = 4, limitsize = FALSE)
+```
+
+Plot on log-transformed data.
+```{r}
+ggplot(all.detect, aes(x = detect.log)) +
+    geom_histogram(binwidth = 0.005, fill = "black") +
+    geom_vline(xintercept = -1.07881, color = "red") + # value at z > 1.96
+    labs(x = "Horizontal coverage (log-transformed)", y = "Number of genomes") +
+    theme_bw()+
+    theme(text = element_text(),
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 16, angle = 0, hjust = 0.5, vjust = 0),
+      axis.text.y = element_text(color = "black", size = 16, angle = 0, hjust = 0, vjust = 0.5),  
+      axis.title.x = element_text(color = "black", size = 20, angle = 0, hjust = 0.5, vjust = -0.4, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 20, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
+      )
+ggsave("../figures/figure_S1B_log_genome_horizontal_cov_all_samples.pdf", width = 12, height = 4, limitsize = FALSE)
+```
+
+-################################################################################
