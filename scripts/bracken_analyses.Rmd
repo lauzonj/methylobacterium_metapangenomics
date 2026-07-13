@@ -1,0 +1,1476 @@
+---
+title: "bracken_analyses"
+output: html_document
+date: "2024-04-23"
+---
+
+-################################################################################
+
+## Load libraries
+```{r}
+library(tidyverse)
+library(vegan)
+#library(pairwiseAdonis)
+library(ggrepel)
+library(ggordiplots)
+#library(extrafont)
+#library(phylostratr)
+```
+
+################################################################################
+
+# Import Data
+
+## Bracken
+```{r}
+bracken.import <- read.delim("../data_imported/combined.bracken.txt", header = TRUE, sep = "\t", dec = ".", row.names = 1)
+```
+
+## Reads data
+```{r}
+reads.data <- read.delim("../data_imported/nb_reads.txt", header = TRUE, sep = "\t", dec = ",", row.names = 1)
+```
+
+## Metadata
+```{r}
+metadata <- read.delim("../data_imported/samples_metadata.txt", header = TRUE, sep = "\t", dec = ".", row.names = 1)
+metadata <- metadata %>% arrange(row.names(.))
+metadata <- metadata %>% mutate(across(c(plant_clade,plant_order,plant_family,host_species,plot,tree,leaf_wash_batch,extraction_batch), as.factor))
+metadata$host_species <- factor(x = metadata$host_species, levels = c("ABBA","THOC","ACSA","FAGR","COCO"))
+metadata$shrub_tree <- c("tree","tree","tree","tree","tree","tree","tree","tree","tree","tree","shrub","shrub","shrub","shrub","shrub","tree","tree","tree","tree","tree","tree","tree","tree","tree","tree")
+metadata$shrub_tree <- factor(x = metadata$shrub_tree, levels = c("shrub","tree"))
+metadata$gymno_angio_tree <- c("gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_shrub","angiosperm_shrub","angiosperm_shrub","angiosperm_shrub","angiosperm_shrub","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree")
+metadata$gymno_angio_tree <- factor(x = metadata$gymno_angio_tree, levels = c("gymnosperm_tree","angiosperm_tree","angiosperm_shrub"))
+metadata.bac.comm <- metadata
+```
+
+
+################################################################################
+
+# Taxonomy
+
+## Export taxonomy ID number for NCBI
+```{r, eval = FALSE}
+#write_file(paste(bracken.import$taxonomy_id, collapse = "\n"), file = "../ncbi_taxonomy_id.txt")
+# load file to: https://www.ncbi.nlm.nih.gov/Taxonomy/TaxIdentifier/tax_identifier.cgi
+```
+
+## Import NCBI taxonomy
+```{r}
+ncbi.tax <- read_delim("../data_imported/ncbi_tax_report.txt")
+ncbi.tax <- ncbi.tax[,-c(1,2,4,6)]
+ncbi.tax <- ncbi.tax %>%
+  mutate(domain = case_when(
+    sapply(strsplit(lineage, " "), tail, 1) == "10239" ~ "Virus",
+    sapply(strsplit(lineage, " "), function(x) tail(x, 2)[1]) == "2" ~ "Bacteria",
+    sapply(strsplit(lineage, " "), function(x) tail(x, 2)[1]) == "2157" ~ "Archaea",
+    sapply(strsplit(lineage, " "), function(x) tail(x, 2)[1]) == "2759" ~ "Eukaryota",
+    TRUE ~ NA_character_  # Keep as NA if no conditions are met
+  ))
+colnames(ncbi.tax) <- c("taxid","Genus","NCBI_lineage","Domain")
+bracken.import <- cbind(bracken.import, ncbi.tax)
+# inspect match between row names and NCBI Genera --> all is good.
+bracken.import[c(which(bracken.import$taxonomy_id != bracken.import$taxid)),]
+bracken.import[c(which(rownames(bracken.import) != bracken.import$Genus)),]
+```
+
+
+################################################################################
+
+# Edit bracken reads dataframe
+
+Build bacterial reads matrix
+```{r}
+bacteria.reads <- bracken.import[bracken.import$Domain == "Bacteria", ]
+bacteria.reads <- bacteria.reads[,-c(1,2,53:56)]
+bacteria.reads <- bacteria.reads[,-c(2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50)] # remove fractions
+colnames(bacteria.reads) <- gsub("_num", "", colnames(bacteria.reads))
+bacteria.reads <- t(bacteria.reads)
+bacteria.reads <- data.frame(bacteria.reads)
+n.reads.bacteria <- sum(rowSums(bacteria.reads)) # Total bacterial reads : 549,194,184
+n.reads.bacteria/sum(reads.data$filtered_pairs) # Bracken assigned reads pairs to bacteria represent 26.35 % of filtered reads
+```
+
+Combine Methylorubrum with Methylobacterium
+```{r}
+bacteria.reads$Methylobacterium <- bacteria.reads$Methylobacterium+bacteria.reads$Methylorubrum
+bacteria.reads <- bacteria.reads[, names(bacteria.reads) != "Methylorubrum"]
+```
+
+
+Build archaeal reads matrix
+```{r}
+archaea.reads <- bracken.import[bracken.import$Domain == "Archaea", ]
+archaea.reads <- archaea.reads[,-c(1,2,53:56)]
+archaea.reads <- archaea.reads[,-c(2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50)] # remove fractions
+colnames(archaea.reads) <- gsub("_num", "", colnames(archaea.reads))
+archaea.reads <- t(archaea.reads)
+archaea.reads <- data.frame(archaea.reads)
+n.reads.archaea <- sum(rowSums(archaea.reads)) # Total archaeal reads : 2,546,218
+n.reads.archaea/(n.reads.archaea+n.reads.bacteria) # Archaeal reads account for 0.4% of total prokaryota reads.
+test <- data.frame(colnames(archaea.reads), colSums(archaea.reads))
+sum(test$colSums.archaea.reads.)
+test$colnames.archaea.reads.
+```
+
+Build prokaryota reads matrix
+```{r}
+prok.reads <- cbind(bacteria.reads, archaea.reads)
+n.reads.prok <- sum(rowSums(prok.reads)) # Total prokl reads : 551,740,402
+```
+
+Build viral reads matrix
+```{r}
+virus.reads <- bracken.import[bracken.import$Domain == "Virus", ]
+virus.reads <- virus.reads[,-c(1,2,53:56)]
+virus.reads <- virus.reads[,-c(2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50)] # remove fractions
+colnames(virus.reads) <- gsub("_num", "", colnames(virus.reads))
+virus.reads <- t(virus.reads)
+virus.reads <- data.frame(virus.reads)
+n.reads.virus <- sum(rowSums(virus.reads)) # Total viral reads : 3,100,582
+n.reads.virus/sum(reads.data$filtered_pairs) # Bracken assigned reads pairs to viruses represent 0.1 % of filtered reads
+```
+
+Build eukaryota reads matrix
+```{r}
+euk.reads <- bracken.import[bracken.import$Domain == "Eukaryota", ]
+euk.reads <- euk.reads[,-c(1,2,53:56)]
+euk.reads <- euk.reads[,-c(2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50)] # remove fractions
+colnames(euk.reads) <- gsub("_num", "", colnames(euk.reads))
+euk.reads <- t(euk.reads)
+euk.reads <- data.frame(euk.reads)
+n.euk.reads <- sum(rowSums(euk.reads)) # Total eukaryota reads : 30,873,349
+n.homo.reads <- sum(euk.reads$Homo)
+contamination.pc <- sum(euk.reads$Homo)/(sum(rowSums(bacteria.reads))+sum(rowSums(archaea.reads))+sum(rowSums(virus.reads))) # 5.6% of read pairs assigned by bracken is contamination by human DNA
+pc.homo <- euk.reads$Homo/(rowSums(bacteria.reads)+rowSums(archaea.reads)+rowSums(virus.reads))
+metadata$pc.homo <- pc.homo
+plot(pc.homo ~ host_species, metadata)
+```
+
+
+################################################################################
+
+# DF SELECTION 
+```{r}
+bracken.reads <- bacteria.reads
+```
+
+
+################################################################################
+
+# Correlation between bracken and pangenome approach for Methylobacterium reads
+
+Note : in kraken and bracken, "reads" are actually pairs of reads (or "paired reads"). So for a correlation between single reads mapped to Methylobacterium pangenome with number of "paired read" assigned to Methylobacterium by kraken/bracken, I must multiply by 2 the counts from bracken.
+
+```{r}
+#lm <- lm(2*bracken.reads[,"Methylobacterium"] ~ poly(reads.data$mapped_reads,2,raw=T))
+lm <- lm(2*bracken.reads[,"Methylobacterium"] ~ reads.data$mapped_reads)
+plot(2*bracken.reads[,"Methylobacterium"] ~ reads.data$mapped_reads) + abline(lm[["coefficients"]][["(Intercept)"]],lm[["coefficients"]][["reads.data$mapped_reads"]])
+summary(lm)
+anova(lm)
+plot(lm)
+hist(residuals(lm), breaks = 25)
+shapiro.test(residuals(lm))
+```
+
+
+################################################################################
+
+# Methylobacterium relative abundance in bacterial communities among hosts
+
+For these analyses, keep all assigned bacterial genera (n = 2065), even though some of them may not be accurately assigned, because we can assume these reads belong to bacteria.
+
+## Exploration
+```{r}
+# number of reads per sample (in millions)
+rowSums(bracken.reads)/1000000
+min(rowSums(bracken.reads))/1000000
+
+# test correlation between assigned reads and filtered reads
+plot(rowSums(bracken.reads) ~ reads.data$filtered_pairs)
+summary(lm(rowSums(bracken.reads) ~ reads.data$filtered_pairs))
+```
+The correlation is strong between the number of assigned bacterial reads and the number of filtered reads
+I must rarefy.
+
+## Rarefying : One random subsampling ("rarefying" sensu Schloss 2024)
+```{r, eval=FALSE}
+rrarefy.comm <- bracken.reads
+length(rrarefy.comm[rrarefy.comm == 10])
+rrarefy.comm[rrarefy.comm == 10] <- 1 # just to make function work!
+rrarefy.comm <- rrarefy(rrarefy.comm, sample = min(rowSums(rrarefy.comm)))
+rrarefy.comm <- data.frame(rrarefy.comm)
+rowSums(bracken.reads)
+rowSums(rrarefy.comm)
+colnames(rrarefy.comm)[colSums(rrarefy.comm) == 0] # no lost of genera. OK, because the focus is only on Methylo relative abundance!
+```
+
+Save rrarefy.comm dataframe for further code rerun. Load RDS.
+```{r}
+#saveRDS(rrarefy.comm, "../rds/rrarefy.comm.rds")
+rrarefy.comm <- readRDS("../rds/rrarefy.comm.rds")
+```
+
+
+## Methylobacterium relative abundances in bacterial communities
+```{r}
+bracken.reads[,"Methylobacterium"]
+rrarefy.comm[,"Methylobacterium"]
+plot(rrarefy.comm[,"Methylobacterium"] ~ bracken.reads[,"Methylobacterium"])
+temp1 <- bracken.reads[,"Methylobacterium"]/rowSums(bracken.reads)*100 # Without rarefying
+temp2 <- rrarefy.comm[,"Methylobacterium"]/rowSums(rrarefy.comm)*100 # With rarefying
+plot(temp2 ~ temp1) + abline(0,1)
+metadata.bac.comm$meth_rel_abund <- rrarefy.comm[,"Methylobacterium"]/rowSums(rrarefy.comm)*100 # With rarefying
+```
+
+## Other abundant genera relative abundances in bacterial communities
+```{r}
+metadata.bac.comm$mycobacterium_rel_abund <- rrarefy.comm[,"Mycobacterium"]/rowSums(rrarefy.comm)*100
+metadata.bac.comm$xanthomonas_rel_abund <- rrarefy.comm[,"Xanthomonas"]/rowSums(rrarefy.comm)*100
+metadata.bac.comm$streptomyces_rel_abund <- rrarefy.comm[,"Streptomyces"]/rowSums(rrarefy.comm)*100
+metadata.bac.comm$sphingomonas_rel_abund <- rrarefy.comm[,"Sphingomonas"]/rowSums(rrarefy.comm)*100
+metadata.bac.comm$pseudomonas_rel_abund <- rrarefy.comm[,"Pseudomonas"]/rowSums(rrarefy.comm)*100
+metadata.bac.comm$hymenobacter_rel_abund <- rrarefy.comm[,"Hymenobacter"]/rowSums(rrarefy.comm)*100
+metadata.bac.comm$spirosoma_rel_abund <- rrarefy.comm[,"Spirosoma"]/rowSums(rrarefy.comm)*100
+metadata.bac.comm$granulicella_rel_abund <- rrarefy.comm[,"Granulicella"]/rowSums(rrarefy.comm)*100
+```
+
+### Mycobacterium
+
+Covariation between bacterial Methylobacterium and Mycobacterium
+```{r}
+#lm.myco <- lm(mycobacterium_rel_abund ~ meth_rel_abund*plant_clade, data = metadata.bac.comm)
+lm.myco <- lm(mycobacterium_rel_abund ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
+summary(lm.myco)
+anova(lm.myco)
+#car::Anova(lm.myco, type = "II")
+car::Anova(lm.myco, type = "III")
+plot(residuals(lm.myco))
+hist(residuals(lm.myco), breaks = 25)
+shapiro.test(residuals(lm.myco))
+#plot(mycobacterium_rel_abund ~ meth_rel_abund*plant_clade, data = metadata.bac.comm)
+plot(mycobacterium_rel_abund ~ meth_rel_abund+shrub_tree, data = metadata.bac.comm)
+abline(lm.myco[["coefficients"]][["(Intercept)"]],lm.myco[["coefficients"]][["meth_rel_abund"]])
+lm.myco2 <- lm(mycobacterium_rel_abund ~ meth_rel_abund, data = metadata.bac.comm[c(1:10,16:25),])
+summary(lm.myco2)
+```
+
+### Xanthomonas
+
+Covariation between bacterial Methylobacterium and Xanthomonas
+```{r}
+#lm.xantho <- lm(xanthomonas_rel_abund ~ meth_rel_abund*plant_clade, data = metadata.bac.comm)
+lm.xantho <- lm(xanthomonas_rel_abund ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
+summary(lm.xantho)
+anova(lm.xantho)
+#car::Anova(lm.xantho, type = "II")
+car::Anova(lm.xantho, type = "III")
+plot(residuals(lm.xantho))
+hist(residuals(lm.xantho), breaks = 25)
+shapiro.test(residuals(lm.xantho))
+plot(xanthomonas_rel_abund ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
+abline(lm2[["coefficients"]][["(Intercept)"]],lm2[["coefficients"]][["meth_rel_abund"]])
+```
+
+#### ggplot Xanthomonas
+```{r}
+data.pred <- metadata.bac.comm
+data.pred$pred.xantho <- predict(lm.xantho)
+
+ggplot(data.pred, aes(x = meth_rel_abund, y = xanthomonas_rel_abund, color = shrub_tree)) +
+  geom_point(size = 3) +
+  geom_line(aes(y = pred.xantho, group = shrub_tree), size = 1) +
+  geom_smooth(method = "lm", aes(group = shrub_tree, fill = shrub_tree), 
+              se = TRUE, linetype = "solid", size = 1) +
+  labs(x = "Methylobacterium relative abundance", y = "Xanthomonas relative abundance") +
+  scale_color_manual(values = c("shrub" = "#6104BB", "tree" = "forestgreen"), name = "Host type", labels = c("Shrub","Tree")) +
+  scale_fill_manual(values = c("shrub" = "#6104BB", "tree" = "forestgreen"), name = "Host type",labels = c("Shrub","Tree")) +
+  theme_bw()+
+  theme(text = element_text(family = "Arial"),
+      legend.justification = c(0.5, 0),
+      legend.text = element_text(size = 10.5),
+      legend.key.size = unit(0.43, "cm"),
+      legend.position = "right", 
+      panel.grid.major = element_blank(), 
+      panel.grid.major.y = element_line(color = "gray90", size = 0.25), 
+      panel.grid.minor.y = element_line(color = "gray90", size = 0.25), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 11, angle = 0, hjust = 0.5, vjust = 0),
+      axis.text.y = element_text(color = "black", size = 11, angle = 0, hjust = 0, vjust = 0.5),  
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
+      )
+ggsave("../figures/Xanthomonas_by_Methylobacterium.tiff", width = 6, height = 4)
+```
+
+### Streptomyces
+
+Covariation between bacterial Methylobacterium and Streptomyces
+```{r}
+#lm.strepto <- lm(streptomyces_rel_abund ~ meth_rel_abund*plant_clade, data = metadata.bac.comm)
+lm.strepto <- lm(streptomyces_rel_abund ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
+summary(lm.strepto)
+anova(lm.strepto)
+car::Anova(lm.strepto, type = "III")
+plot(residuals(lm.strepto))
+hist(residuals(lm.strepto), breaks = 25)
+shapiro.test(residuals(lm.strepto))
+plot(streptomyces_rel_abund ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
+```
+
+### Sphingomonas
+
+Covariation between bacterial Methylobacterium and sphingomonas
+```{r}
+#lm.sphingo <- lm(sphingomonas_rel_abund ~ meth_rel_abund*plant_clade, data = metadata.bac.comm)
+lm.sphingo <- lm(sphingomonas_rel_abund ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
+summary(lm.sphingo)
+anova(lm.sphingo)
+car::Anova(lm.sphingo, type = "III")
+plot(residuals(lm.sphingo)) + abline(0,0)
+hist(residuals(lm.sphingo), breaks = 25)
+shapiro.test(residuals(lm.sphingo))
+plot(sphingomonas_rel_abund ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
+
+lm.sphingo2 <- lm(sphingomonas_rel_abund ~ meth_rel_abund, data = metadata.bac.comm)
+plot(residuals(lm.sphingo2)) + abline(0,0)
+
+```
+
+#### ggplot Sphingomonas
+```{r}
+data.pred$pred.sphingo <- predict(lm.sphingo)
+
+ggplot(data.pred, aes(x = meth_rel_abund, y = sphingomonas_rel_abund)) +
+  geom_point(size = 3) +
+  #geom_line(aes(y = pred.sphingo), size = 1) +
+  geom_smooth(method = "lm",
+              se = TRUE, linetype = "solid", size = 1, color = "black") +
+  labs(x = "Methylobacterium relative abundance", y = "Sphingomonas relative abundance") +
+  theme_bw()+
+  theme(text = element_text(family = "Arial"),
+      legend.justification = c(0.5, 0),
+      legend.text = element_text(size = 10.5),
+      legend.key.size = unit(0.43, "cm"),
+      legend.position = "right", 
+      panel.grid.major = element_blank(), 
+      panel.grid.major.y = element_line(color = "gray90", size = 0.25), 
+      panel.grid.minor.y = element_line(color = "gray90", size = 0.25), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 11, angle = 0, hjust = 0.5, vjust = 0),
+      axis.text.y = element_text(color = "black", size = 11, angle = 0, hjust = 0, vjust = 0.5),  
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
+      )
+ggsave("../figures/Sphingomonas_by_Methylobacterium.tiff", width = 6, height = 4)
+```
+
+### Pseudomonas
+
+Covariation between bacterial Methylobacterium and Pseudomonas
+```{r}
+lm.pseudo <- lm(pseudomonas_rel_abund ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
+summary(lm.pseudo)
+anova(lm.pseudo)
+car::Anova(lm.pseudo, type = "III")
+plot(residuals(lm.pseudo))
+hist(residuals(lm.pseudo), breaks = 25)
+shapiro.test(residuals(lm.pseudo))
+plot(pseudomonas_rel_abund ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
+```
+
+### Hymenobacter
+
+Covariation between bacterial Methylobacterium and Hymenobacter
+```{r}
+lm.hymeno <- lm(log(hymenobacter_rel_abund) ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
+summary(lm.hymeno)
+anova(lm.hymeno)
+car::Anova(lm.hymeno, type = "III")
+plot(residuals(lm.hymeno))
+hist(residuals(lm.hymeno), breaks = 25)
+shapiro.test(residuals(lm.hymeno))
+plot(log(hymenobacter_rel_abund) ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
+```
+#### ggplot Hymenobacter
+```{r}
+data.pred$pred.hymeno <- predict(lm.hymeno)
+
+# Plot the interaction using ggplot2
+ggplot(data.pred, aes(x = meth_rel_abund, y = hymenobacter_rel_abund, color = shrub_tree)) +
+  geom_point(size = 3) +
+  #geom_line(aes(y = pred.hymeno, group = shrub_tree), size = 1) +
+  geom_smooth(method = "lm", aes(group = shrub_tree, fill = shrub_tree), 
+              se = TRUE, linetype = "solid", size = 1) +
+  labs(x = "Age", y = "Dependent Variable (Y)") +
+  theme_minimal() +
+  scale_color_manual(values = c("shrub" = "blue", "tree" = "green")) +
+  scale_fill_manual(values = c("shrub" = "blue", "tree" = "green")) +
+  theme(legend.position = "right")
+```
+
+
+### Spirosoma
+
+Covariation between bacterial Methylobacterium and Spirosoma
+```{r}
+lm.spiro <- lm(spirosoma_rel_abund ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
+summary(lm.spiro)
+anova(lm.spiro)
+car::Anova(lm.spiro, type = "III")
+plot(residuals(lm.spiro))
+hist(residuals(lm.spiro), breaks = 25)
+shapiro.test(residuals(lm.spiro))
+plot(spirosoma_rel_abund ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
+```
+
+
+## Meth abundance X host
+
+### Model
+```{r}
+plot(meth_rel_abund ~ host_species, data = metadata.bac.comm)
+lm <- lm(meth_rel_abund ~ host_species, data = metadata.bac.comm)
+summary(lm)
+anova(lm)
+hist(residuals(lm), breaks = 50)
+shapiro.test(residuals(lm))
+```
+
+### Post-hoc
+```{r}
+# Shrub vs. trees
+
+## Student t-test assumptions : normal distribution of data and equal variance
+hist(metadata.bac.comm[metadata.bac.comm$shrub_tree == "tree",]$meth_rel_abund, breaks = 25)
+shapiro.test(metadata.bac.comm[metadata.bac.comm$shrub_tree == "tree",]$meth_rel_abund)
+hist(metadata.bac.comm[metadata.bac.comm$shrub_tree == "shrub",]$meth_rel_abund, breaks = 25)
+shapiro.test(metadata.bac.comm[metadata.bac.comm$shrub_tree == "shrub",]$meth_rel_abund)
+var(metadata.bac.comm[metadata.bac.comm$shrub_tree == "tree",]$meth_rel_abund)
+sd(metadata.bac.comm[metadata.bac.comm$shrub_tree == "tree",]$meth_rel_abund)
+var(metadata.bac.comm[metadata.bac.comm$shrub_tree == "shrub",]$meth_rel_abund)
+sd(metadata.bac.comm[metadata.bac.comm$shrub_tree == "shrub",]$meth_rel_abund)
+## unequal variance so welch t-test
+t1 <- t.test(meth_rel_abund ~ shrub_tree, data = metadata.bac.comm, var.equal = F)
+
+# Gymno vs. angio trees
+
+## Student t-test assumptions : normal distribution of data and equal variance
+hist(metadata.bac.comm[metadata.bac.comm$gymno_angio_tree == "gymnosperm_tree",]$meth_rel_abund, breaks = 25)
+shapiro.test(metadata.bac.comm[metadata.bac.comm$gymno_angio_tree == "gymnosperm_tree",]$meth_rel_abund)
+hist(metadata.bac.comm[metadata.bac.comm$gymno_angio_tree == "angiosperm_tree",]$meth_rel_abund, breaks = 25)
+shapiro.test(metadata.bac.comm[metadata.bac.comm$gymno_angio_tree == "angiosperm_tree",]$meth_rel_abund)
+var(metadata.bac.comm[metadata.bac.comm$gymno_angio_tree == "gymnosperm_tree",]$meth_rel_abund)
+var(metadata.bac.comm[metadata.bac.comm$gymno_angio_tree == "angiosperm_tree",]$meth_rel_abund)
+## equal variance so student t-test
+t2 <- t.test(meth_rel_abund ~ gymno_angio_tree, data = metadata.bac.comm[c(1:10,16:25),], var.equal = T)
+
+# p-values adjustement
+p.adjust(c(t1[["p.value"]],t2[["p.value"]]), method = "bonferroni")
+```
+
+### Plot
+```{r}
+ggplot(metadata.bac.comm, aes(x = host_species, y = meth_rel_abund)) +
+geom_boxplot(alpha = 1, aes(fill = host_species), show.legend = FALSE, outlier.shape = NA)+
+geom_point(aes(color = host_species), 
+           position = position_jitter(0.075), 
+           shape = 16, 
+           size = 3, show.legend = FALSE)+
+scale_fill_manual(values=c("#63AFF9","#1EA670","#CA0E78","#F39635","#6104BB"))+
+scale_color_manual(values=c("black","black","black","black","black"))+
+labs(x = "Host Species", 
+     y = "Methylobacterium relative abundance (%)")+
+scale_x_discrete(labels = c("ABBA" = "A. balsamea", "THOC" = "T. occidentalis","ACSA" = "A. Saccharum", "FAGR" = "F. grandifolia", "COCO" = "C. cornuta"))+
+ylim(0,20) +
+theme_bw()+
+theme(text = element_text(family = "Arial"),
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 11, angle = 0, hjust = 0.5, vjust = 0, face = "italic"),
+      axis.text.y = element_text(color = "black", size = 11, angle = 0, hjust = 0, vjust = 0.5),  
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
+      )
+ggsave("../figures/Methylo_relative_abundance.tiff", width = 6, height = 4)
+```
+
+
+
+
+
+################################################################################
+
+
+# Community genera composition
+
+## "Others category" = Genera that did not make up a total of 0.5% of bacterial reads across samples.
+```{r}
+rrarefy.comm.w_oth <- rrarefy.comm
+Others.names <- names(colSums(rrarefy.comm.w_oth)[colSums(rrarefy.comm.w_oth) < (0.005 * sum(rrarefy.comm.w_oth))])
+Others <- rowSums(rrarefy.comm.w_oth[, Others.names])
+rrarefy.comm.w_oth <- rrarefy.comm.w_oth[, !(names(rrarefy.comm.w_oth) %in% Others.names)]
+rrarefy.comm.w_oth$Others <- Others
+rowSums(rrarefy.comm)
+rowSums(rrarefy.comm.w_oth)
+```
+
+## List of genera names in taxonomic order
+```{r}
+abund_genera_taxo <- as.data.frame(read_delim("../data_imported/bacterial_genera_taxonomy_from_NCBI.csv"))
+abund_genera_taxo$Genus <- factor(abund_genera_taxo$Genus, levels = unique(abund_genera_taxo$Genus))
+```
+
+
+## Barplot
+```{r}
+abundances <- picante::matrix2sample(rrarefy.comm.w_oth)
+colnames(abundances) <- c("sample","abund","genus")
+abundances$sample <- factor(x = abundances$sample, levels =c ("ABBA_M11","ABBA_M12","ABBA_M13","ABBA_M14","ABBA_M15","THOC_M06","THOC_M07","THOC_M08","THOC_M09","THOC_M10","ACSA_M21","ACSA_M22","ACSA_M23","ACSA_M24","ACSA_M25","FAGR_M16","FAGR_M17","FAGR_M18","FAGR_M19","FAGR_M20","COCO_M01","COCO_M02","COCO_M03","COCO_M04","COCO_M05"))
+abundances$genus <- droplevels(abundances$genus)
+abundances$genus <- factor(x = abundances$genus, levels = abund_genera_taxo$Genus)
+
+palette <- sample(pals::glasbey(28))
+palette8 <- readRDS("../rds/palettes/palette8.rds")
+
+# Composition with abundances
+ggplot(abundances, aes(x = sample, y = abund, fill = genus)) +
+  geom_bar(stat = "identity", position = "fill"
+  ) +
+  labs(x = "Sample", y = "Relative abundance") +
+  scale_fill_manual(values=c(palette8, "grey80"), name = "Bacterial genera") +
+  guides(fill = guide_legend(ncol = 1)) +
+  theme_bw() +
+  theme(text = element_text(family = "Arial"),
+      legend.justification = c(0.5, 1),
+      legend.text = element_text(size = 10.5),
+      legend.key.size = unit(0.43, "cm"),
+      legend.position = "right", 
+      panel.grid.major = element_line(color = "gray90", size = 0.25), 
+      #panel.grid.minor = element_line(color = "lightgray", size = 0.25), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 12, angle = 90, vjust = 0.35, hjust = 1),
+      axis.text.y = element_text(color = "black", size = 11),
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
+      )
+#ggsave("../figures/bacterial_genera_barplot_241220.tiff", width = 8, height = 5.5)
+```
+
+What are the most abundant genera across samples?
+```{r}
+0.0*sum(rrarefy.comm.w_oth)/1000000
+colSums(rrarefy.comm.w_oth)[order(colSums(rrarefy.comm.w_oth), decreasing = TRUE)]
+colSums(rrarefy.comm.w_oth)[order(colSums(rrarefy.comm.w_oth), decreasing = TRUE)]/sum(rrarefy.comm.w_oth)*100 # percentage of genera across all samples
+```
+
+### Covariation matrix (TAKE 1) --> NOT! See TAKE 2!
+```{r}
+# Remove "Others" category
+rrarefy.comm.only.abund.genera <- rrarefy.comm.w_oth[,colnames(rrarefy.comm.w_oth)!="Others"]
+
+# Correlation matrix
+cor_matrix <- cor(rrarefy.comm.only.abund.genera, method = "spearman")
+cor_test <- cor_test(rrarefy.comm.only.abund.genera, method = "spearman")
+
+# Threshold of correlation
+cor_matrix[abs(cor_matrix) < 0.5] <- 0
+
+library(reshape2)
+cor_melted <- melt(cor_matrix)
+ggplot(cor_melted, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile() +
+  scale_y_discrete(limits=rev) +
+  #scale_fill_gradientn(
+  #  name = "Spearman rho",
+  #  colors = c("blue","skyblue","white","white","white","pink","red"),
+  #  #values = scales::rescale(c(-1,0.5,-0.4999999,0,0.49999999,0.5,1)),
+  #  breaks = c(-1,-0.5,-0.4999999,0,0.49999999,0.5,1),
+  #  labels = c("-1","-0.5", "","0","","0.5","1")) +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, name = "Spearman rho") +
+  theme_minimal() +
+  labs(x = "Bacterial genera", y = "Bacterial genera") +
+  theme_bw() +
+  theme(text = element_text(family = "Arial"),
+      legend.justification = c(0.5, 0),
+      legend.text = element_text(size = 10.5),
+      legend.key.size = unit(0.43, "cm"),
+      legend.position = "right", 
+      panel.grid.major = element_line(color = "gray90", size = 0.25), 
+      #panel.grid.minor = element_line(color = "lightgray", size = 0.25), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 12, angle = 90, vjust = 0.35, hjust = 1),
+      axis.text.y = element_text(color = "black", size = 11),
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
+      ) + coord_fixed()
+
+ggsave("../figures/bacterial_genera_covariance.tiff", width = 8, height = 5.5)
+```
+
+
+### Covariation matrix (TAKE 2) --> YES
+```{r}
+library(rstatix)
+
+# Remove "Others" category
+rrarefy.comm.only.abund.genera <- rrarefy.comm.w_oth[,colnames(rrarefy.comm.w_oth)!="Others"]
+
+cor_test_result <- cor_test(rrarefy.comm.only.abund.genera, method = "spearman")
+
+cor_test_result$p <- p.adjust(cor_test_result$p, method = "BH")
+
+#Filter significant correlations (p-value < 0.05)
+cor_test_result_sig <- cor_test_result %>%
+  filter(p < 0.05)
+
+cor_melted_sig <- cor_test_result_sig %>%
+  select(var1, var2, cor) %>%
+  reshape2::melt(id.vars = c("var1", "var2"))
+
+cor_melted_sig$var1 <- factor(cor_melted_sig$var1, levels = abund_genera_taxo[-29,]$Genus)
+
+cor_melted_sig$var2 <- factor(cor_melted_sig$var2, levels = abund_genera_taxo[-29,]$Genus)
+
+ggplot(cor_melted_sig, aes(x = var1, y = var2, fill = value)) +
+  geom_tile() +
+  scale_y_discrete(limits = rev) +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, name = "Spearman rho") +
+  labs(x = "Bacterial genera", y = "Bacterial genera") +
+  theme_bw() +
+  theme(text = element_text(family = "Arial"),
+      legend.justification = c(0.5, 0),
+      legend.text = element_text(size = 10.5),
+      legend.key.size = unit(0.43, "cm"),
+      legend.position = "right", 
+      panel.grid.major = element_line(color = "gray90", size = 0.25), 
+      #panel.grid.minor = element_line(color = "lightgray", size = 0.25), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 12, angle = 90, vjust = 0.35, hjust = 1),
+      axis.text.y = element_text(color = "black", size = 11),
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
+      ) + coord_fixed()
+
+ggsave("../figures/bacterial_genera_covariance_sig.tiff", width = 8, height = 8)
+
+```
+
+Correlation matrices by host species
+```{r}
+cor_gymnosperms <- cor_test(rrarefy.comm.only.abund.genera[c(1:5,21:25),], method = "spearman")
+cor_angiosperms <- cor_test(rrarefy.comm.only.abund.genera[c(6:20),], method = "spearman")
+
+cor_gymno <- cor_gymnosperms %>% filter(var1 != var2)
+cor_angio <- cor_angiosperms %>% filter(var1 != var2)
+
+#cor_gymno <- cor_gymno %>% filter(abs(cor) >= 0.5)
+#cor_angio <- cor_angio %>% filter(abs(cor) >= 0.5)
+
+#cor_gymno <- cor_gymno %>% filter(var1 == "Methylobacterium")
+#cor_angio <- cor_angio%>% filter(var1 == "Methylobacterium")
+
+# test mean absolute correlation between angio and gymno
+
+#cor_gymno$padj <- p.adjust(cor_gymno$p, method = "BH")
+#cor_angio$padj <- p.adjust(cor_angio$p, method = "BH")
+
+#cor_gymno <- cor_gymno %>% filter(padj <= 0.05)
+#cor_angio <- cor_angio %>% filter(padj <= 0.05)
+
+cor_gymno <- as.data.frame(cor_gymno)
+cor_angio <- as.data.frame(cor_angio)
+
+cor_gymno$cor.abs <- abs(cor_gymno$cor)
+cor_angio$cor.abs <- abs(cor_angio$cor)
+
+#hist(cor_gymno$cor.abs, breaks = 100)
+#hist(cor_angio$cor.abs, breaks = 100)
+
+cor_gymno$host_type <- rep("gymno", nrow(cor_gymno))
+cor_angio$host_type <- rep("angio", nrow(cor_angio))
+
+cor.data <- rbind(cor_gymno, cor_angio)
+cor.data$host_type <- as.factor(cor.data$host_type) 
+
+plot(cor.data$cor.abs ~ cor.data$host_type)
+points(cor.data$cor.abs ~ cor.data$host_type)
+
+mean(cor.data[cor.data$host_type =="gymno",]$cor.abs)
+mean(cor.data[cor.data$host_type =="angio",]$cor.abs)
+
+lm <- lm(cor.abs ~ host_type, cor.data)
+summary(lm)
+hist(residuals(lm), breaks =100)
+shapiro.test(residuals(lm))
+
+kruskal.test(cor.abs ~ host_type, data = cor.data)
+rstatix::kruskal_effsize(cor.abs ~ host_type, data = cor.data)
+
+# test positive/negative interactions between angio and gymno
+
+cor_gymno$pos_neg <- ifelse(cor_gymno$cor < 0, "negative", "positive")
+cor_angio$pos_neg <- ifelse(cor_angio$cor < 0, "negative", "positive")
+
+cor_gymno$host_type <- rep("gymno", nrow(cor_gymno))
+cor_angio$host_type <- rep("angio", nrow(cor_angio))
+
+cor.data <- rbind(cor_gymno, cor_angio)
+cor.data$pos_neg <- as.factor(cor.data$pos_neg) 
+cor.data$host_type <- as.factor(cor.data$host_type) 
+
+plot(pos_neg ~ host_type, cor.data)
+
+cor.table <- table(cor.data[,c(7:8)])
+chisq.test(cor.table)
+
+```
+
+
+
+### Co-occurence networks
+
+TAKE 1
+```{r}
+rrarefy.comm.only.abund.genera <- rrarefy.comm.w_oth[,colnames(rrarefy.comm.w_oth)!="Others"]
+str(rrarefy.comm.only.abund.genera)
+
+rrarefy.comm.only.abund.genera <- as.matrix(rrarefy.comm.only.abund.genera)
+
+co_occurrence_matrix <- t(rrarefy.comm.only.abund.genera) %*% rrarefy.comm.only.abund.genera
+co_occurrence_matrix
+
+network <- graph.adjacency(co_occurrence_matrix, mode = "undirected", weighted = TRUE, diag = FALSE)
+summary(network)
+
+plot(network,
+     vertex.size = 10, 
+     vertex.label.cex = 0.5,
+     edge.width = E(network)$weight / 2,  # Scale edge width based on weight
+     main = "Occurrence Network")
+
+```
+
+TAKE 2
+```{r}
+rrarefy.comm.only.abund.genera <- rrarefy.comm.w_oth[,colnames(rrarefy.comm.w_oth)!="Others"]
+
+cor_matrix <- cor(rrarefy.comm.only.abund.genera, method = "spearman")
+
+library(reshape2)
+cor_melted <- melt(cor_matrix)
+ggplot(cor_melted, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, name = "Correlation") +
+  theme_minimal() +
+  labs(title = "Co-Abundance Heatmap", x = "Taxa", y = "Taxa") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Load igraph for network visualization
+library(igraph)
+
+# Create an igraph object from the correlation matrix (threshold to avoid too many edges)
+threshold <- 0.75  # You can adjust this threshold
+cor_matrix[abs(cor_matrix) < threshold] <- 0  # Remove weak correlations
+
+# Create a graph from the correlation matrix
+network <- graph.adjacency(cor_matrix, mode = "undirected", weighted = TRUE, diag = FALSE)
+
+cor_matrix_for_layout <- abs(cor_matrix)
+network_for_layout <- graph.adjacency(cor_matrix_for_layout, mode = "undirected", weighted = TRUE, diag = FALSE)
+
+
+plot(network_for_layout, 
+     vertex.size = 10, 
+     vertex.label.cex = 0.8,
+     edge.width = E(network)$weight * 5,  # Scale edge width by correlation strength
+     edge.color = ifelse(E(network)$weight > 0, "red", "blue"),  # Red for positive, blue for negative
+     layout = layout_with_fr(network_for_layout),  # Force-directed layout
+     main = "Co-Abundance Network (Positive and Negative Correlations)")
+```
+
+
+
+
+
+################################################################################
+
+# Diversity analyses
+
+## Remove 'noise'
+
+Before performing diversity analyses, we will remove all presence (replace with a count of 1) of a genus that is not >= 0.1% of total bacterial reads in a given sample. The rationale is that kraken is known to be not conservative enough. So we assume these 'low abundant' genera detection are actually noise.
+
+```{r}
+bracken.reads.clean <- bracken.reads
+bracken.reads.clean[bracken.reads.clean < (0.001 * rowSums(bracken.reads.clean))] <- 1 # If a genus accounts for less than 0.1% of total bacterial reads in a given sample, its read count is replaced by 1 (so the rarefaction functions can work)
+bracken.reads.clean <- bracken.reads.clean[, colSums(bracken.reads.clean) > 25] # remove genera which are not present >= 0.1% in at least one sample.
+
+## IMPORTANT NOTE : whatever the noise threshold I use (0.01, 0.001, 0.0001), my PERMANOVA and PCoA results are almost exactly the same! (tests with 2 iterations)
+
+# I tested bringing back all values for genera that we kept in the community matrix, but this is not a good idea. First, rarefaction functions of vegan need counts of 1, otherwise they don't work. So we would have to insert a dummy variable. # I tried for alpha diversity, see NOTE after alpha diversity plot.
+# For beta diversity, adding a dummy variable in this case did not change the PERMANOVA and PCoA significantly.
+# AGAIN, in any cases, my PERMANOVA and PCoA results are consistent and robust to the details of my method in this script chunk.
+#bracken.reads.clean.2 <- bracken.reads[, colnames(bracken.reads.clean)]
+#bracken.reads.clean <- bracken.reads.clean.2
+#bracken.reads.clean$dummy <- c(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1)
+
+# Statistics
+# On 'bracken.reads.clean'
+rowSums(bracken.reads.clean)/rowSums(bracken.reads)*100
+mean(rowSums(bracken.reads.clean)/rowSums(bracken.reads)*100)
+sum(bracken.reads.clean)/sum(bracken.reads)*100
+length(colnames(bracken.reads.clean))/length(colnames(bracken.reads))*100
+# By getting rid of the noise, we keep approx. 82.07% of the reads, with 198 (9.59%) genera out of 2065 originally 'detected'
+```
+
+
+## Alpha diversity
+
+### Rarefaction
+```{r, eval=FALSE}
+rowSums(bracken.reads.clean)
+rarefy.alpha <- rarefy(bracken.reads.clean, sample = min(rowSums(bracken.reads.clean)), se = T)
+rarefy.alpha <- data.frame(as.matrix(t(rarefy.alpha)))
+```
+
+Save rarefy.alpha dataframe for further code rerun. Load RDS.
+```{r}
+#saveRDS(rarefy.alpha, "../rds/rarefy.alpha.rds")
+rarefy.alpha <- readRDS("../rds/rarefy.alpha.rds")
+```
+
+```{r}
+rarefy.alpha$non.absence <- 198 - rowSums(bracken.reads.clean == 1)
+rarefy.alpha$nb.reads.clean <- rowSums(bracken.reads.clean)
+```
+
+```{r}
+lm <- lm(rarefy.alpha$S ~ metadata.bac.comm$host_species)
+summary(lm)
+hist(residuals(lm))
+```
+
+```{r}
+plot(rarefy.alpha$S ~ metadata.bac.comm$host_species)
+```
+
+# SUPER DUPER IMPORTANT NOTE
+The way the data is structured, if I keep '1' values for low abundant genera that are kept in my analysis (dataframe 'bracken.reads.clean'), the S (expected richness) values I am not sure they make total sense and if I can trust them. If I add a dummy variable just so the function can work, than the genera richness is the same across all samples.
+Therefore, I don't feel like I can confidently analyze alpha diversity with bracken output, at least for now.
+
+BUT anyhow, is it really important to evaluate genera richness among hosts? not really. Compositional differences are most interesting!
+
+
+
+## Beta diversity
+
+### Rarefaction
+```{r, eval=FALSE}
+bracken.dist <- avgdist(bracken.reads.clean, sample = min(rowSums(bracken.reads.clean)), dmethod = "bray", iteration = 100)
+#saveRDS(bracken.dist, "../rds/bracken_dist_iterations_100.rds")
+```
+
+```{r}
+bracken.dist <- readRDS("../rds/bracken_dist_iterations_100.rds")
+```
+
+
+## PERMANOVA
+```{r}
+bacteria.perm <- adonis2(bracken.dist ~ host_species, data = metadata)
+bacteria.perm
+```
+
+## BETADISPER
+```{r}
+bacteria.disper <- betadisper(bracken.dist, metadata$host_species)
+anova(bacteria.disper)
+plot(bacteria.disper)
+```
+## Pairwise PERMANOVAs
+```{r}
+shrub_tree_PERM <- adonis2(bracken.dist ~ shrub_tree, data = metadata.bac.comm)
+shrub_tree_PERM
+shrub_tree_DISP <- betadisper(bracken.dist, metadata.bac.comm$shrub_tree)
+anova(shrub_tree_DISP)
+plot(shrub_tree_DISP)
+
+#bracken.dist.noCOCO <- avgdist(bracken.reads.clean[c(1:10,16:25),], sample = min(rowSums(bracken.reads.clean[c(1:10,16:25),])), dmethod = "bray", iteration = 100)
+#saveRDS(bracken.dist, "../rds/bracken_dist_iterations_100.rds")
+#bracken.dist.noCOCO <- readRDS("../rds/bracken_dist_iterations_100.rds")
+bracken.dist.noCOCO <- data.frame(as.matrix(bracken.dist))
+bracken.dist.noCOCO <- bracken.dist.noCOCO[c(1:10,16:25),c(1:10,16:25)]
+bracken.dist.noCOCO <- as.dist(as.matrix(bracken.dist.noCOCO), diag = FALSE, upper = FALSE)
+gymno_angio_tree_PERM <- adonis2(bracken.dist.noCOCO ~ gymno_angio_tree, data = metadata.bac.comm[c(1:10,16:25),])
+gymno_angio_tree_PERM
+gymno_angio_tree_DISP <- betadisper(bracken.dist.noCOCO, metadata.bac.comm[c(1:10,16:25),]$gymno_angio_tree)
+anova(gymno_angio_tree_DISP)
+plot(gymno_angio_tree_DISP, label = F)
+
+
+bracken.dist.gymno <- data.frame(as.matrix(bracken.dist))
+bracken.dist.gymno <- bracken.dist.gymno[c(1:5,21:25),c(1:5,21:25)]
+bracken.dist.gymno <- as.dist(as.matrix(bracken.dist.gymno), diag = FALSE, upper = FALSE)
+gymno_PERM <- adonis2(bracken.dist.gymno ~ host_species, data = metadata.bac.comm[c(1:5,21:25),])
+gymno_PERM
+gymno_DISP <- betadisper(bracken.dist.gymno, metadata.bac.comm[c(1:5,21:25),]$host_species)
+anova(gymno_DISP)
+plot(gymno_DISP, label = F)
+
+bracken.dist.angio <- data.frame(as.matrix(bracken.dist))
+bracken.dist.angio <- bracken.dist.angio[c(6:10,16:20),c(6:10,16:20)]
+bracken.dist.angio <- as.dist(as.matrix(bracken.dist.angio), diag = FALSE, upper = FALSE)
+angio_PERM <- adonis2(bracken.dist.angio ~ host_species, data = metadata.bac.comm[c(6:10,16:20),])
+angio_PERM
+angio_DISP <- betadisper(bracken.dist.angio, metadata.bac.comm[c(6:10,16:20),]$host_species)
+anova(angio_DISP)
+plot(angio_DISP, label = F)
+
+
+```
+
+## PCoA
+```{r}
+bacteria.pcoa <- cmdscale(bracken.dist, k =(nrow(bracken.reads.clean) - 1), eig = TRUE)
+pcoa.eig <- eigenvals(bacteria.pcoa) # extract eigenvalues
+pcoa.eig <- abs(pcoa.eig) # absolute values
+sum.pcoa.eig <- sum(pcoa.eig) # total of eigenvalues
+pcoa.prop.exp <- pcoa.eig/sum.pcoa.eig # proportion explained by each axis
+(pcoa.axis1 <- pcoa.prop.exp[1])
+(pcoa.axis2 <- pcoa.prop.exp[2])
+site.scores.pcoa <- scores(bacteria.pcoa) # site scores
+sp.scores.pcoa <- wascores(bacteria.pcoa$points, bracken.reads.clean) # species scores 
+site.scores.pcoa <- data.frame(site.scores.pcoa)
+sp.scores.pcoa <- data.frame(sp.scores.pcoa)
+host_species <- metadata.bac.comm$host_species
+site.scores.pcoa <- cbind(site.scores.pcoa, host_species)
+pcoa.ggordiplot <- gg_ordiplot(bacteria.pcoa, choices = c(1,2), groups = metadata.bac.comm$host_species, kind = "sd", conf = 0.95, pt.size = 3)
+pcoa.ellipses <- pcoa.ggordiplot$df_ellipse # extract confidence ellipse
+```
+
+Plot
+```{r}
+ggplot(data = site.scores.pcoa, 
+         aes(x = Dim1, y = Dim2), 
+         color = host_species) + 
+  expand_limits(x=c(-0.4,0.4), y=c(-0.2,0.3)) +
+  geom_point(aes(shape = host_species, color = host_species), show.legend = T, 
+             size=3) +
+  xlab(paste("PCoA1 (",round(pcoa.axis1*100, digits = 2),"%)", sep = "")) +
+  ylab(paste("PCoA2 (",round(pcoa.axis2*100, digits = 2),"%)", sep = "")) +
+  #geom_text_repel(data = sp.scores.pcoa, 
+  #                aes(x = X1, y = X2), 
+  #                label=rownames(sp.scores.pcoa), 
+  #                color = "black") +
+  scale_shape_manual(values = c(16,16,16,16,16)) +
+  guides(shape = "none") +
+  geom_path(data = pcoa.ellipses, 
+            aes(x = x, y = y, color = Group), 
+            show.legend = FALSE) + 
+  scale_color_manual(values=c("#63AFF9","#1EA670","#CA0E78","#F39635","#6104BB"), name = "Host species", labels = c("ABBA" = expression(italic("A. balsamea")), "THOC" = expression(italic("T. occidentalis")),"ACSA" = expression(italic("A. Saccharum")), "FAGR" = expression(italic("F. grandifolia")), "COCO" = expression(italic("C. cornuta")))) +
+  theme_bw() +
+  theme(text = element_text(family = "Arial"),
+      legend.justification = c(0.5, 0),
+      legend.text = element_text(size = 11),
+      panel.grid.major = element_line(color = "gray90", size = 0.25), 
+      #panel.grid.minor = element_line(color = "lightgray", size = 0.25), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 11, angle = 0, hjust = 0.5, vjust = 0),
+      axis.text.y = element_text(color = "black", size = 11, angle = 0, hjust = 0, vjust = 0.5),  
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
+      )
+ggsave("../figures/bacteria_pcoa.tiff", width = 6, height = 4)
+```
+
+################################################################################
+
+dbRDA tests
+
+### dbRDA
+```{r}
+dbrda <- dbrda(bracken.dist ~ host_species, data = metadata.bac.comm)
+summary(dbrda)
+plot(dbrda)
+anova.cca(dbrda, by = "terms", permutations = 999)
+RsquareAdj(dbrda)
+```
+
+Extract proportions explained by axes 1 and 2
+```{r}
+dbrda.eig <- eigenvals(dbrda, model = "constrained") # extract eigenvalues
+dbrda.eig <- abs(dbrda.eig) # calculate eigenvalues absolute values
+dbrda.eig.sum <- sum(dbrda.eig) # total of all eigenvalues
+dbrda.prop.exp <- dbrda.eig/dbrda.eig.sum # proportion explained by every axes
+(dbrda.axis1 <- dbrda.prop.exp[1])
+(dbrda.axis2 <- dbrda.prop.exp[2])
+```
+
+Extract dbRDA scores
+```{r}
+dbrda.site.scores <- data.frame(scores(dbrda, display = "sites", scaling = "sites")) # site scores
+#sppscores(dbrda) <- GC.agg.acc.count.rar
+#dbrda.sp.scores <- data.frame(scores(dbrda, display = "species", scaling = "sites")) # species scores 
+#dbrda.sp.scores.DA <- dbrda.sp.scores[rownames(DA.KM),] # Keep only KEGG Module which are differentially abundant in DESeq2 analysis
+```
+
+Add host_species factor in site scores data frame for ggplot 
+```{r}
+host_species <- metadata.bac.comm$host_species
+dbrda.site.scores <- cbind(dbrda.site.scores,host_species)
+rm(host_species)
+```
+
+dbRDA plot
+```{r}
+dbrda.plot <- 
+  ggplot(data = dbrda.site.scores, 
+         aes(x = dbRDA1, y = dbRDA2), 
+         color = host_species) + 
+  expand_limits(x=c(-0.5,0.5), y=c(-0.3,0.4)) +
+  geom_point(aes(shape = host_species, color = host_species), 
+             size=4) +
+  xlab("dbRDA 1 (%)") + 
+  ylab("dbRDA 2 (%)") +
+  #geom_text(data = dbrda.sp.scores.DA, 
+  #                aes(x = CAP1, y = CAP2), 
+  #                label=rownames(dbrda.sp.scores.DA), 
+  #                color = "black") +
+  #geom_segment(data = vect.pcoa.env, 
+  #             aes(x = 0, xend = Dim1, y = 0, yend = Dim3),
+  #             arrow = arrow(length = unit(0.75, "cm")), 
+  #             color = "black") +
+  #geom_text_repel(data = vect.pcoa.env, 
+  #                aes(x = Dim1, y = Dim3, label = variable.env, size = 3), 
+  #                color = "firebrick1", 
+  #                fontface = "bold", 
+  #                show.legend = FALSE) +
+  scale_shape_manual(values = c(17,16,16,16,17)) +
+  #geom_path(data = pcoa1.ellipses, 
+  #          aes(x = x, y = y, color = Group), 
+  #          show.legend = FALSE) + 
+  scale_color_manual(values=c("turquoise1","red1", "gold1","orchid1","limegreen")) +
+  dark_theme_linedraw() +
+  theme(axis.text.x = element_text(color = "grey80", size = 10, angle = 0, hjust = 0.5, vjust = 0),
+        axis.text.y = element_text(color = "grey80", size = 10, angle = 0, hjust = 0, vjust = 0.5),  
+        axis.title.x = element_text(color = "grey80", size = 14, angle = 0, hjust = 0.5, vjust = -1),
+        axis.title.y = element_text(color = "grey80", size = 14, angle = 90, hjust = 0.5, vjust = 1),
+        plot.background = element_rect(fill = "grey15"),
+        panel.background = element_blank(),
+        legend.background = element_blank(),
+        panel.grid.major = element_line(size = 0, linetype = 'solid', colour = "grey90"), 
+        panel.grid.minor = element_line(size = 0, linetype = 'solid', colour = "grey90"))
+dbrda.plot
+#ggsave("../dbrda.plot.tiff")
+```
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
+# --------- BACKUP BELOW
+BELOW NOT USED FOR NOW, KEPT AS BACKUP
+
+
+
+
+```{r}
+
+
+
+
+# In summary, we kept only genera (and their read counts) that represented a relative abundance > 0.5% in at least one sample.
+
+rowSums(bracken.reads)
+rowSums(bracken.reads.pm)
+rowSums(bracken.reads.2)
+
+# % reads lost 
+(1 - (rowSums(bracken.reads.2)/rowSums(bracken.reads)))*100
+
+# NOW, IN NEED TO LUMP LOST GENERA INTO "OTHER"CATEGORY TO USE TO VISUALIZE RELATIVE ABUNDANCES (BARPLOT) AND TO COMPARE RELATIVE ABUNDANCE OF METHYLO AMONG HOST SPECIES. THEN DELETE THIS OTHER COLUMN FOR ALPHA AND BETA DIVERSITY.
+
+bracken.reads.others <- bracken.reads[,setdiff(colnames(bracken.reads), colnames(bracken.reads.2))]
+braken.comm.r.others.2 <- data.frame(rowSums(bracken.reads.others))
+colnames(braken.comm.r.others.2) <- "Others"
+bracken.reads.3 <- bracken.reads.2
+bracken.reads.3$Others <- braken.comm.r.others.2$Others
+
+
+bracken.comm <- (bracken.reads.2/rowSums(bracken.reads.2))*100 # values are now relative abundances of kept genera, expressed in percentage
+rowSums(bracken.comm)
+colSums(bracken.comm)
+
+braken.comm.filt <- bracken.comm
+braken.comm.filt[braken.comm.filt < 0.05] <- 0 # put zero for all values < 0.05.
+
+bracken.comm.others <- (bracken.reads.3/rowSums(bracken.reads.3))*100 # values are now relative abundances of kept genera, expressed in percentage
+
+
+
+```
+
+
+
+# Edit bracken df - fractions
+```{r}
+bracken.frac <- bracken.import[,-c(1,2)]
+bracken.frac <- bracken.frac[,-c(1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,45,47,49)]
+colnames(bracken.frac) <- gsub("_frac", "", colnames(bracken.frac))
+```
+
+Transpose and filter data
+```{r}
+options(scipen = 999) # to reset sci. not. : options(scipen = 0)
+bracken.comm <- t(bracken.frac)
+bracken.comm <- as.data.frame(bracken.comm)
+rowSums(bracken.comm)
+bracken.comm <- bracken.comm[, !grepl("virus", colnames(bracken.comm))] # remove virus
+bracken.comm <- bracken.comm[, colSums(bracken.comm)>0.01] # remove genera with less than 1% additive abundance across all samples
+bracken.comm <- (bracken.comm/rowSums(bracken.comm))*100 # values are now relative abundances of kept genera, expressed in percentage
+rowSums(bracken.comm)
+colSums(bracken.comm)
+```
+
+ABOVE NOT USED FOR NOW, KEPT AS BACKUP
+################################################################################
+
+
+
+
+
+
+
+
+
+
+
+# Exploratory analysis of Methylobacterium relative abundance (%) in samples
+```{r}
+plot(bracken.comm[,"Methylobacterium"] ~ metadata.bac.comm$host_species)
+```
+
+
+
+
+
+
+
+
+################################################################################
+
+# Alpha diversity
+
+## Indices calculation
+
+### Richness and Shannon Index
+```{r}
+bacteria.PA.comm <- data.frame(ifelse(bacteria.comm > 0, 1, 0))
+metadata.bac.comm$richness <- rowSums(bacteria.PA.comm)
+metadata.bac.comm$shannon <- diversity(bacteria.comm, index = "shannon")
+hist(metadata.bac.comm$richness, breaks = 25)
+shapiro.test(metadata.bac.comm$richness)
+hist(metadata.bac.comm$shannon, breaks = 25)
+shapiro.test(metadata.bac.comm$shannon)
+```
+Richness and shannon values are normally distributed.
+
+### Pielou Index
+```{r}
+metadata.bac.comm$pielou <- metadata.bac.comm$shannon/log(metadata.bac.comm$richness)
+hist(metadata.bac.comm$pielou, breaks = 25)
+shapiro.test(metadata.bac.comm$pielou)
+```
+Pielou values are normally distributed.
+
+## Models
+
+### Richness
+```{r}
+lm <- lm(richness ~ host_species, data = metadata.bac.comm)
+plot(richness ~ host_species, data = metadata.bac.comm)
+summary(lm)
+anova(lm)
+plot(lm)
+hist(residuals(lm))
+shapiro.test(residuals(lm))
+```
+Linear model's assumptions are met.
+
+
+### Shannon
+```{r}
+lm <- lm(shannon ~ host_species, data = metadata.bac.comm)
+plot(shannon ~ host_species, data = metadata.bac.comm)
+summary(lm)
+anova(lm)
+plot(lm)
+hist(residuals(lm))
+shapiro.test(residuals(lm))
+```
+Linear model's assumptions are met.
+
+Plot
+```{r}
+ggplot(metadata.bac.comm, aes(x = host_species, y = shannon)) +
+geom_boxplot(alpha = 1, aes(fill = host_species), show.legend = FALSE, outlier.shape = NA)+
+geom_point(aes(color = host_species), 
+           position = position_jitter(0.075), 
+           shape = 16, 
+           size = 3, show.legend = FALSE)+
+scale_fill_manual(values=c("#63AFF9","#CA0E78","#6104BB","#F39635","#1EA670"))+
+scale_color_manual(values=c("black","black","black","black","black"))+
+labs(x = "Host Species", 
+     y = "Shannon Index")+
+ylim(0.5,2.5) +
+theme_bw()+
+theme(text = element_text(family = "Arial"),
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 12, angle = 0, hjust = 0.5, vjust = 0),
+      axis.text.y = element_text(color = "black", size = 11, angle = 0, hjust = 0, vjust = 0.5),  
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
+      )
+ggsave("../figures/Bacterial_genera_shannon.tiff", width = 6, height = 4)
+```
+
+
+
+### Evenness
+```{r}
+lm <- lm(pielou ~ host_species, data = metadata.bac.comm)
+plot(pielou ~ host_species, data = metadata.bac.comm)
+summary(lm)
+anova(lm)
+plot(lm) 
+hist(residuals(lm))
+shapiro.test(residuals(lm))
+```
+
+
+################################################################################
+
+# Beta diversity
+
+With Methylobacterium 
+Genera composition by host species (including Methylobacterium)
+
+## Distance matrix
+```{r}
+bacteria.dist <- vegdist(bacteria.comm, method='bray')
+```
+
+## PERMANOVA
+```{r}
+bacteria.perm <- adonis2(bacteria.dist ~ host_species, data = metadata)
+bacteria.perm
+```
+
+## BETADISPER
+```{r}
+bacteria.disper <- betadisper(bacteria.dist, metadata$host_species)
+anova(bacteria.disper)
+plot(bacteria.disper)
+```
+## Pairwise adonis
+```{r}
+pair.adonis.bac.bray <- pairwise.adonis(bacteria.dist, metadata.bac.comm$host_species)
+pair.adonis.bac.bray
+```
+
+
+## PCoA
+```{r}
+bacteria.pcoa <- cmdscale(bacteria.dist, k =(nrow(bacteria.comm) - 1), eig = TRUE)
+pcoa.eig <- eigenvals(bacteria.pcoa) # extract eigenvalues
+pcoa.eig <- abs(pcoa.eig) # absolute values
+sum.pcoa.eig <- sum(pcoa.eig) # total of eigenvalues
+pcoa.prop.exp <- pcoa.eig/sum.pcoa.eig # proportion explained by each axis
+(pcoa.axis1 <- pcoa.prop.exp[1])
+(pcoa.axis2 <- pcoa.prop.exp[2])
+site.scores.pcoa <- scores(bacteria.pcoa) # site scores
+sp.scores.pcoa <- wascores(bacteria.pcoa$points, bacteria.comm) # species scores 
+site.scores.pcoa <- data.frame(site.scores.pcoa)
+sp.scores.pcoa <- data.frame(sp.scores.pcoa)
+host_species <- metadata.bac.comm$host_species
+site.scores.pcoa <- cbind(site.scores.pcoa, host_species)
+pcoa.ggordiplot <- gg_ordiplot(bacteria.pcoa, choices = c(1,2), groups = metadata.bac.comm$host_species, kind = "sd", conf = 0.95, pt.size = 3)
+pcoa.ellipses <- pcoa.ggordiplot$df_ellipse # extract confidence ellipse
+```
+Plot
+```{r}
+ggplot(data = site.scores.pcoa, 
+         aes(x = Dim1, y = Dim2), 
+         color = host_species) + 
+  expand_limits(x=c(-0.8,0.8), y=c(-0.8,0.8)) +
+  geom_point(aes(shape = host_species, color = host_species), show.legend = T, 
+             size=3) +
+  xlab(paste("PCoA1 (",round(pcoa.axis1*100, digits = 2),"%)", sep = "")) +
+  ylab(paste("PCoA2 (",round(pcoa.axis2*100, digits = 2),"%)", sep = "")) +
+  #geom_text_repel(data = sp.scores.pcoa, 
+  #                aes(x = X1, y = X2), 
+  #                label=rownames(sp.scores.pcoa), 
+  #                color = "black") +
+  scale_shape_manual(values = c(16,16,16,16,16)) +
+  guides(shape = "none") +
+  geom_path(data = pcoa.ellipses, 
+            aes(x = x, y = y, color = Group), 
+            show.legend = FALSE) + 
+  scale_color_manual(values=c("#63AFF9","#CA0E78","#6104BB","#F39635","#1EA670"), name = "Host species") +
+  theme_bw() +
+  theme(text = element_text(family = "Arial"),
+      legend.justification = c(0.5, 0),
+      legend.text = element_text(size = 11),
+      panel.grid.major = element_line(color = "gray90", size = 0.25), 
+      #panel.grid.minor = element_line(color = "lightgray", size = 0.25), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 11, angle = 0, hjust = 0.5, vjust = 0),
+      axis.text.y = element_text(color = "black", size = 11, angle = 0, hjust = 0, vjust = 0.5),  
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
+      )
+ggsave("../figures/bacteria_pcoa.tiff", width = 6, height = 4.5)
+```
+
+### Barplot
+```{r}
+abundances.bac <- picante::matrix2sample(bracken.comm)
+colnames(abundances.bac) <- c("sample","abund","genus")
+
+ggplot(abundances.bac, aes(x = sample, y = abund, fill = genus)) +
+  geom_bar(stat = "identity",
+#          position = "fill" # add to get relative abundances
+  ) +
+  labs(x = "Sample", y = "Relative abundance") +
+  guides(fill = guide_legend(ncol = 1)) +
+  theme_bw() +
+  theme(text = element_text(family = "Arial"),
+      legend.justification = c(0.5, 1),
+      legend.text = element_text(size = 10.5),
+      legend.key.size = unit(0.43, "cm"),
+      legend.position = "right",  
+      panel.grid.major = element_line(color = "gray90", size = 0.25), 
+      #panel.grid.minor = element_line(color = "lightgray", size = 0.25), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 12, angle = 90, vjust = 0.35, hjust = 1),
+      axis.text.y = element_text(color = "black", size = 11),
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
+      )
+ggsave("../figures/bacteria_barplot.tiff", width = 8, height = 5.5)
+
+
+
+
+
+  scale_fill_manual(values=c(
+  "#CC3366", # Lichenibacterium
+  "#FFB2B2", "#B3C2FF", "#FFE1B2", 
+  "#0098A1", # Methylobacterium
+  "#FFD4A3", "#FFC8A1", 
+  "#FFDBA3", "#FFA07A", 
+  "#FF9CDA", # Pseudomonas
+  "#99C1FF",# Sphingomonas
+  "#E7EBA3", "#A2B89D","#FF8B5C", "#F9AFA3", "#F6D2A6", "#D1D1B5",  "#E7C6A0", 
+  "#A7C6A7", "#9BC6C8", "#B5C6D9", "#A4D8E1",  
+  "#5BA2D6", "#7BAFFF", "#3A8CBB", "#A1E1D5", 
+  "#E1D5B2", "#D9B3A0", "#E9B7A6", "#EAB0B5", "#E7C5A8", 
+  "#C8B4A0", "#C2C8A1", "#B7D1A7",  "#B4D6B8", "#FF9E6D",
+  "#B2D8E1", "#C2E6D5", "#C7D5E1", "#C4B2E1", "#B0C4E1", 
+  "#9CB2E1", "#9DC6E1", "#A8D9D0", "#A6D2E1", "#D4A4D2", 
+  "#D1A4D9", "#D2B2FF", "#FFCCB2", "#D5C2E1", "#E1B2C2", 
+  "#E1A2B4", "#D6A1B8", "#EAB8C9", "#FFC9F5", "#FF9CDA", 
+  "#FFA1B1", "#FFC5B8", "#FFC9E0", "#FFD7B3", "#D9C9A6",
+  "#A1E1D5", "#E1D5B2", "#D9B3A0", "#E9B7A6", "#EAB0B5", 
+  "#E7C5A8", "#C8B4A0", "#C2C8A1", "#B7D1A7", "#E7EBA3", 
+  "#B4D6B8", "#B2D8E1", "#C2E6D5", "#C7D5E1", "#C4B2E1", 
+  "#B0C4E1", "#9CB2E1", "#9DC6E1", "#A8D9D0", "#A6D2E1",  "#FFAA90",
+  "#D4A4D2", "#D1A4D9", "#D2B2FF", "#B3C2FF", "#A1C6E1", 
+  "#D5C2E1", "#E1B2C2", "#E1A2B4", "#D6A1B8", "#EAB8C9", 
+  "#FFC9F5",  "#FFA1B1", "#FFC5B8", "#FFC9E0"
+), name = "Bacterial genera") +
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
+CODE BELOW KEPT IN CASE OF....
+
+
+Without Methylobacterium 
+Other genera composition by host species (excluding Methylobacterium)
+
+```{r}
+bacteria.comm.others <- bacteria.comm[, colnames(bacteria.comm)!="Methylobacterium"]
+```
+
+Create distance matrix
+```{r}
+bacteria.dist.nometh <- vegdist(bacteria.comm.others, method='bray')
+```
+
+PERMANOVA
+```{r}
+bacteria.perm.nometh <- adonis2(bacteria.dist.nometh ~ host_species + plot, data = metadata)
+bacteria.perm.nometh
+```
+
+BETADISPER
+```{r}
+bacteria.disper.nometh <- betadisper(bacteria.dist.nometh, metadata$host_species)
+anova(bacteria.disper.nometh)
+plot(bacteria.disper.nometh)
+```
+
+Conclusion
+
+Whether I include or exclude Methylobacterium of the bacterial composition, I still get similar results : Host species significantly explains 36% of the variation in bacterial genera composition.
+
+Extracting PCoA site scores
+For testing the effect of total bacterial community (excluding Methylobacterium) on Methylobacterium's genetic/functional composition (analyses in other scripts).
+
+PCoA
+```{r}
+bacteria.pcoa <- cmdscale(bacteria.dist.nometh, k =(nrow(bacteria.comm.others) - 1), eig = TRUE)
+```
+
+Extract PCoA scores
+```{r}
+bacteria.pcoa.site.scores <- data.frame(scores(bacteria.pcoa, display = "sites", choices = c(1,2))) # site scores for axes 1 and 2
+```
+
+Save scores as RDS file.
+```{r}
+saveRDS(bacteria.pcoa.site.scores, "../bacteria.pcoa.site.scores.rds")
+```
+
