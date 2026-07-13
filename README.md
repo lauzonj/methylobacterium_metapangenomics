@@ -11,7 +11,13 @@ Scripts should be run in the order listed below.
 
 Include it?
 How did I do the nb_reads.txt table?
-What are the output files of anvio I used in R scripts?
+
+In general, What are the output files of anvio I used in R scripts?
+--> must include in 'data' folder anvio's output files that are inputed directly in R scripts.
+
+
+
+Include metaphlan script...
 
 
 ## R markdown scripts descriptions
@@ -23,20 +29,34 @@ paired-end reads ~ host species
 
 
 
+genomes_cov_and_detect.Rmd
+
+Analyses of Methylobacterium species' genomes mean coverage depth, and genome horizontal coverage ('detection').
 
 
-genome_cov_homogeneity.Rmd
-Investigate homogeneity of genome coverage and detection = ok.
-Only done for ABBA_M11. 
-TO DO -> All samples.
+
+
+
+
+
+
+pangenome_char.Rmd
+Calculate number of core and accessory genes, and number of hypothetical proteins.
+
+
+
 
 genomes_cov_and_detect.Rmd
 Analyses of Methylobacterium species' genomes mean and std coverage, and genome detection.
 Analyses of rpoB coverage and detection.
 
-methylo_species_analyses_v2.Rmd
+
+
+methylo_species_analyses.Rmd
 Analyses of Methylobacterium species diversity and composition.
 TO DO -> Incorporate phylogeny
+
+
 
 bracken_analyses_v3.Rmd
 Analyses on total bacterial communities (genus level)
@@ -48,9 +68,6 @@ Creation of 3 dataframes to work from.
 'data.pangenome.rds' -> for pangenome analyses
 'data.fct.det.rds' -> for gene coverage and detection statistics analyses
 'data.fct.cov.rds' -> for gene coverage analyses (diversity and differential abundances analyses)
-
-pangenome_char.Rmd
-Calculate number of core and accessory genes, and number of hypothetical proteins.
 
 genes_cov_and_detect.Rmd
 Analyses of genes mean coverage and detection distributions.
