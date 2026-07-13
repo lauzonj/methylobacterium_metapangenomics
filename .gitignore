@@ -52,7 +52,7 @@ po/*~
 rsconnect/
 
 # RDS files
-*.rds
+#*.rds
 
 # csv files
 *.csv
