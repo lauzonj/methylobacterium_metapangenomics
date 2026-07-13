@@ -27,13 +27,10 @@ paired-end reads ~ host species (Figure S4)
 % mapped reads ~ host species (Figure S5)
 
 genomes_horizontal_cov_hist.Rmd
-Distribution histograms of horizontal coverage values (Figure S1A-B)
-
-
-
+Distribution histograms of horizontal coverage values (Figure S1A-B).
 
 bracken_analyses.Rmd
-Analyses on total bacterial communities (genus level)
+Analyses on total bacterial communities (genus level).
 
 
 
