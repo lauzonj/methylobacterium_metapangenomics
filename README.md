@@ -17,7 +17,7 @@ In general, What are the output files of anvio I used in R scripts?
 
 
 
-Include metaphlan script...
+Include kraken script...and outputs!
 
 
 ## R markdown scripts descriptions
@@ -33,18 +33,10 @@ Distribution histograms of horizontal coverage values (Figure S1A-B)
 
 
 
+bracken_analyses.Rmd
+Analyses on total bacterial communities (genus level)
 
 
-
-pangenome_char.Rmd
-Calculate number of core and accessory genes, and number of hypothetical proteins.
-
-
-
-
-genomes_cov_and_detect.Rmd
-Analyses of Methylobacterium species' genomes mean and std coverage, and genome detection.
-Analyses of rpoB coverage and detection.
 
 
 
@@ -54,8 +46,19 @@ TO DO -> Incorporate phylogeny
 
 
 
-bracken_analyses_v3.Rmd
-Analyses on total bacterial communities (genus level)
+
+
+pangenome_char.Rmd
+Calculate number of core and accessory genes, and number of hypothetical proteins.
+
+
+
+
+
+
+
+
+
 
 gene_data_preparation.Rmd
 Preparation of data for gene composition and diversity analyses.
