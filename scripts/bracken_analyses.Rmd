@@ -130,7 +130,7 @@ rrarefy.comm <- rrarefy(rrarefy.comm, sample = min(rowSums(rrarefy.comm)))
 rrarefy.comm <- data.frame(rrarefy.comm)
 rowSums(bracken.reads)
 rowSums(rrarefy.comm)
-colnames(rrarefy.comm)[colSums(rrarefy.comm) == 0] # no lost of genera. OK, because the focus is only on Methylo relative abundance!
+colnames(rrarefy.comm)[colSums(rrarefy.comm) == 0] # no lost of genera
 ```
 
 Save rrarefy.comm dataframe for further code rerun. Load RDS.
@@ -145,11 +145,10 @@ rrarefy.comm <- readRDS("../rds/rrarefy.comm.rds")
 bracken.reads[,"Methylobacterium"]
 rrarefy.comm[,"Methylobacterium"]
 plot(rrarefy.comm[,"Methylobacterium"] ~ bracken.reads[,"Methylobacterium"])
-temp1 <- bracken.reads[,"Methylobacterium"]/rowSums(bracken.reads)*100 # Without rarefying
-temp2 <- rrarefy.comm[,"Methylobacterium"]/rowSums(rrarefy.comm)*100 # With rarefying
-plot(temp2 ~ temp1) + abline(0,1)
 metadata.bac.comm$meth_rel_abund <- rrarefy.comm[,"Methylobacterium"]/rowSums(rrarefy.comm)*100 # With rarefying
 ```
+
+
 
 ## Other abundant genera relative abundances in bacterial communities
 ```{r}
@@ -163,206 +162,15 @@ metadata.bac.comm$spirosoma_rel_abund <- rrarefy.comm[,"Spirosoma"]/rowSums(rrar
 metadata.bac.comm$granulicella_rel_abund <- rrarefy.comm[,"Granulicella"]/rowSums(rrarefy.comm)*100
 ```
 
-### Mycobacterium
 
-Covariation between bacterial Methylobacterium and Mycobacterium
-```{r}
-#lm.myco <- lm(mycobacterium_rel_abund ~ meth_rel_abund*plant_clade, data = metadata.bac.comm)
-lm.myco <- lm(mycobacterium_rel_abund ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
-summary(lm.myco)
-anova(lm.myco)
-#car::Anova(lm.myco, type = "II")
-car::Anova(lm.myco, type = "III")
-plot(residuals(lm.myco))
-hist(residuals(lm.myco), breaks = 25)
-shapiro.test(residuals(lm.myco))
-#plot(mycobacterium_rel_abund ~ meth_rel_abund*plant_clade, data = metadata.bac.comm)
-plot(mycobacterium_rel_abund ~ meth_rel_abund+shrub_tree, data = metadata.bac.comm)
-abline(lm.myco[["coefficients"]][["(Intercept)"]],lm.myco[["coefficients"]][["meth_rel_abund"]])
-lm.myco2 <- lm(mycobacterium_rel_abund ~ meth_rel_abund, data = metadata.bac.comm[c(1:10,16:25),])
-summary(lm.myco2)
-```
-
-### Xanthomonas
-
-Covariation between bacterial Methylobacterium and Xanthomonas
-```{r}
-#lm.xantho <- lm(xanthomonas_rel_abund ~ meth_rel_abund*plant_clade, data = metadata.bac.comm)
-lm.xantho <- lm(xanthomonas_rel_abund ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
-summary(lm.xantho)
-anova(lm.xantho)
-#car::Anova(lm.xantho, type = "II")
-car::Anova(lm.xantho, type = "III")
-plot(residuals(lm.xantho))
-hist(residuals(lm.xantho), breaks = 25)
-shapiro.test(residuals(lm.xantho))
-plot(xanthomonas_rel_abund ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
-abline(lm2[["coefficients"]][["(Intercept)"]],lm2[["coefficients"]][["meth_rel_abund"]])
-```
-
-#### ggplot Xanthomonas
-```{r}
-data.pred <- metadata.bac.comm
-data.pred$pred.xantho <- predict(lm.xantho)
-
-ggplot(data.pred, aes(x = meth_rel_abund, y = xanthomonas_rel_abund, color = shrub_tree)) +
-  geom_point(size = 3) +
-  geom_line(aes(y = pred.xantho, group = shrub_tree), size = 1) +
-  geom_smooth(method = "lm", aes(group = shrub_tree, fill = shrub_tree), 
-              se = TRUE, linetype = "solid", size = 1) +
-  labs(x = "Methylobacterium relative abundance", y = "Xanthomonas relative abundance") +
-  scale_color_manual(values = c("shrub" = "#6104BB", "tree" = "forestgreen"), name = "Host type", labels = c("Shrub","Tree")) +
-  scale_fill_manual(values = c("shrub" = "#6104BB", "tree" = "forestgreen"), name = "Host type",labels = c("Shrub","Tree")) +
-  theme_bw()+
-  theme(text = element_text(family = "Arial"),
-      legend.justification = c(0.5, 0),
-      legend.text = element_text(size = 10.5),
-      legend.key.size = unit(0.43, "cm"),
-      legend.position = "right", 
-      panel.grid.major = element_blank(), 
-      panel.grid.major.y = element_line(color = "gray90", size = 0.25), 
-      panel.grid.minor.y = element_line(color = "gray90", size = 0.25), 
-      panel.grid.minor = element_blank(), 
-      plot.title = element_text(hjust = 0.5),
-      axis.text.x = element_text(color = "black", size = 11, angle = 0, hjust = 0.5, vjust = 0),
-      axis.text.y = element_text(color = "black", size = 11, angle = 0, hjust = 0, vjust = 0.5),  
-      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
-      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
-      )
-ggsave("../figures/Xanthomonas_by_Methylobacterium.tiff", width = 6, height = 4)
-```
-
-### Streptomyces
-
-Covariation between bacterial Methylobacterium and Streptomyces
-```{r}
-#lm.strepto <- lm(streptomyces_rel_abund ~ meth_rel_abund*plant_clade, data = metadata.bac.comm)
-lm.strepto <- lm(streptomyces_rel_abund ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
-summary(lm.strepto)
-anova(lm.strepto)
-car::Anova(lm.strepto, type = "III")
-plot(residuals(lm.strepto))
-hist(residuals(lm.strepto), breaks = 25)
-shapiro.test(residuals(lm.strepto))
-plot(streptomyces_rel_abund ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
-```
-
-### Sphingomonas
-
-Covariation between bacterial Methylobacterium and sphingomonas
-```{r}
-#lm.sphingo <- lm(sphingomonas_rel_abund ~ meth_rel_abund*plant_clade, data = metadata.bac.comm)
-lm.sphingo <- lm(sphingomonas_rel_abund ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
-summary(lm.sphingo)
-anova(lm.sphingo)
-car::Anova(lm.sphingo, type = "III")
-plot(residuals(lm.sphingo)) + abline(0,0)
-hist(residuals(lm.sphingo), breaks = 25)
-shapiro.test(residuals(lm.sphingo))
-plot(sphingomonas_rel_abund ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
-
-lm.sphingo2 <- lm(sphingomonas_rel_abund ~ meth_rel_abund, data = metadata.bac.comm)
-plot(residuals(lm.sphingo2)) + abline(0,0)
-
-```
-
-#### ggplot Sphingomonas
-```{r}
-data.pred$pred.sphingo <- predict(lm.sphingo)
-
-ggplot(data.pred, aes(x = meth_rel_abund, y = sphingomonas_rel_abund)) +
-  geom_point(size = 3) +
-  #geom_line(aes(y = pred.sphingo), size = 1) +
-  geom_smooth(method = "lm",
-              se = TRUE, linetype = "solid", size = 1, color = "black") +
-  labs(x = "Methylobacterium relative abundance", y = "Sphingomonas relative abundance") +
-  theme_bw()+
-  theme(text = element_text(family = "Arial"),
-      legend.justification = c(0.5, 0),
-      legend.text = element_text(size = 10.5),
-      legend.key.size = unit(0.43, "cm"),
-      legend.position = "right", 
-      panel.grid.major = element_blank(), 
-      panel.grid.major.y = element_line(color = "gray90", size = 0.25), 
-      panel.grid.minor.y = element_line(color = "gray90", size = 0.25), 
-      panel.grid.minor = element_blank(), 
-      plot.title = element_text(hjust = 0.5),
-      axis.text.x = element_text(color = "black", size = 11, angle = 0, hjust = 0.5, vjust = 0),
-      axis.text.y = element_text(color = "black", size = 11, angle = 0, hjust = 0, vjust = 0.5),  
-      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
-      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
-      )
-ggsave("../figures/Sphingomonas_by_Methylobacterium.tiff", width = 6, height = 4)
-```
-
-### Pseudomonas
-
-Covariation between bacterial Methylobacterium and Pseudomonas
-```{r}
-lm.pseudo <- lm(pseudomonas_rel_abund ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
-summary(lm.pseudo)
-anova(lm.pseudo)
-car::Anova(lm.pseudo, type = "III")
-plot(residuals(lm.pseudo))
-hist(residuals(lm.pseudo), breaks = 25)
-shapiro.test(residuals(lm.pseudo))
-plot(pseudomonas_rel_abund ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
-```
-
-### Hymenobacter
-
-Covariation between bacterial Methylobacterium and Hymenobacter
-```{r}
-lm.hymeno <- lm(log(hymenobacter_rel_abund) ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
-summary(lm.hymeno)
-anova(lm.hymeno)
-car::Anova(lm.hymeno, type = "III")
-plot(residuals(lm.hymeno))
-hist(residuals(lm.hymeno), breaks = 25)
-shapiro.test(residuals(lm.hymeno))
-plot(log(hymenobacter_rel_abund) ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
-```
-#### ggplot Hymenobacter
-```{r}
-data.pred$pred.hymeno <- predict(lm.hymeno)
-
-# Plot the interaction using ggplot2
-ggplot(data.pred, aes(x = meth_rel_abund, y = hymenobacter_rel_abund, color = shrub_tree)) +
-  geom_point(size = 3) +
-  #geom_line(aes(y = pred.hymeno, group = shrub_tree), size = 1) +
-  geom_smooth(method = "lm", aes(group = shrub_tree, fill = shrub_tree), 
-              se = TRUE, linetype = "solid", size = 1) +
-  labs(x = "Age", y = "Dependent Variable (Y)") +
-  theme_minimal() +
-  scale_color_manual(values = c("shrub" = "blue", "tree" = "green")) +
-  scale_fill_manual(values = c("shrub" = "blue", "tree" = "green")) +
-  theme(legend.position = "right")
-```
-
-
-### Spirosoma
-
-Covariation between bacterial Methylobacterium and Spirosoma
-```{r}
-lm.spiro <- lm(spirosoma_rel_abund ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
-summary(lm.spiro)
-anova(lm.spiro)
-car::Anova(lm.spiro, type = "III")
-plot(residuals(lm.spiro))
-hist(residuals(lm.spiro), breaks = 25)
-shapiro.test(residuals(lm.spiro))
-plot(spirosoma_rel_abund ~ meth_rel_abund*shrub_tree, data = metadata.bac.comm)
-```
-
-
-## Meth abundance X host
+## Meth abundance ~ host
 
 ### Model
 ```{r}
 plot(meth_rel_abund ~ host_species, data = metadata.bac.comm)
 lm <- lm(meth_rel_abund ~ host_species, data = metadata.bac.comm)
+plot(lm)
 summary(lm)
-anova(lm)
 hist(residuals(lm), breaks = 50)
 shapiro.test(residuals(lm))
 ```
@@ -382,6 +190,7 @@ var(metadata.bac.comm[metadata.bac.comm$shrub_tree == "shrub",]$meth_rel_abund)
 sd(metadata.bac.comm[metadata.bac.comm$shrub_tree == "shrub",]$meth_rel_abund)
 ## unequal variance so welch t-test
 t1 <- t.test(meth_rel_abund ~ shrub_tree, data = metadata.bac.comm, var.equal = F)
+t1
 
 # Gymno vs. angio trees
 
@@ -394,6 +203,7 @@ var(metadata.bac.comm[metadata.bac.comm$gymno_angio_tree == "gymnosperm_tree",]$
 var(metadata.bac.comm[metadata.bac.comm$gymno_angio_tree == "angiosperm_tree",]$meth_rel_abund)
 ## equal variance so student t-test
 t2 <- t.test(meth_rel_abund ~ gymno_angio_tree, data = metadata.bac.comm[c(1:10,16:25),], var.equal = T)
+t2
 
 # p-values adjustement
 p.adjust(c(t1[["p.value"]],t2[["p.value"]]), method = "bonferroni")
@@ -410,11 +220,11 @@ geom_point(aes(color = host_species),
 scale_fill_manual(values=c("#63AFF9","#1EA670","#CA0E78","#F39635","#6104BB"))+
 scale_color_manual(values=c("black","black","black","black","black"))+
 labs(x = "Host Species", 
-     y = "Methylobacterium relative abundance (%)")+
-scale_x_discrete(labels = c("ABBA" = "A. balsamea", "THOC" = "T. occidentalis","ACSA" = "A. Saccharum", "FAGR" = "F. grandifolia", "COCO" = "C. cornuta"))+
+     y = expression(bolditalic("Methylobacterium") ~ bold("relative abundance (%)")))+
+scale_x_discrete(labels = c("ABBA" = "A. balsamea", "THOC" = "T. occidentalis","ACSA" = "A. saccharum", "FAGR" = "F. grandifolia", "COCO" = "C. cornuta"))+
 ylim(0,20) +
 theme_bw()+
-theme(text = element_text(family = "Arial"),
+theme(text = element_text(),
       panel.grid.major = element_blank(), 
       panel.grid.minor = element_blank(), 
       plot.title = element_text(hjust = 0.5),
@@ -423,7 +233,7 @@ theme(text = element_text(family = "Arial"),
       axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
       axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
       )
-ggsave("../figures/Methylo_relative_abundance.tiff", width = 6, height = 4)
+ggsave("../figures/figure_1_Methylo_relative_abundance.pdf", width = 6, height = 4)
 ```
 
 
