@@ -155,11 +155,14 @@ metadata.bac.comm$meth_rel_abund <- rrarefy.comm[,"Methylobacterium"]/rowSums(rr
 metadata.bac.comm$mycobacterium_rel_abund <- rrarefy.comm[,"Mycobacterium"]/rowSums(rrarefy.comm)*100
 metadata.bac.comm$xanthomonas_rel_abund <- rrarefy.comm[,"Xanthomonas"]/rowSums(rrarefy.comm)*100
 metadata.bac.comm$streptomyces_rel_abund <- rrarefy.comm[,"Streptomyces"]/rowSums(rrarefy.comm)*100
-metadata.bac.comm$sphingomonas_rel_abund <- rrarefy.comm[,"Sphingomonas"]/rowSums(rrarefy.comm)*100
-metadata.bac.comm$pseudomonas_rel_abund <- rrarefy.comm[,"Pseudomonas"]/rowSums(rrarefy.comm)*100
-metadata.bac.comm$hymenobacter_rel_abund <- rrarefy.comm[,"Hymenobacter"]/rowSums(rrarefy.comm)*100
-metadata.bac.comm$spirosoma_rel_abund <- rrarefy.comm[,"Spirosoma"]/rowSums(rrarefy.comm)*100
-metadata.bac.comm$granulicella_rel_abund <- rrarefy.comm[,"Granulicella"]/rowSums(rrarefy.comm)*100
+mean(metadata.bac.comm$mycobacterium_rel_abund)
+sd(metadata.bac.comm$mycobacterium_rel_abund)
+mean(metadata.bac.comm$xanthomonas_rel_abund)
+sd(metadata.bac.comm$xanthomonas_rel_abund)
+mean(metadata.bac.comm$streptomyces_rel_abund)
+sd(metadata.bac.comm$streptomyces_rel_abund)
+mean(metadata.bac.comm$meth_rel_abund)
+sd(metadata.bac.comm$meth_rel_abund)
 ```
 
 
@@ -236,11 +239,7 @@ theme(text = element_text(),
 ggsave("../figures/figure_1_Methylo_relative_abundance.pdf", width = 6, height = 4)
 ```
 
-
-
-
-
-################################################################################
+-################################################################################
 
 
 # Community genera composition
@@ -258,7 +257,7 @@ rowSums(rrarefy.comm.w_oth)
 
 ## List of genera names in taxonomic order
 ```{r}
-abund_genera_taxo <- as.data.frame(read_delim("../data_imported/bacterial_genera_taxonomy_from_NCBI.csv"))
+abund_genera_taxo <- as.data.frame(read_delim("../data/bacterial_genera_taxonomy_from_NCBI.csv"))
 abund_genera_taxo$Genus <- factor(abund_genera_taxo$Genus, levels = unique(abund_genera_taxo$Genus))
 ```
 
@@ -271,8 +270,7 @@ abundances$sample <- factor(x = abundances$sample, levels =c ("ABBA_M11","ABBA_M
 abundances$genus <- droplevels(abundances$genus)
 abundances$genus <- factor(x = abundances$genus, levels = abund_genera_taxo$Genus)
 
-palette <- sample(pals::glasbey(28))
-palette8 <- readRDS("../rds/palettes/palette8.rds")
+palette8 <- readRDS("../rds/palette8.rds")
 
 # Composition with abundances
 ggplot(abundances, aes(x = sample, y = abund, fill = genus)) +
@@ -282,7 +280,7 @@ ggplot(abundances, aes(x = sample, y = abund, fill = genus)) +
   scale_fill_manual(values=c(palette8, "grey80"), name = "Bacterial genera") +
   guides(fill = guide_legend(ncol = 1)) +
   theme_bw() +
-  theme(text = element_text(family = "Arial"),
+  theme(text = element_text(),
       legend.justification = c(0.5, 1),
       legend.text = element_text(size = 10.5),
       legend.key.size = unit(0.43, "cm"),
@@ -295,179 +293,17 @@ ggplot(abundances, aes(x = sample, y = abund, fill = genus)) +
       axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
       axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
       )
-#ggsave("../figures/bacterial_genera_barplot_241220.tiff", width = 8, height = 5.5)
+ggsave("../figures/figure_S6_bacterial_genera_barplot.pdf", width = 8, height = 5.5)
 ```
 
 What are the most abundant genera across samples?
 ```{r}
-0.0*sum(rrarefy.comm.w_oth)/1000000
-colSums(rrarefy.comm.w_oth)[order(colSums(rrarefy.comm.w_oth), decreasing = TRUE)]
-colSums(rrarefy.comm.w_oth)[order(colSums(rrarefy.comm.w_oth), decreasing = TRUE)]/sum(rrarefy.comm.w_oth)*100 # percentage of genera across all samples
-```
-
-### Covariation matrix (TAKE 1) --> NOT! See TAKE 2!
-```{r}
-# Remove "Others" category
-rrarefy.comm.only.abund.genera <- rrarefy.comm.w_oth[,colnames(rrarefy.comm.w_oth)!="Others"]
-
-# Correlation matrix
-cor_matrix <- cor(rrarefy.comm.only.abund.genera, method = "spearman")
-cor_test <- cor_test(rrarefy.comm.only.abund.genera, method = "spearman")
-
-# Threshold of correlation
-cor_matrix[abs(cor_matrix) < 0.5] <- 0
-
-library(reshape2)
-cor_melted <- melt(cor_matrix)
-ggplot(cor_melted, aes(x = Var1, y = Var2, fill = value)) +
-  geom_tile() +
-  scale_y_discrete(limits=rev) +
-  #scale_fill_gradientn(
-  #  name = "Spearman rho",
-  #  colors = c("blue","skyblue","white","white","white","pink","red"),
-  #  #values = scales::rescale(c(-1,0.5,-0.4999999,0,0.49999999,0.5,1)),
-  #  breaks = c(-1,-0.5,-0.4999999,0,0.49999999,0.5,1),
-  #  labels = c("-1","-0.5", "","0","","0.5","1")) +
-  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, name = "Spearman rho") +
-  theme_minimal() +
-  labs(x = "Bacterial genera", y = "Bacterial genera") +
-  theme_bw() +
-  theme(text = element_text(family = "Arial"),
-      legend.justification = c(0.5, 0),
-      legend.text = element_text(size = 10.5),
-      legend.key.size = unit(0.43, "cm"),
-      legend.position = "right", 
-      panel.grid.major = element_line(color = "gray90", size = 0.25), 
-      #panel.grid.minor = element_line(color = "lightgray", size = 0.25), 
-      plot.title = element_text(hjust = 0.5),
-      axis.text.x = element_text(color = "black", size = 12, angle = 90, vjust = 0.35, hjust = 1),
-      axis.text.y = element_text(color = "black", size = 11),
-      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
-      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
-      ) + coord_fixed()
-
-ggsave("../figures/bacterial_genera_covariance.tiff", width = 8, height = 5.5)
+colSums(rrarefy.comm.w_oth)[order(colSums(rrarefy.comm.w_oth), decreasing = TRUE)]/sum(rrarefy.comm.w_oth)*100 
 ```
 
 
-### Covariation matrix (TAKE 2) --> YES
-```{r}
-library(rstatix)
 
-# Remove "Others" category
-rrarefy.comm.only.abund.genera <- rrarefy.comm.w_oth[,colnames(rrarefy.comm.w_oth)!="Others"]
-
-cor_test_result <- cor_test(rrarefy.comm.only.abund.genera, method = "spearman")
-
-cor_test_result$p <- p.adjust(cor_test_result$p, method = "BH")
-
-#Filter significant correlations (p-value < 0.05)
-cor_test_result_sig <- cor_test_result %>%
-  filter(p < 0.05)
-
-cor_melted_sig <- cor_test_result_sig %>%
-  select(var1, var2, cor) %>%
-  reshape2::melt(id.vars = c("var1", "var2"))
-
-cor_melted_sig$var1 <- factor(cor_melted_sig$var1, levels = abund_genera_taxo[-29,]$Genus)
-
-cor_melted_sig$var2 <- factor(cor_melted_sig$var2, levels = abund_genera_taxo[-29,]$Genus)
-
-ggplot(cor_melted_sig, aes(x = var1, y = var2, fill = value)) +
-  geom_tile() +
-  scale_y_discrete(limits = rev) +
-  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0, name = "Spearman rho") +
-  labs(x = "Bacterial genera", y = "Bacterial genera") +
-  theme_bw() +
-  theme(text = element_text(family = "Arial"),
-      legend.justification = c(0.5, 0),
-      legend.text = element_text(size = 10.5),
-      legend.key.size = unit(0.43, "cm"),
-      legend.position = "right", 
-      panel.grid.major = element_line(color = "gray90", size = 0.25), 
-      #panel.grid.minor = element_line(color = "lightgray", size = 0.25), 
-      plot.title = element_text(hjust = 0.5),
-      axis.text.x = element_text(color = "black", size = 12, angle = 90, vjust = 0.35, hjust = 1),
-      axis.text.y = element_text(color = "black", size = 11),
-      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
-      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
-      ) + coord_fixed()
-
-ggsave("../figures/bacterial_genera_covariance_sig.tiff", width = 8, height = 8)
-
-```
-
-Correlation matrices by host species
-```{r}
-cor_gymnosperms <- cor_test(rrarefy.comm.only.abund.genera[c(1:5,21:25),], method = "spearman")
-cor_angiosperms <- cor_test(rrarefy.comm.only.abund.genera[c(6:20),], method = "spearman")
-
-cor_gymno <- cor_gymnosperms %>% filter(var1 != var2)
-cor_angio <- cor_angiosperms %>% filter(var1 != var2)
-
-#cor_gymno <- cor_gymno %>% filter(abs(cor) >= 0.5)
-#cor_angio <- cor_angio %>% filter(abs(cor) >= 0.5)
-
-#cor_gymno <- cor_gymno %>% filter(var1 == "Methylobacterium")
-#cor_angio <- cor_angio%>% filter(var1 == "Methylobacterium")
-
-# test mean absolute correlation between angio and gymno
-
-#cor_gymno$padj <- p.adjust(cor_gymno$p, method = "BH")
-#cor_angio$padj <- p.adjust(cor_angio$p, method = "BH")
-
-#cor_gymno <- cor_gymno %>% filter(padj <= 0.05)
-#cor_angio <- cor_angio %>% filter(padj <= 0.05)
-
-cor_gymno <- as.data.frame(cor_gymno)
-cor_angio <- as.data.frame(cor_angio)
-
-cor_gymno$cor.abs <- abs(cor_gymno$cor)
-cor_angio$cor.abs <- abs(cor_angio$cor)
-
-#hist(cor_gymno$cor.abs, breaks = 100)
-#hist(cor_angio$cor.abs, breaks = 100)
-
-cor_gymno$host_type <- rep("gymno", nrow(cor_gymno))
-cor_angio$host_type <- rep("angio", nrow(cor_angio))
-
-cor.data <- rbind(cor_gymno, cor_angio)
-cor.data$host_type <- as.factor(cor.data$host_type) 
-
-plot(cor.data$cor.abs ~ cor.data$host_type)
-points(cor.data$cor.abs ~ cor.data$host_type)
-
-mean(cor.data[cor.data$host_type =="gymno",]$cor.abs)
-mean(cor.data[cor.data$host_type =="angio",]$cor.abs)
-
-lm <- lm(cor.abs ~ host_type, cor.data)
-summary(lm)
-hist(residuals(lm), breaks =100)
-shapiro.test(residuals(lm))
-
-kruskal.test(cor.abs ~ host_type, data = cor.data)
-rstatix::kruskal_effsize(cor.abs ~ host_type, data = cor.data)
-
-# test positive/negative interactions between angio and gymno
-
-cor_gymno$pos_neg <- ifelse(cor_gymno$cor < 0, "negative", "positive")
-cor_angio$pos_neg <- ifelse(cor_angio$cor < 0, "negative", "positive")
-
-cor_gymno$host_type <- rep("gymno", nrow(cor_gymno))
-cor_angio$host_type <- rep("angio", nrow(cor_angio))
-
-cor.data <- rbind(cor_gymno, cor_angio)
-cor.data$pos_neg <- as.factor(cor.data$pos_neg) 
-cor.data$host_type <- as.factor(cor.data$host_type) 
-
-plot(pos_neg ~ host_type, cor.data)
-
-cor.table <- table(cor.data[,c(7:8)])
-chisq.test(cor.table)
-
-```
-
-
+RENDU LA!!!! 
 
 ### Co-occurence networks
 
