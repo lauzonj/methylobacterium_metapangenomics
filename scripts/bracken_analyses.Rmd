@@ -17,26 +17,28 @@ library(ggordiplots)
 #library(phylostratr)
 ```
 
-################################################################################
+-################################################################################
 
 # Import Data
 
-## Bracken
+## Bracken data
 ```{r}
-bracken.import <- read.delim("../data_imported/combined.bracken.txt", header = TRUE, sep = "\t", dec = ".", row.names = 1)
+bracken.import <- read.delim("../data/bracken_outputs/combined.bracken.txt", header = TRUE, sep = "\t", dec = ".", row.names = 1)
 ```
 
 ## Reads data
 ```{r}
-reads.data <- read.delim("../data_imported/nb_reads.txt", header = TRUE, sep = "\t", dec = ",", row.names = 1)
+reads.data <- read.delim("../data/nb_reads.txt", header = TRUE, sep = "\t", dec = ",", row.names = 1)
 ```
 
 ## Metadata
 ```{r}
-metadata <- read.delim("../data_imported/samples_metadata.txt", header = TRUE, sep = "\t", dec = ".", row.names = 1)
+metadata <- read.delim("../data/samples_metadata.txt", header = TRUE, sep = "\t", dec = ".", row.names = 1)
 metadata <- metadata %>% arrange(row.names(.))
-metadata <- metadata %>% mutate(across(c(plant_clade,plant_order,plant_family,host_species,plot,tree,leaf_wash_batch,extraction_batch), as.factor))
+metadata <- metadata %>% mutate(across(c(plant_clade,plant_order,plant_family,host_species,tree), as.factor))
+reads.data$host_species <- metadata$host_species
 metadata$host_species <- factor(x = metadata$host_species, levels = c("ABBA","THOC","ACSA","FAGR","COCO"))
+reads.data$host_species <- factor(x = reads.data$host_species, levels = c("ABBA","THOC","ACSA","FAGR","COCO"))
 metadata$shrub_tree <- c("tree","tree","tree","tree","tree","tree","tree","tree","tree","tree","shrub","shrub","shrub","shrub","shrub","tree","tree","tree","tree","tree","tree","tree","tree","tree","tree")
 metadata$shrub_tree <- factor(x = metadata$shrub_tree, levels = c("shrub","tree"))
 metadata$gymno_angio_tree <- c("gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_shrub","angiosperm_shrub","angiosperm_shrub","angiosperm_shrub","angiosperm_shrub","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree")
@@ -45,7 +47,7 @@ metadata.bac.comm <- metadata
 ```
 
 
-################################################################################
+-################################################################################
 
 # Taxonomy
 
@@ -55,9 +57,9 @@ metadata.bac.comm <- metadata
 # load file to: https://www.ncbi.nlm.nih.gov/Taxonomy/TaxIdentifier/tax_identifier.cgi
 ```
 
-## Import NCBI taxonomy
+## Import NCBI taxonomy (report from online NCBI web page)
 ```{r}
-ncbi.tax <- read_delim("../data_imported/ncbi_tax_report.txt")
+ncbi.tax <- read_delim("../data/ncbi_tax_report.txt")
 ncbi.tax <- ncbi.tax[,-c(1,2,4,6)]
 ncbi.tax <- ncbi.tax %>%
   mutate(domain = case_when(
@@ -69,13 +71,10 @@ ncbi.tax <- ncbi.tax %>%
   ))
 colnames(ncbi.tax) <- c("taxid","Genus","NCBI_lineage","Domain")
 bracken.import <- cbind(bracken.import, ncbi.tax)
-# inspect match between row names and NCBI Genera --> all is good.
 bracken.import[c(which(bracken.import$taxonomy_id != bracken.import$taxid)),]
-bracken.import[c(which(rownames(bracken.import) != bracken.import$Genus)),]
 ```
 
-
-################################################################################
+-################################################################################
 
 # Edit bracken reads dataframe
 
@@ -88,93 +87,25 @@ colnames(bacteria.reads) <- gsub("_num", "", colnames(bacteria.reads))
 bacteria.reads <- t(bacteria.reads)
 bacteria.reads <- data.frame(bacteria.reads)
 n.reads.bacteria <- sum(rowSums(bacteria.reads)) # Total bacterial reads : 549,194,184
-n.reads.bacteria/sum(reads.data$filtered_pairs) # Bracken assigned reads pairs to bacteria represent 26.35 % of filtered reads
-```
-
-Combine Methylorubrum with Methylobacterium
-```{r}
+# Combine Methylorubrum with Methylobacterium
 bacteria.reads$Methylobacterium <- bacteria.reads$Methylobacterium+bacteria.reads$Methylorubrum
 bacteria.reads <- bacteria.reads[, names(bacteria.reads) != "Methylorubrum"]
-```
-
-
-Build archaeal reads matrix
-```{r}
-archaea.reads <- bracken.import[bracken.import$Domain == "Archaea", ]
-archaea.reads <- archaea.reads[,-c(1,2,53:56)]
-archaea.reads <- archaea.reads[,-c(2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50)] # remove fractions
-colnames(archaea.reads) <- gsub("_num", "", colnames(archaea.reads))
-archaea.reads <- t(archaea.reads)
-archaea.reads <- data.frame(archaea.reads)
-n.reads.archaea <- sum(rowSums(archaea.reads)) # Total archaeal reads : 2,546,218
-n.reads.archaea/(n.reads.archaea+n.reads.bacteria) # Archaeal reads account for 0.4% of total prokaryota reads.
-test <- data.frame(colnames(archaea.reads), colSums(archaea.reads))
-sum(test$colSums.archaea.reads.)
-test$colnames.archaea.reads.
-```
-
-Build prokaryota reads matrix
-```{r}
-prok.reads <- cbind(bacteria.reads, archaea.reads)
-n.reads.prok <- sum(rowSums(prok.reads)) # Total prokl reads : 551,740,402
-```
-
-Build viral reads matrix
-```{r}
-virus.reads <- bracken.import[bracken.import$Domain == "Virus", ]
-virus.reads <- virus.reads[,-c(1,2,53:56)]
-virus.reads <- virus.reads[,-c(2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50)] # remove fractions
-colnames(virus.reads) <- gsub("_num", "", colnames(virus.reads))
-virus.reads <- t(virus.reads)
-virus.reads <- data.frame(virus.reads)
-n.reads.virus <- sum(rowSums(virus.reads)) # Total viral reads : 3,100,582
-n.reads.virus/sum(reads.data$filtered_pairs) # Bracken assigned reads pairs to viruses represent 0.1 % of filtered reads
-```
-
-Build eukaryota reads matrix
-```{r}
-euk.reads <- bracken.import[bracken.import$Domain == "Eukaryota", ]
-euk.reads <- euk.reads[,-c(1,2,53:56)]
-euk.reads <- euk.reads[,-c(2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,32,34,36,38,40,42,44,46,48,50)] # remove fractions
-colnames(euk.reads) <- gsub("_num", "", colnames(euk.reads))
-euk.reads <- t(euk.reads)
-euk.reads <- data.frame(euk.reads)
-n.euk.reads <- sum(rowSums(euk.reads)) # Total eukaryota reads : 30,873,349
-n.homo.reads <- sum(euk.reads$Homo)
-contamination.pc <- sum(euk.reads$Homo)/(sum(rowSums(bacteria.reads))+sum(rowSums(archaea.reads))+sum(rowSums(virus.reads))) # 5.6% of read pairs assigned by bracken is contamination by human DNA
-pc.homo <- euk.reads$Homo/(rowSums(bacteria.reads)+rowSums(archaea.reads)+rowSums(virus.reads))
-metadata$pc.homo <- pc.homo
-plot(pc.homo ~ host_species, metadata)
-```
-
-
-################################################################################
-
-# DF SELECTION 
-```{r}
 bracken.reads <- bacteria.reads
 ```
 
-
-################################################################################
+-################################################################################
 
 # Correlation between bracken and pangenome approach for Methylobacterium reads
 
-Note : in kraken and bracken, "reads" are actually pairs of reads (or "paired reads"). So for a correlation between single reads mapped to Methylobacterium pangenome with number of "paired read" assigned to Methylobacterium by kraken/bracken, I must multiply by 2 the counts from bracken.
-
 ```{r}
-#lm <- lm(2*bracken.reads[,"Methylobacterium"] ~ poly(reads.data$mapped_reads,2,raw=T))
 lm <- lm(2*bracken.reads[,"Methylobacterium"] ~ reads.data$mapped_reads)
 plot(2*bracken.reads[,"Methylobacterium"] ~ reads.data$mapped_reads) + abline(lm[["coefficients"]][["(Intercept)"]],lm[["coefficients"]][["reads.data$mapped_reads"]])
 summary(lm)
-anova(lm)
 plot(lm)
 hist(residuals(lm), breaks = 25)
-shapiro.test(residuals(lm))
 ```
 
-
-################################################################################
+-################################################################################
 
 # Methylobacterium relative abundance in bacterial communities among hosts
 
@@ -185,19 +116,16 @@ For these analyses, keep all assigned bacterial genera (n = 2065), even though s
 # number of reads per sample (in millions)
 rowSums(bracken.reads)/1000000
 min(rowSums(bracken.reads))/1000000
-
-# test correlation between assigned reads and filtered reads
+# test correlation between assigned reads (bracken) and filtered reads
 plot(rowSums(bracken.reads) ~ reads.data$filtered_pairs)
 summary(lm(rowSums(bracken.reads) ~ reads.data$filtered_pairs))
 ```
-The correlation is strong between the number of assigned bacterial reads and the number of filtered reads
-I must rarefy.
 
 ## Rarefying : One random subsampling ("rarefying" sensu Schloss 2024)
 ```{r, eval=FALSE}
 rrarefy.comm <- bracken.reads
 length(rrarefy.comm[rrarefy.comm == 10])
-rrarefy.comm[rrarefy.comm == 10] <- 1 # just to make function work!
+rrarefy.comm[rrarefy.comm == 10] <- 1 # to make function work
 rrarefy.comm <- rrarefy(rrarefy.comm, sample = min(rowSums(rrarefy.comm)))
 rrarefy.comm <- data.frame(rrarefy.comm)
 rowSums(bracken.reads)
