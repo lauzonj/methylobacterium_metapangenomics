@@ -9,15 +9,14 @@ Scripts should be run in the order listed below.
 
 ## Bash script?
 
-Include it?
+Include anvio and kraken?
+
 How did I do the nb_reads.txt table?
 
 In general, What are the output files of anvio I used in R scripts?
 --> must include in 'data' folder anvio's output files that are inputed directly in R scripts.
 
 
-
-Include kraken script...and outputs!
 
 
 ## R markdown scripts descriptions
