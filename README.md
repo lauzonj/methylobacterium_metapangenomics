@@ -23,16 +23,12 @@ Include metaphlan script...
 ## R markdown scripts descriptions
 
 mapped_reads.Rmd
-Tests for
-paired-end reads ~ host species
-% mapped reads ~ host species
+Tests for:
+paired-end reads ~ host species (Figure S4)
+% mapped reads ~ host species (Figure S5)
 
-
-
-genomes_cov_and_detect.Rmd
-
-Analyses of Methylobacterium species' genomes mean coverage depth, and genome horizontal coverage ('detection').
-
+genomes_horizontal_cov_hist.Rmd
+Distribution histograms of horizontal coverage values (Figure S1A-B)
 
 
 
