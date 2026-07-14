@@ -41,14 +41,15 @@ pangenome_char.Rmd
 Descriptive statistics on the number of core, accessory and single genes, as well as hypothetical proteins.
 Analyses of genome openness.
 
-
-
-
-
 genes_diversity_v5-3.Rmd
 Diversity analyses of gene clusters.
 DAGCs analyses (use 'TAKE 2' section of DAG). !! DO NOT use code for the creation of the DAGCs table nor for the COG categories figures. This code
 was used for my M.Sc. thesis, but for the article, use 'DAGCs_analyses_folloup.Rmd'
+
+
+
+
+
 
 DAGCs_analyses_followup.Rmd
 Followup of the DAGCs analyses, of the 757 annotated DAGCs. Table : To include all COG categories and pathways, as well as all KEGG brite, 
