@@ -9,7 +9,7 @@ Scripts should be run in the order listed below.
 
 ## Bash script?
 
-Include anvio and kraken?
+Include anvio?
 
 How did I do the nb_reads.txt table?
 
@@ -32,13 +32,11 @@ Distribution histograms of horizontal coverage values (Figure S1A-B).
 bracken_analyses.Rmd
 Analyses on total bacterial communities (genus level).
 
-
-
-
-
 methylo_species_analyses.Rmd
 Analyses of Methylobacterium species diversity and composition.
 TO DO -> Incorporate phylogeny
+
+
 
 
 
