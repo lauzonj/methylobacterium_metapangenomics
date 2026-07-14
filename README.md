@@ -41,11 +41,10 @@ pangenome_char.Rmd
 Descriptive statistics on the number of core, accessory and single genes, as well as hypothetical proteins.
 Analyses of genome openness.
 
-
-
-
 genes_cov_and_detect.Rmd
 Analyses of genes mean coverage and detection distributions.
+
+
 
 genes_diversity_v5-3.Rmd
 Diversity analyses of gene clusters.
