@@ -3,13 +3,17 @@
 R scripts for "Metapangenomics reveals host-driven adaptation of Methylobacterium to the phyllosphere"
 Script author: Jocelyn Lauzon, Département des sciences biologiques, Université du Québec à Montréal
 
-These R markdown scripts cover all statistical analyses related to the article.
+These R markdown scripts cover all statistical analyses and figures related to the article.
 
 Scripts should be run in the order listed below.
 
 ## Bash script
 
-Include anvio?
+anvio_script.txt
+This script contains all commands related to the analyses performed with anvio v.8
+
+
+
 
 How did I do the nb_reads.txt table?
 
@@ -38,6 +42,16 @@ Analyses of Methylobacterium species' community diversity, composition and phylo
 
 
 
+gene_data_preparation.Rmd
+Preparation of data for gene composition and diversity analyses.
+Merging metapangenome table with detection and coverage stats.
+Creation of 3 dataframes to work from.
+'data.pangenome.rds' -> for pangenome analyses
+'data.fct.det.rds' -> for gene coverage and detection statistics analyses
+'data.fct.cov.rds' -> for gene coverage analyses (diversity and differential abundances analyses)
+
+
+
 
 
 pangenome_char.Rmd
@@ -47,13 +61,6 @@ Calculate number of core and accessory genes, and number of hypothetical protein
 
 
 
-gene_data_preparation.Rmd
-Preparation of data for gene composition and diversity analyses.
-Merging metapangenome table with detection and coverage stats.
-Creation of 3 dataframes to work from.
-'data.pangenome.rds' -> for pangenome analyses
-'data.fct.det.rds' -> for gene coverage and detection statistics analyses
-'data.fct.cov.rds' -> for gene coverage analyses (diversity and differential abundances analyses)
 
 genes_cov_and_detect.Rmd
 Analyses of genes mean coverage and detection distributions.
