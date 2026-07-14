@@ -1,17 +1,201 @@
-# author : Jocelyn Lauzon
-# This script contains all commands related to the analyses performed with anvio v.8
+#!/bin/bash
 
-#########################################################################################################
+################################################################################
+# Anvio analyses scripts related to the article
+# "Metapangenomics reveals host-driven adaptation of Methylobacterium to the phyllosphere"
+# Script author: Jocelyn Lauzon, Département des sciences biologiques, Université du Québec à Montréal
+################################################################################
 
--- Quality filtering of raw reads
+################################################################################
+# Important notes
+################################################################################
 
----- Preparation
+# This file documents all commands used for the analyses performed with anvio (v.8)
+# This file was not written to be run as a single script, but as sections.
+# The number of threads used, when commands allow the choice, should be determined by the user 
+# and thus was omitted in this script.
 
-# The file '25_samples.txt' is available in '../data/anvio_inputs'
+################################################################################
+# Anvio analyses project directory structure
+################################################################################
+
+# Note that this project directory and its content were not included in the github repository. 
+# These subdirectories must be created by the user prior to running the commands.
+# Sequencing reads (raw metagenomes) are available through the National Center for Biotechnology Information (NCBI) 
+# and can be found under BioSample accession numbers SAMN49978915-39. 
+# Upon download, raw metagenomes should be placed in folder 'anvio/data/raw_metagenomes'.
+# Each of the 104 Methylobacterium genomes should be downloaded (see Supplementary File A for sources),
+# and placed in its corresponding species' folder within 'anvio/data/meth_genomes/'.
+
+# anvio/
+# ├── anvio_analysis/
+# │   ├── ABBA
+# │   ├── ACSA
+# │   ├── COCO
+# │   ├── FAGR
+# │   ├── THOC
+# ├── anvio_artifacts/
+# │   ├──
+# ├── data/
+# │   ├── filtered_metagenomes
+# │   |   ├── ini_files
+# │   |   ├── stats_files
+# │   ├── kegg_data
+# │   ├── meth_genomes
+# │   |   ├── M_adhaesivum
+# │   |   ├── M_aerolatum
+# │   |   ├── M_ajmalii
+# │   |   ├── M_aminovorans
+# │   |   ├── M_aquaticum
+# │   |   ├── M_brachiatum
+# │   |   ├── M_brachythecii
+# │   |   ├── M_bullatum
+# │   |   ├── M_cerastii
+# │   |   ├── M_crusticola
+# │   |   ├── M_currus
+# │   |   ├── M_dankookense
+# │   |   ├── M_durans
+# │   |   ├── M_extorquens
+# │   |   ├── M_frigidaeris
+# │   |   ├── M_fujisawaense
+# │   |   ├── M_gnaphalii
+# │   |   ├── M_goesingense
+# │   |   ├── M_gossipiicola
+# │   |   ├── M_gregans
+# │   |   ├── M_haplocladii
+# │   |   ├── M_hispanicum
+# │   |   ├── M_indicum
+# │   |   ├── M_iners
+# │   |   ├── M_isbiliense
+# │   |   ├── M_jeotgali
+# │   |   ├── M_komagatae
+# │   |   ├── M_longum
+# │   |   ├── M_marchantiae
+# │   |   ├── M_mesophilicum
+# │   |   ├── M_nodulans
+# │   |   ├── M_nonmethylotrophicum
+# │   |   ├── M_organophilum
+# │   |   ├── M_oryzihabitans
+# │   |   ├── M_oxalidis
+# │   |   ├── M_persicinum
+# │   |   ├── M_phyllostachyos
+# │   |   ├── M_planeticum
+# │   |   ├── M_platani
+# │   |   ├── M_podarium
+# │   |   ├── M_pseudosasicola
+# │   |   ├── M_radiodurans
+# │   |   ├── M_radiotolerans
+# │   |   ├── M_rhodesianum
+# │   |   ├── M_rhodinum
+# │   |   ├── M_salsuginis
+# │   |   ├── M_segetis
+# │   |   ├── M_soli
+# │   |   ├── M_sp_001
+# │   |   ├── M_sp_002
+# │   |   ├── M_sp_003
+# │   |   ├── M_sp_004
+# │   |   ├── M_sp_005
+# │   |   ├── M_sp_006
+# │   |   ├── M_sp_007
+# │   |   ├── M_sp_008
+# │   |   ├── M_sp_009
+# │   |   ├── M_sp_010
+# │   |   ├── M_sp_011
+# │   |   ├── M_sp_012
+# │   |   ├── M_sp_013
+# │   |   ├── M_sp_014
+# │   |   ├── M_sp_015
+# │   |   ├── M_sp_016
+# │   |   ├── M_sp_017
+# │   |   ├── M_sp_018
+# │   |   ├── M_sp_019
+# │   |   ├── M_sp_020
+# │   |   ├── M_sp_021
+# │   |   ├── M_sp_022
+# │   |   ├── M_sp_023
+# │   |   ├── M_sp_024
+# │   |   ├── M_sp_025
+# │   |   ├── M_sp_026
+# │   |   ├── M_sp_027
+# │   |   ├── M_sp_028
+# │   |   ├── M_sp_029
+# │   |   ├── M_sp_030
+# │   |   ├── M_sp_031
+# │   |   ├── M_sp_032
+# │   |   ├── M_sp_033
+# │   |   ├── M_sp_034
+# │   |   ├── M_sp_035
+# │   |   ├── M_sp_036
+# │   |   ├── M_sp_037
+# │   |   ├── M_sp_038
+# │   |   ├── M_sp_039
+# │   |   ├── M_sp_040
+# │   |   ├── M_sp_041
+# │   |   ├── M_sp_042
+# │   |   ├── M_sp_043
+# │   |   ├── M_sp_044
+# │   |   ├── M_sp_045
+# │   |   ├── M_suomiense
+# │   |   ├── M_symbioticum
+# │   |   ├── M_tardum
+# │   |   ├── M_tarhaniae
+# │   |   ├── M_terrae
+# │   |   ├── M_terricola
+# │   |   ├── M_thiocyanatum
+# │   |   ├── M_thuringiense
+# │   |   ├── M_trifolii
+# │   |   ├── M_variabile
+# │   |   ├── M_zatmanii
+# │   ├── pfam_data
+# │   ├── raw_metagenomes
+
+# Each section of this script should be run from the project root directory 'anvio/'.
+
+################################################################################
+# Installation and setup of anvio
+################################################################################
+
+# Create conda environment
+conda create -y --name anvio8 python=3.10
+conda activate anvio8
+
+# Setup conda environment
+conda install -y -c conda-forge mamba
+mamba install -y -c conda-forge -c bioconda python=3.10 \
+        sqlite prodigal idba mcl muscle=3.8.1551 famsa hmmer diamond \
+        blast megahit spades bowtie2 bwa graphviz "samtools>=1.9" \
+        trimal iqtree trnascan-se fasttree vmatch r-base r-tidyverse \
+        r-optparse r-stringi r-magrittr bioconductor-qvalue meme ghostscript
+        
+# Anvio installation
+curl -L https://github.com/merenlab/anvio/releases/download/v8/anvio-8.tar.gz --output anvio-8.tar.gz
+pip install anvio-8.tar.gz
+
+# Tests
+anvi-self-test --suite mini
+anvi-self-test --suite pangenomics
+
+# Setup key resources
+anvi-setup-scg-taxonomy
+anvi-setup-ncbi-cogs
+anvi-setup-kegg-data --kegg-data-dir ./data/kegg_data/
+anvi-setup-pfams --pfam-data-dir ./data/pfam_data/
+
+
+################################################################################
+# Quality filtering of raw reads
+################################################################################
+
+# Preparation
+
+# The file '25_samples.txt' is available in the github repository '../data/anvio_inputs', 
+# and must be copied to 'anvio/data/raw_metagenomes'
+
+cd data/raw_metagenomes/
 
 iu-gen-configs 25_samples.txt
 
----- ABBA
+## ABBA
 
 for sample in `awk '{print $1}' 25_samples.txt | sed -n '12,16p'`
 do
@@ -20,7 +204,7 @@ do
     gzip $sample-QUALITY_PASSED_R?.fastq
 done
 
----- ACSA
+## ACSA
 
 for sample in `awk '{print $1}' 25_samples.txt | sed -n '22,26p'`
 do
@@ -29,7 +213,7 @@ do
     gzip $sample-QUALITY_PASSED_R?.fastq
 done
 
----- COCO
+## COCO
 
 for sample in `awk '{print $1}' 25_samples.txt | sed -n '2,6p'`
 do
@@ -38,7 +222,7 @@ do
     gzip $sample-QUALITY_PASSED_R?.fastq
 done
 
----- FAGR
+## FAGR
 
 for sample in `awk '{print $1}' 25_samples.txt | sed -n '17,21p'`
 do
@@ -47,7 +231,7 @@ do
     gzip $sample-QUALITY_PASSED_R?.fastq
 done
 
----- THOC
+## THOC
 
 for sample in `awk '{print $1}' 25_samples.txt | sed -n '7,11p'`
 do
@@ -56,13 +240,30 @@ do
     gzip $sample-QUALITY_PASSED_R?.fastq
 done
 
-#########################################################################################################
+## Move files
 
--- Create contig.fa file from all individuals genome file.
+mv *QUALITY_PASSED*.fastq.gz ../filtered_metagenomes
+mv *.ini ../filtered_metagenomes/ini_files
+mv *-STATS.txt ./filtered_metagenomes/stats_files
 
-cat "${GENOME_DIR}"/M_*/* > all_genomes.contigs.fa
+################################################################################
+# Generate anvio CONTIGS.db
+################################################################################
 
----- Simplify deflines names
+# Create contig.fa file from all individuals genome file
+
+gunzip data/meth_genomes/M_*/*_genomic.fna.gz
+
+cd anvio_artifacts/
+
+for i in $(ls ../data/meth_genomes/M_*/*)
+do
+  	cat $i >> all_genomes.contigs.fa
+done
+
+grep ">" all_genomes.contigs.fa > all_genomes.contigs.deflines.txt
+
+# Simplify deflines names
 
 anvi-script-reformat-fasta \
     all_genomes.contigs.fa \
@@ -72,48 +273,42 @@ anvi-script-reformat-fasta \
     -r report_file \
     --seq-type NT
 
-#########################################################################################################
-
--- Generate anvio CONTIGS.db
+# Generate contigs database
 
 anvi-gen-contigs-database \
     -f all_genomes.contigs-fixed.fa \
     -o all_genomes-CONTIGS.db \
     -n "Methylobacterium_104_species_genomes"
 
-#########################################################################################################
+################################################################################
+# Identify single-copy core genes and annotate genes
+################################################################################
 
--- Identify archaeal and bacterial single-copy core genes (SCGs)
+cd anvio_artifacts/
 
 anvi-run-hmms -c all_genomes-CONTIGS.db
 
-#########################################################################################################
-
--- Annotate genes
-
----- COG 
-
 anvi-run-ncbi-cogs -c all_genomes-CONTIGS.db
 
----- KEGG
+anvi-run-kegg-kofams -c all_genomes-CONTIGS.db --kegg-data-dir data/kegg_data/
 
-anvi-run-kegg-kofams -c all_genomes-CONTIGS.db
+anvi-run-pfams -c all_genomes-CONTIGS.db --pfam-data-dir data/pfam_data/
 
----- Pfams
+################################################################################
+# Mapping metagenomes on contigs
+################################################################################
 
-anvi-run-pfams -c all_genomes-CONTIGS.db
+# Build a Bowtie2 database from contigs fasta
 
-#########################################################################################################
-
--- Build a Bowtie2 database from contigs fasta
+cd anvio_artifacts/
 
 bowtie2-build \
     all_genomes.contigs-fixed.fa \
     all_genomes.contigs-fixed-bowtie2-db
 
-#########################################################################################################
+# Mapping ABBA metagenomes
 
--- Mapping ABBA metagenomes on contigs
+cd ../anvio_analysis/ABBA/
 
 for sample in ABBA_M11 ABBA_M12 ABBA_M13 ABBA_M14 ABBA_M15
 do
@@ -137,9 +332,9 @@ do
     rm $sample.sam $sample-RAW.bam
 done
 
-#########################################################################################################
+# Mapping ACSA metagenomes
 
--- Mapping ACSA metagenomes on contigs
+cd ../ACSA/
 
 for sample ACSA_M21 ACSA_M22 ACSA_M23 ACSA_M24 ACSA_M25
 do
@@ -163,9 +358,9 @@ do
     rm $sample.sam $sample-RAW.bam
 done
 
-#########################################################################################################
+# Mapping COCO metagenomes
 
--- Mapping COCO metagenomes on contigs (on phyllo)
+cd ../COCO/
 
 for sample in COCO_M01 COCO_M02 COCO_M03 COCO_M04 COCO_M05
 do
@@ -189,9 +384,9 @@ do
     rm $sample.sam $sample-RAW.bam
 done
 
-#########################################################################################################
+# Mapping FAGR metagenomes 
 
--- Mapping FAGR metagenomes on contigs (on phyllo)
+cd ../FAGR/
 
 for sample FAGR_M16 FAGR_M17 FAGR_M18 FAGR_M19 FAGR_M20
 do
@@ -215,9 +410,9 @@ do
     rm $sample.sam $sample-RAW.bam
 done
 
-#########################################################################################################
+# Mapping THOC metagenomes on contigs
 
--- Mapping THOC metagenomes on contigs
+cd ../THOC/
 
 for sample in THOC_M06 THOC_M07 THOC_M08 THOC_M09 THOC_M10
 do
@@ -241,176 +436,214 @@ do
     rm $sample.sam $sample-RAW.bam
 done
 
-#########################################################################################################
+################################################################################
+# Profiling mapping results and merging profiles
+################################################################################
 
--- Profiling ABBA mapping results, and merging profiles
+cd anvio_analysis/
+
+# ABBA
+
+cd ABBA/
 
 for sample in ABBA_M11 ABBA_M12 ABBA_M13 ABBA_M14 ABBA_M15
 do
     if [ "$sample" == "sample" ]; then continue; fi
-
-    anvi-profile -c all_genomes-CONTIGS.db \
+    anvi-profile -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
                  -i $sample.bam \
                  -M 1000 \
 		             --profile-SCVs \
                  -o $sample
 done
 
-anvi-merge */PROFILE.db -o ABBA-MERGED -c all_genomes-CONTIGS.db --enforce-hierarchical-clustering
+anvi-merge */PROFILE.db \
+                 -o ABBA-MERGED \
+                 -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+                 --enforce-hierarchical-clustering
 
-#########################################################################################################
+# ACSA
 
--- Profiling ACSA mapping results, and merging profiles
+cd ../ACSA/
 
 for sample ACSA_M21 ACSA_M22 ACSA_M23 ACSA_M24 ACSA_M25
 do
     if [ "$sample" == "sample" ]; then continue; fi
-
-    anvi-profile -c all_genomes-CONTIGS.db \
+    anvi-profile -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
                  -i $sample.bam \
                  -M 1000 \
 		             --profile-SCVs \
                  -o $sample
 done
 
-anvi-merge */PROFILE.db -o ACSA-MERGED -c all_genomes-CONTIGS.db --enforce-hierarchical-clustering
+anvi-merge */PROFILE.db \
+                 -o ACSA-MERGED \
+                 -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+                 --enforce-hierarchical-clustering
 
-#########################################################################################################
+# COCO
 
--- Profiling COCO mapping results, and merging profiles
+cd ../COCO/
 
 for sample in COCO_M01 COCO_M02 COCO_M03 COCO_M04 COCO_M05
 do
     if [ "$sample" == "sample" ]; then continue; fi
-
-    anvi-profile -c all_genomes-CONTIGS.db \
+    anvi-profile -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
                  -i $sample.bam \
                  -M 1000 \
 		             --profile-SCVs \
                  -o $sample
 done
 
-anvi-merge */PROFILE.db -o COCO-MERGED -c all_genomes-CONTIGS.db --enforce-hierarchical-clustering
+anvi-merge */PROFILE.db \
+                 -o COCO-MERGED \
+                 -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+                 --enforce-hierarchical-clustering
 
-#########################################################################################################
+# FAGR
 
--- Profiling FAGR mapping results, and merging profiles
+cd ../FAGR/
 
 for sample in for sample FAGR_M16 FAGR_M17 FAGR_M18 FAGR_M19 FAGR_M20
 do
     if [ "$sample" == "sample" ]; then continue; fi
-
-    anvi-profile -c all_genomes-CONTIGS.db \
+    anvi-profile -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
                  -i $sample.bam \
                  -M 1000 \
 		             --profile-SCVs \
                  -o $sample
 done
 
-anvi-merge */PROFILE.db -o FAGR-MERGED -c all_genomes-CONTIGS.db --enforce-hierarchical-clustering
+anvi-merge */PROFILE.db \
+                 -o FAGR-MERGED \
+                 -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+                 --enforce-hierarchical-clustering
 
-#########################################################################################################
+# THOC
 
--- Profiling THOC mapping results, and merging profiles
+cd ./THOC/
 
 for sample in THOC_M06 THOC_M07 THOC_M08 THOC_M09 THOC_M10
 do
     if [ "$sample" == "sample" ]; then continue; fi
-
-    anvi-profile -c all_genomes-CONTIGS.db \
+    anvi-profile -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
                  -i $sample.bam \
                  -M 1000 \
 		             --profile-SCVs \
                  -o $sample
 done
 
-anvi-merge */PROFILE.db -o THOC-MERGED -c all_genomes-CONTIGS.db --enforce-hierarchical-clustering
+anvi-merge */PROFILE.db \
+                 -o THOC-MERGED \
+                 -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+                 --enforce-hierarchical-clustering
 
-#########################################################################################################
+################################################################################
+# Import and summarize collections
+################################################################################
 
--- Import collection
+# The file 'contigs_and_species_names.txt' was hand-edited based on the anvio file 'anvio_artifacts/report_file'.
+# It is available in the github repository '../data/anvio_inputs', and must be copied to 'anvio/anvio_artifacts/'.
 
-# The file 'contigs_and_species_names.txt' is available in '../data/anvio_inputs'
+cd anvio_analysis/
+
+# ABBA
+
+cd ABBA/
 
 anvi-import-collection \
-      contigs_and_species_names.txt \ 
-      -c all_genomes-CONTIGS.db \
+      ../../anvio_artifacts/contigs_and_species_names.txt \ 
+      -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
       -p ABBA-MERGED/PROFILE.db \
       -C Methylobacterium_Species_for_ABBA \
       --contigs-mode
 
-anvi-import-collection \
-      contigs_and_species_names.txt \ 
-      -c all_genomes-CONTIGS.db \
-      -p ACSA-MERGED/PROFILE.db \
-      -C Methylobacterium_Species_for_ACSA \
-      --contigs-mode
-      
-anvi-import-collection \
-      contigs_and_species_names.txt \ 
-      -c all_genomes-CONTIGS.db \
-      -p COCO-MERGED/PROFILE.db \
-      -C Methylobacterium_Species_for_COCO \
-      --contigs-mode
-      
-anvi-import-collection \
-      contigs_and_species_names.txt \ 
-      -c all_genomes-CONTIGS.db \
-      -p FAGR-MERGED/PROFILE.db \
-      -C Methylobacterium_Species_for_FAGR \
-      --contigs-mode
-      
-anvi-import-collection \
-      contigs_and_species_names.txt \ 
-      -c all_genomes-CONTIGS.db \
-      -p THOC-MERGED/PROFILE.db \
-      -C Methylobacterium_Species_for_THOC \
-      --contigs-mode
-
-#########################################################################################################
-
--- Summarize collections
-
 anvi-summarize \
-      -c all_genomes-CONTIGS.db \
+      -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
       -p ABBA-MERGED/PROFILE.db \
       -C Methylobacterium_Species_for_ABBA \
       --init-gene-coverages \
       -o ABBA_PROFILE-SUMMARY
 
+# ACSA
+
+cd ../ACSA/
+
+anvi-import-collection \
+      ../../anvio_artifacts/contigs_and_species_names.txt \ 
+      -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+      -p ACSA-MERGED/PROFILE.db \
+      -C Methylobacterium_Species_for_ACSA \
+      --contigs-mode
+      
 anvi-summarize \
-      -c all_genomes-CONTIGS.db \
+      -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
       -p ACSA-MERGED/PROFILE.db \
       -C Methylobacterium_Species_for_ACSA \
       --init-gene-coverages \
       -o ACSA_PROFILE-SUMMARY
-      
+    
+# COCO
+
+cd ../COCO/
+
+anvi-import-collection \
+      ../../anvio_artifacts/contigs_and_species_names.txt \ 
+      -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+      -p COCO-MERGED/PROFILE.db \
+      -C Methylobacterium_Species_for_COCO \
+      --contigs-mode
+
 anvi-summarize \
-      -c all_genomes-CONTIGS.db \
+      -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
       -p COCO-MERGED/PROFILE.db \
       -C Methylobacterium_Species_for_COCO \
       --init-gene-coverages \
       -o COCO_PROFILE-SUMMARY
       
+# FAGR
+
+cd ../FAGR/
+      
+anvi-import-collection \
+      ../../anvio_artifacts/contigs_and_species_names.txt \ 
+      -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+      -p FAGR-MERGED/PROFILE.db \
+      -C Methylobacterium_Species_for_FAGR \
+      --contigs-mode
+
 anvi-summarize \
-      -c all_genomes-CONTIGS.db \
+      -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
       -p FAGR-MERGED/PROFILE.db \
       -C Methylobacterium_Species_for_FAGR \
       --init-gene-coverages \
       -o FAGR_PROFILE-SUMMARY
+
+# THOC
+
+cd ../THOC/
       
+anvi-import-collection \
+      ../../anvio_artifacts/contigs_and_species_names.txt \ 
+      -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+      -p THOC-MERGED/PROFILE.db \
+      -C Methylobacterium_Species_for_THOC \
+      --contigs-mode
+
 anvi-summarize \
-      -c all_genomes-CONTIGS.db \
+      -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
       -p THOC-MERGED/PROFILE.db \
       -C Methylobacterium_Species_for_THOC \
       --init-gene-coverages \
       -o THOC_PROFILE-SUMMARY
 
-#########################################################################################################
+################################################################################
+# Generate genome databases (one per tree species)
+################################################################################
 
--- Generate genome databases (one per tree species)
+# The files '*_internal_genomes.txt' are available in the github repository '../data/anvio_inputs'
+# and must be copied to 'anvio/anvio_artifacts/'.
 
-# The fileS '****_internal_genomes.txt' are available in '../data/anvio_inputs'
+cd anvio_artifacts/
 
 anvi-gen-genomes-storage \
     -i ABBA_internal_genomes.txt \
@@ -432,9 +665,11 @@ anvi-gen-genomes-storage \
     -i THOC_internal_genomes.txt \
     -o Methylobacterium-THOC-GENOMES.db
 
-#########################################################################################################
+################################################################################
+# Generate PANgenome databases (one per tree species)
+################################################################################
 
--- Generate PANgenome databases (one per tree species)
+cd anvio_artifacts/
 
 for tree in ABBA ACSA COCO FAGR THOC
 do
@@ -451,45 +686,87 @@ do
 		    --I-know-this-is-not-a-good-idea
 done
 
-#########################################################################################################
+################################################################################
+# Generate the METAPANgenome (one per tree species)
+################################################################################
+
+cd anvio_artifacts/
+
+# First make copies of the PAN.db, then generate the metapangenomes
+
+# ABBA
+
+cd Methylobacterium-ABBA-PAN/
+
+cp Methylobacterium-ABBA-PAN-PAN.db Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db
+
+anvi-meta-pan-genome \
+                 -i ../ABBA_internal_genomes.txt \
+                 -g ../Methylobacterium-ABBA-GENOMES.db \
+                 -p Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db \
+                 --fraction-of-median-coverage 0.25 \
+                 --min-detection 0.5
+
+# ACSA
+
+cd ../Methylobacterium-ACSA-PAN/
+
+cp Methylobacterium-ACSA-PAN-PAN.db Methylobacterium-ACSA-PAN-PAN-metapan-d0_5-f0_25.db
+
+anvi-meta-pan-genome \
+                 -i ../ACSA_internal_genomes.txt \
+                 -g ../Methylobacterium-ACSA-GENOMES.db \
+                 -p Methylobacterium-ACSA-PAN-PAN-metapan-d0_5-f0_25.db \
+                 --fraction-of-median-coverage 0.25 \
+                 --min-detection 0.5
+
+# COCO
+
+cd ../Methylobacterium-COCO-PAN/
+
+cp Methylobacterium-COCO-PAN-PAN.db Methylobacterium-COCO-PAN-PAN-metapan-d0_5-f0_25.db
+
+anvi-meta-pan-genome \
+                 -i ../COCO_internal_genomes.txt \
+                 -g ../Methylobacterium-COCO-GENOMES.db \
+                 -p Methylobacterium-COCO-PAN-PAN-metapan-d0_5-f0_25.db \
+                 --fraction-of-median-coverage 0.25 \
+                 --min-detection 0.5
+
+# FAGR
+
+cd ../Methylobacterium-FAGR-PAN/
+
+cp Methylobacterium-FAGR-PAN-PAN.db Methylobacterium-FAGR-PAN-PAN-metapan-d0_5-f0_25.db
+
+anvi-meta-pan-genome \
+                 -i ../FAGR_internal_genomes.txt \
+                 -g ../Methylobacterium-FAGR-GENOMES.db \
+                 -p Methylobacterium-FAGR-PAN-PAN-metapan-d0_5-f0_25.db \
+                 --fraction-of-median-coverage 0.25 \
+                 --min-detection 0.5
+
+# THOC
+
+cd ../Methylobacterium-THOC-PAN/
+
+cp Methylobacterium-THOC-PAN-PAN.db Methylobacterium-THOC-PAN-PAN-metapan-d0_5-f0_25.db
+
+anvi-meta-pan-genome \
+                 -i ../THOC_internal_genomes.txt \
+                 -g ../Methylobacterium-THOC-GENOMES.db \
+                 -p Methylobacterium-THOC-PAN-PAN-metapan-d0_5-f0_25.db \
+                 --fraction-of-median-coverage 0.25 \
+                 --min-detection 0.5
+
+################################################################################
+# Summarize the METAPANgenomes (one per tree species)
+################################################################################
 
 
 
 
-RENDU LA!!!! 260713
 
-
-
-
-
--- Generate the METAPANgenome (one per tree species)
-
-
----- Make copies of the PAN.db
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ cp Methylobacterium-ABBA-PAN-PAN.db Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ACSA-PAN$ cp Methylobacterium-ACSA-PAN-PAN.db Methylobacterium-ACSA-PAN-PAN-metapan-d0_5-f0_25.db
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-COCO-PAN$ cp Methylobacterium-COCO-PAN-PAN.db Methylobacterium-COCO-PAN-PAN-metapan-d0_5-f0_25.db
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-FAGR-PAN$ cp Methylobacterium-FAGR-PAN-PAN.db Methylobacterium-FAGR-PAN-PAN-metapan-d0_5-f0_25.db
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-THOC-PAN$ cp Methylobacterium-THOC-PAN-PAN.db Methylobacterium-THOC-PAN-PAN-metapan-d0_5-f0_25.db
-
-
----- Generate metapangenomes 
-
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ anvi-meta-pan-genome -i ../ABBA_internal_genomes.txt -g ../Methylobacterium-ABBA-GENOMES.db -p Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db --fraction-of-median-coverage 0.25 --min-detection 0.5
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ACSA-PAN$ anvi-meta-pan-genome -i ../ACSA_internal_genomes.txt -g ../Methylobacterium-ACSA-GENOMES.db -p Methylobacterium-ACSA-PAN-PAN-metapan-d0_5-f0_25.db --fraction-of-median-coverage 0.25 --min-detection 0.5
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-COCO-PAN$ anvi-meta-pan-genome -i ../COCO_internal_genomes.txt -g ../Methylobacterium-COCO-GENOMES.db -p Methylobacterium-COCO-PAN-PAN-metapan-d0_5-f0_25.db --fraction-of-median-coverage 0.25 --min-detection 0.5
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-FAGR-PAN$ anvi-meta-pan-genome -i ../FAGR_internal_genomes.txt -g ../Methylobacterium-FAGR-GENOMES.db -p Methylobacterium-FAGR-PAN-PAN-metapan-d0_5-f0_25.db --fraction-of-median-coverage 0.25 --min-detection 0.5
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-THOC-PAN$ anvi-meta-pan-genome -i ../THOC_internal_genomes.txt -g ../Methylobacterium-THOC-GENOMES.db -p Methylobacterium-THOC-PAN-PAN-metapan-d0_5-f0_25.db --fraction-of-median-coverage 0.25 --min-detection 0.5
 
 
 #########################################################################################################
