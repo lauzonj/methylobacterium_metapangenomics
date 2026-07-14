@@ -49,13 +49,8 @@ Calculate number of core and accessory genes, and number of hypothetical protein
 
 
 
-
-
 genes_cov_and_detect.Rmd
 Analyses of genes mean coverage and detection distributions.
-
-plant_traits_v2.Rmd
-Prepare traits data to import to 'genes_diversity_v5-2' script.
 
 genes_diversity_v5-3.Rmd
 Diversity analyses of gene clusters.
