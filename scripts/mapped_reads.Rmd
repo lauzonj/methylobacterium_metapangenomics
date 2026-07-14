@@ -16,6 +16,10 @@ library(tidyverse)
 
 # Import data
 ```{r}
+# The statistics on filtering have been collected from the "stats files" ($sample-STATS.txt) outputed from
+# anvio function 'iu-filter-quality-minoche' (see anvio_script.txt).
+# The statistics on mapping have been collected from the '$sample/RUNLOG.txt' files outputed from
+# anvio function 'anvi-profile' (see anvio_script.txt).
 reads.data <- read.delim("../data/nb_reads.txt", header = TRUE, sep = "\t", dec = ",", row.names = 1)
 ```
 
