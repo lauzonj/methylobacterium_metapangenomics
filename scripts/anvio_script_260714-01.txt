@@ -35,8 +35,8 @@
 # │   ├── FAGR
 # │   ├── THOC
 # ├── anvio_artifacts/
-# │   ├──
 # ├── data/
+# │   ├── cazyme_data
 # │   ├── filtered_metagenomes
 # │   |   ├── ini_files
 # │   |   ├── stats_files
@@ -180,6 +180,7 @@ anvi-setup-scg-taxonomy
 anvi-setup-ncbi-cogs
 anvi-setup-kegg-data --kegg-data-dir ./data/kegg_data/
 anvi-setup-pfams --pfam-data-dir ./data/pfam_data/
+anvi-setup-cazymes --cazyme-data-dir ./data/cazyme_data/ # CAZymes were annotated but not used in the analyses.
 
 
 ################################################################################
@@ -686,15 +687,30 @@ do
 		    --I-know-this-is-not-a-good-idea
 done
 
+################################################################################
+# Core and accessory gene analyses (mOTUpan method)
+################################################################################
 
+cd anvio_artifacts/
 
+mkdir anvio_core_pan_genome
 
+cp ./Methylobacterium-ABBA-PAN/Methylobacterium-ABBA-PAN-PAN.db anvio_core_pan_genome/
 
+cp Methylobacterium-ABBA-GENOMES.db anvio_core_pan_genome/
 
+cd anvio_core_pan_genome/
 
+pip install mOTUlizer
 
+anvi-script-compute-bayesian-pan-core \
+                 -p Methylobacterium-ABBA-PAN-PAN.db \
+                 -g Methylobacterium-ABBA-GENOMES.db \
+                 -o core_pan_genome 
+                 
+cp core_pan_genome core_pan_genome_table
 
-
+sed -i '1,11d' core_pan_genome_table
 
 ################################################################################
 # Generate the METAPANgenome (one per tree species)
@@ -910,30 +926,7 @@ anvi-summarize \
                  -C core_accessory_singleton_gc \
                  -o Methylobacterium-THOC-METAPAN-SUMMARY
 
-################################################################################
-# Core and accessory gene analyses (mOTUpan method)
-################################################################################
 
-cd anvio_artifacts/
-
-mkdir anvio_core_pan_genome
-
-cp ./Methylobacterium-ABBA-PAN/Methylobacterium-ABBA-PAN-PAN.db anvio_core_pan_genome/
-
-cp Methylobacterium-ABBA-GENOMES.db anvio_core_pan_genome/
-
-cd anvio_core_pan_genome/
-
-pip install mOTUlizer
-
-anvi-script-compute-bayesian-pan-core \
-                 -p Methylobacterium-ABBA-PAN-PAN.db \
-                 -g Methylobacterium-ABBA-GENOMES.db \
-                 -o core_pan_genome 
-                 
-cp core_pan_genome core_pan_genome_table
-
-sed -i '1,11d' core_pan_genome_table
 
 
 
