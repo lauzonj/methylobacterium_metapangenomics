@@ -15,6 +15,8 @@ library(tidyverse)
 
 # Import data
 
+## Mean coverage
+
 Import anvio mean genome coverage data
 ```{r}
 genome.mean.cov <- read.delim("../data/anvio_outputs/ABBA/ABBA_PROFILE-SUMMARY/bins_across_samples/mean_coverage.txt", header = T, sep = "\t", dec = ".")
@@ -27,7 +29,9 @@ rownames(genome.mean.cov) <- genome.mean.cov$species
 genome.mean.cov <- genome.mean.cov[,-1]
 ```
 
-Import anvio genome detection data
+## Horizontal coverage
+
+Import anvio genome 'detection' data
 ```{r}
 genome.detect <- read.delim("../data/anvio_outputs/ABBA/ABBA_PROFILE-SUMMARY/bins_across_samples/detection.txt", header = T, sep = "\t", dec = ".")
 genome.detect <- merge(genome.detect, read.delim("../data/anvio_outputs/ACSA/ACSA_PROFILE-SUMMARY/bins_across_samples/detection.txt", header = T, sep = "\t", dec = "."), by = "bins")
