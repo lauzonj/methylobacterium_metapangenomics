@@ -7,7 +7,7 @@ These R markdown scripts cover all statistical analyses related to the article.
 
 Scripts should be run in the order listed below.
 
-## Bash script?
+## Bash script
 
 Include anvio?
 
@@ -33,9 +33,7 @@ bracken_analyses.Rmd
 Analyses on total bacterial communities (genus level).
 
 methylo_species_analyses.Rmd
-Analyses of Methylobacterium species diversity and composition.
-TO DO -> Incorporate phylogeny
-
+Analyses of Methylobacterium species' community diversity, composition and phylogenetic relatedness.
 
 
 
@@ -44,11 +42,6 @@ TO DO -> Incorporate phylogeny
 
 pangenome_char.Rmd
 Calculate number of core and accessory genes, and number of hypothetical proteins.
-
-
-
-
-
 
 
 
