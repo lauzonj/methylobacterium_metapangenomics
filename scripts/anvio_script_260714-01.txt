@@ -686,13 +686,23 @@ do
 		    --I-know-this-is-not-a-good-idea
 done
 
+
+
+
+
+
+
+
+
+
+
 ################################################################################
 # Generate the METAPANgenome (one per tree species)
 ################################################################################
 
 cd anvio_artifacts/
 
-# First make copies of the PAN.db, then generate the metapangenomes
+# First make copies of the PAN.db, then generate the metapangenomes.
 
 # ABBA
 
@@ -760,471 +770,181 @@ anvi-meta-pan-genome \
                  --min-detection 0.5
 
 ################################################################################
+# Create exploratory collection of "core, accessory and singletons" genes.
+################################################################################
+
+# This anvio collection classify genes as core, accessory or singletons, but serves exploratory purposes only.
+# True core-accessory classification will be made later using the mOTUpan method.
+
+cd anvio_artifacts/Methylobacterium-ABBA-PAN/
+
+# Create collection
+
+anvi-get-sequences-for-gene-clusters \
+                 -g ../Methylobacterium-ABBA-GENOMES.db \
+                 -p Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db \
+                 --max-num-genomes-gene-cluster-occurs 1 \
+                 -o singletons_gc
+                 
+anvi-get-sequences-for-gene-clusters \
+                 -g ../Methylobacterium-ABBA-GENOMES.db \
+                 -p Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db \
+                 --min-num-genomes-gene-cluster-occurs 104 \
+                 -o core_gc                 
+
+anvi-get-sequences-for-gene-clusters \
+                 -g ../Methylobacterium-ABBA-GENOMES.db \
+                 -p Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db \
+                 --min-num-genomes-gene-cluster-occurs 2 \
+                 --max-num-genomes-gene-cluster-occurs 103 \
+                 -o accessory_gc
+
+grep -o -P '.{0,0}GC_.{0,8}' singletons_gc | sort -u > singletons_gc.txt
+sed -i "s/$/\tsingleton/" singletons_gc.txt
+grep -o -P '.{0,0}GC_.{0,8}' accessory_gc | sort -u > accessory_gc.txt
+sed -i "s/$/\taccessory/" accessory_gc.txt
+grep -o -P '.{0,0}GC_.{0,8}' core_gc | sort -u > core_gc.txt
+sed -i "s/$/\tcore/" core_gc.txt
+for i in core_gc.txt accessory_gc.txt singletons_gc.txt; do cat $i >> i.txt; done
+sort i.txt > gene_clusters.txt
+rm i.txt
+cp gene_clusters.txt ..
+
+# Import collection in metapangenomes
+
+# ABBA
+
+anvi-import-collection gene_clusters.txt \
+                 -p Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db \
+                 -C core_accessory_singleton_gc
+
+# ACSA
+
+cd ../Methylobacterium-ACSA-PAN/
+
+anvi-import-collection \
+                 ../gene_clusters.txt \
+                 -p Methylobacterium-ACSA-PAN-PAN-metapan-d0_5-f0_25.db \
+                 -C core_accessory_singleton_gc
+
+# COCO
+
+cd ../Methylobacterium-COCO-PAN/
+
+anvi-import-collection \
+                 ../gene_clusters.txt \
+                 -p Methylobacterium-COCO-PAN-PAN-metapan-d0_5-f0_25.db \
+                 -C core_accessory_singleton_gc
+
+# FAGR
+
+cd ../Methylobacterium-FAGR-PAN/
+
+anvi-import-collection \
+                 ../gene_clusters.txt \
+                 -p Methylobacterium-FAGR-PAN-PAN-metapan-d0_5-f0_25.db \
+                 -C core_accessory_singleton_gc
+
+# THOC
+
+cd ../Methylobacterium-THOC-PAN/
+
+anvi-import-collection \
+                 ../gene_clusters.txt \
+                 -p Methylobacterium-THOC-PAN-PAN-metapan-d0_5-f0_25.db \
+                 -C core_accessory_singleton_gc
+
+################################################################################
 # Summarize the METAPANgenomes (one per tree species)
 ################################################################################
 
+cd anvio_artifacts/
 
+# ABBA
 
+cd /Methylobacterium-ABBA-PAN/
 
+anvi-summarize \
+                 -g ../Methylobacterium-ABBA-GENOMES.db \
+                 -p Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db \
+                 -C core_accessory_singleton_gc \
+                 -o Methylobacterium-ABBA-METAPAN-SUMMARY
 
+# ACSA
 
+cd ../Methylobacterium-ACSA-PAN/
 
-#########################################################################################################
+anvi-summarize \
+                 -g ../Methylobacterium-ACSA-GENOMES.db \
+                 -p Methylobacterium-ACSA-PAN-PAN-metapan-d0_5-f0_25.db \
+                 -C core_accessory_singleton_gc \
+                 -o Methylobacterium-ACSA-METAPAN-SUMMARY
 
+# COCO
 
--- Generate and import collection for ABBA metapangenome
+cd ../Methylobacterium-COCO-PAN/
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ anvi-get-sequences-for-gene-clusters -g ../Methylobacterium-ABBA-GENOMES.db -p Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db --max-num-genomes-gene-cluster-occurs 1 -o singletons_gc
+anvi-summarize \
+                 -g ../Methylobacterium-COCO-GENOMES.db \
+                 -p Methylobacterium-COCO-PAN-PAN-metapan-d0_5-f0_25.db \
+                 -C core_accessory_singleton_gc \
+                 -o Methylobacterium-COCO-METAPAN-SUMMARY
 
-# ANVIO VERBOSE :
-All gene clusters (70695) ....................: GC_00065566, GC_00026818, GC_00035365, (... 70692 more (`--debug` will show all))
-Gene clusters that passed the filter (38190) .: GC_00065566, GC_00056396, GC_00035365, (... 38187 more (`--debug` will show all))
-Genes clusters that failed the filter (32505) : GC_00019282, GC_00026818, GC_00001014, (... 32502 more (`--debug` will show all))
+# FAGR
 
-INFO
-===============================================
-Your filters resulted in 38190 gene clusters that contain a total of 3971760
-genes. for downstream analyses. Just so you know.
+cd ../Methylobacterium-FAGR-PAN/
 
-Sequence type ................................: Amino acid                                                                                     
-Num sequences reported .......................: 39,777
-Output FASTA file ............................: singletons_gc
+anvi-summarize \
+                 -g ../Methylobacterium-FAGR-GENOMES.db \
+                 -p Methylobacterium-FAGR-PAN-PAN-metapan-d0_5-f0_25.db \
+                 -C core_accessory_singleton_gc \
+                 -o Methylobacterium-FAGR-METAPAN-SUMMARY
 
+# THOC
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ anvi-get-sequences-for-gene-clusters -g ../Methylobacterium-ABBA-GENOMES.db -p Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db --min-num-genomes-gene-cluster-occurs 104 -o core_gc
+cd ../Methylobacterium-THOC-PAN/
 
-# ANVIO VERBOSE :
-All gene clusters (70695) ....................: GC_00004776, GC_00032246, GC_00061717, (... 70692 more (`--debug` will show all))
-Gene clusters that passed the filter (1149) ..: GC_00000867, GC_00001312, GC_00000332, (... 1146 more (`--debug` will show all))
-Genes clusters that failed the filter (69546) : GC_00004776, GC_00032246, GC_00061717, (... 69543 more (`--debug` will show all))
+anvi-summarize \
+                 -g ../Methylobacterium-THOC-GENOMES.db \
+                 -p Methylobacterium-THOC-PAN-PAN-metapan-d0_5-f0_25.db \
+                 -C core_accessory_singleton_gc \
+                 -o Methylobacterium-THOC-METAPAN-SUMMARY
 
-INFO
-===============================================
-Your filters resulted in 1149 gene clusters that contain a total of 119496
-genes. for downstream analyses. Just so you know.
+################################################################################
+# Core and accessory gene analyses (mOTUpan method)
+################################################################################
 
-Sequence type ................................: Amino acid                                                                                     
-Num sequences reported .......................: 130,111
-Output FASTA file ............................: core_gc
+cd anvio_artifacts/
 
+mkdir anvio_core_pan_genome
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ anvi-get-sequences-for-gene-clusters -g ../Methylobacterium-ABBA-GENOMES.db -p Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db --min-num-genomes-gene-cluster-occurs 2 --max-num-genomes-gene-cluster-occurs 103 -o accessory_gc
+cp ./Methylobacterium-ABBA-PAN/Methylobacterium-ABBA-PAN-PAN.db anvio_core_pan_genome/
 
-# ANVIO VERBOSE :
-All gene clusters (70695) ....................: GC_00003372, GC_00024356, GC_00034165, (... 70692 more (`--debug` will show all))
-Gene clusters that passed the filter (31356) .: GC_00003372, GC_00024356, GC_00011049, (... 31353 more (`--debug` will show all))
-Genes clusters that failed the filter (39339) : GC_00034165, GC_00047552, GC_00052968, (... 39336 more (`--debug` will show all))
+cp Methylobacterium-ABBA-GENOMES.db anvio_core_pan_genome/
 
-INFO
-===============================================
-Your filters resulted in 31356 gene clusters that contain a total of 3261024
-genes. for downstream analyses. Just so you know.
+cd anvio_core_pan_genome/
 
-Sequence type ................................: Amino acid                                                                                     
-Num sequences reported .......................: 424,165
-Output FASTA file ............................: accessory_gc
+pip install mOTUlizer
 
+anvi-script-compute-bayesian-pan-core \
+                 -p Methylobacterium-ABBA-PAN-PAN.db \
+                 -g Methylobacterium-ABBA-GENOMES.db \
+                 -o core_pan_genome 
+                 
+cp core_pan_genome core_pan_genome_table
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ grep -o -P '.{0,0}GC_.{0,8}' singletons_gc | sort -u > singletons_gc.txt
+sed -i '1,11d' core_pan_genome_table
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ sed -i "s/$/\tsingleton/" singletons_gc.txt
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ grep -o -P '.{0,0}GC_.{0,8}' accessory_gc | sort -u > accessory_gc.txt
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ sed -i "s/$/\taccessory/" accessory_gc.txt
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ grep -o -P '.{0,0}GC_.{0,8}' core_gc | sort -u > core_gc.txt
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ sed -i "s/$/\tcore/" core_gc.txt
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ for i in core_gc.txt accessory_gc.txt singletons_gc.txt; do cat $i >> i.txt; done
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ sort i.txt > gene_clusters.txt
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ rm i.txt
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ cp gene_clusters.txt ..
-
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ anvi-import-collection gene_clusters.txt -p Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db -C core_accessory_singleton_gc
-
-
-#########################################################################################################
-
-
--- Import collection for ACSA, COCO, FAGR and THOC metapangenomes
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ACSA-PAN$ anvi-import-collection ../gene_clusters.txt -p Methylobacterium-ACSA-PAN-PAN-metapan-d0_5-f0_25.db -C core_accessory_singleton_gc
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-COCO-PAN$ anvi-import-collection ../gene_clusters.txt -p Methylobacterium-COCO-PAN-PAN-metapan-d0_5-f0_25.db -C core_accessory_singleton_gc
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-FAGR-PAN$ anvi-import-collection ../gene_clusters.txt -p Methylobacterium-FAGR-PAN-PAN-metapan-d0_5-f0_25.db -C core_accessory_singleton_gc
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-THOC-PAN$ anvi-import-collection ../gene_clusters.txt -p Methylobacterium-THOC-PAN-PAN-metapan-d0_5-f0_25.db -C core_accessory_singleton_gc
-
-
-#########################################################################################################
-
--- Summarize the metapangenomes (one per tree species)
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ anvi-summarize -g ../Methylobacterium-ABBA-GENOMES.db -p Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db -C core_accessory_singleton_gc -o Methylobacterium-ABBA-METAPAN-SUMMARY
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ACSA-PAN$ anvi-summarize -g ../Methylobacterium-ACSA-GENOMES.db -p Methylobacterium-ACSA-PAN-PAN-metapan-d0_5-f0_25.db -C core_accessory_singleton_gc -o Methylobacterium-ACSA-METAPAN-SUMMARY
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-COCO-PAN$ anvi-summarize -g ../Methylobacterium-COCO-GENOMES.db -p Methylobacterium-COCO-PAN-PAN-metapan-d0_5-f0_25.db -C core_accessory_singleton_gc -o Methylobacterium-COCO-METAPAN-SUMMARY
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-FAGR-PAN$ anvi-summarize -g ../Methylobacterium-FAGR-GENOMES.db -p Methylobacterium-FAGR-PAN-PAN-metapan-d0_5-f0_25.db -C core_accessory_singleton_gc -o Methylobacterium-FAGR-METAPAN-SUMMARY
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-THOC-PAN$ anvi-summarize -g ../Methylobacterium-THOC-GENOMES.db -p Methylobacterium-THOC-PAN-PAN-metapan-d0_5-f0_25.db -C core_accessory_singleton_gc -o Methylobacterium-THOC-METAPAN-SUMMARY
-
-
-#########################################################################################################
-
-
--- Combine metapangenomes visuals
-
-# Code adapted from https://dutter.github.io/projects/oral_metapan#step-4---pangenome-and-metapangenome-construction
-
-
----- Create new tree species list in phylogenetic order
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ nano tree_species_in_order.txt 
-
-ABBA
-THOC
-FAGR
-COCO
-ACSA
-
-
----- Export misc items and layers
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ nano export_misc_data.sh 
-
-for tree in `awk '{print $1}' tree_species_in_order.txt`
-do
-    anvi-export-misc-data -p Methylobacterium-$tree-PAN/Methylobacterium-$tree-PAN-PAN-metapan-d0_5-f0_25.db -t items -o $tree-items.txt
-    anvi-export-misc-data -p Methylobacterium-$tree-PAN/Methylobacterium-$tree-PAN-PAN-metapan-d0_5-f0_25.db -t layers -o $tree-layers.txt
-done
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ bash export_misc_data.sh 
-
-
----- Create new directory and rearrange files
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ mkdir ALL_TREE_METAPANGENOME
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ mv tree_species_in_order.txt ALL_TREE_METAPANGENOME
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ mv *-items.txt ALL_TREE_METAPANGENOME
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ mv *-layers.txt ALL_TREE_METAPANGENOME
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ cp Methylobacterium-ABBA-PAN/Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db ALL_TREE_METAPANGENOME
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME$ mv Methylobacterium-ABBA-PAN-PAN-metapan-d0_5-f0_25.db Methylobacterium-all-tree-METAPAN.db
-
-
----- Modify new METAPAN.db
-
-# delete the unprocessed columns from ABBA so don't end up with two sets of ABBA metagenomes (formatted + unformatted)
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME$ anvi-delete-misc-data -p Methylobacterium-all-tree-METAPAN.db -t layers --keys-to-remove $(head -1 ABBA-layers.txt | cut -f11- - | tr '\t' ',')
-
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME$ nano metapan_modif.sh
-
-#!/bin/bash
-
-for tree in `awk '{print $1}' tree_species_in_order.txt`
-do
-
-# select metapan rings from items data and add tree species as prefix
-awk -F"\t" -v tree=$tree 'BEGIN{tree=toupper(tree)}; NR==1{print $1 FS tree"-"$9 FS tree"-"$10 FS tree"-"$11 FS tree"-"$12} NR>1 {print $1 FS $9 FS $10 FS $11 FS $12}' $tree-items.txt > $tree-items.tmp
-
-# prepend capitalized site ID before each metagenome's coverage of the genomes
-cut -d' ' -f1,11- $tree-layers.txt | sed "s/SRS/\U$tree-SRS/g" > $tree-layers.tmp
-
-# trim off junk from SRS filenames in header
-sed -i"" 's/_DENOVO_DUPLICATES_MARKED_TRIMMED//g' $tree-layers.tmp
-
-# import this data back into the all-tree-METAPAN.db
-anvi-import-misc-data -p Methylobacterium-all-tree-METAPAN.db -t items $tree-items.tmp
-anvi-import-misc-data -p Methylobacterium-all-tree-METAPAN.db -t layers $tree-layers.tmp
-
-done
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME$ bash metapan_modif.sh
-
-
-ANVIO VERBOSE :
-
-[...]
-Data keys already in db ......................: total_length, gc_content, percent_completion, percent_redundancy, num_genes, avg_gene_length,
-                                                num_genes_per_kb, singleton_gene_clusters, num_gene_clusters
-
-
-Config Error: Some of the data keys in your new data are already in the database. If you want 
-              to replace them with the ones in your new data input use the `--just-do-it`     
-              flag, and watch anvi'o make an exception just for you and complain about nothin'
-              for this once.                                                                  
-
-# This should be ok since those columns are the same whatever the host tree species.
-# IMPORTANT NOTE : items/columns 'ECGs_and_EAGs.*' are the same than 'ABBA.ECGs_and_EAGs.*'
-
-
-# Open R project
-
-~/msc/R_analysis/msc_detection_coverage/msc_detection_coverage.Rproj
-
-Create new script 'all-tree-metapan-data.R' for building all tree metapangenomes (with median coverage layers per tree species).
-
-{r}
-
-# Script taken and adapted from https://dutter.github.io/projects/oral_metapan#step-4---pangenome-and-metapangenome-construction
-
-# calculate and export the median coverage for each genome for each site, 
-# as well as combine the per-sample coverages for a heatmap
-
-ABBA <- read.csv("/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME/ABBA-layers.tmp", sep = "\t", header = T)
-THOC <- read.csv("/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME/THOC-layers.tmp", sep = "\t", header = T)
-FAGR <- read.csv("/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME/FAGR-layers.tmp", sep = "\t", header = T)
-COCO <- read.csv("/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME/COCO-layers.tmp", sep = "\t", header = T)
-ACSA <- read.csv("/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME/ACSA-layers.tmp", sep = "\t", header = T)
-
-# save genome ids for later
-genomeIDs <- ABBA[,1]
-
-# get just the coverages
-ABBA <- ABBA[,grep("ABBA", colnames(ABBA))]
-THOC <- THOC[,grep("THOC", colnames(THOC))]
-FAGR <- FAGR[,grep("FAGR", colnames(FAGR))]
-COCO <- COCO[,grep("COCO", colnames(COCO))]
-ACSA <- ACSA[,grep("ACSA", colnames(ACSA))]
-
-# get the median for each row=genome
-ABBA <- apply(ABBA, 1, median)
-THOC <- apply(THOC, 1, median)
-FAGR <- apply(FAGR, 1, median)
-COCO <- apply(COCO, 1, median)
-ACSA <- apply(ACSA, 1, median)
-
-# save to import into anvio
-write.table(cbind(layers=as.character(genomeIDs), ABBA_MEDIAN=ABBA, THOC_MEDIAN=THOC, FAGR_MEDIAN=FAGR, COCO_MEDIAN=COCO, ACSA_MEDIAN=ACSA), "tree_species_median.tsv", sep = "\t", col.names = T, row.names = F, quote=F)
-
-{/r}
-
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME$ cp /home/jocelyn/msc/R_analysis/msc_detection_coverage/tree_species_median.tsv .
-
-
----- Import median coverage layer in all-tree-METAPAN.db 
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME$ anvi-import-misc-data -p Methylobacterium-all-tree-METAPAN.db -t layers tree_species_median.tsv
-
-
----- Visualize FINAL METAPANGENOME
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME$ anvi-display-pan -g ../Methylobacterium-ABBA-GENOMES.db -p Methylobacterium-all-tree-METAPAN.db 
-
-
-#########################################################################################################
-
-
--- Summarize FINAL METAPANGENOME
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME$ anvi-summarize -g ../Methylobacterium-ABBA-GENOMES.db -p Methylobacterium-all-tree-METAPAN.db -C core_accessory_singleton_gc -o Methylobacterium-ALL-TREE-METAPAN-SUMMARY
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/ALL_TREE_METAPANGENOME/Methylobacterium-ALL-TREE-METAPAN-SUMMARY$ gunzip Methylobacterium-ABBA-PAN_gene_clusters_summary.txt.gz
-
-# The summary of this operation will be used to build the large metapangenomic data table in R script 'data_preparation.Rmd'.
-
-
-#########################################################################################################
-
-
--- Analyses in R
-
----- Import metaphlan results in R (merged abundance table of genera
-
-# The code to create 'merged_genera_table.txt' is in 'metaphlan_script_phyllo.txt'.
-
-# Copy 'merged_genera_table.txt' file from phyllo to betula
-(base) jocelyn@phyllo:/data/users/jocelyn/msc_data/metaphlan/rarefied_data_results/profile_files$ scp -r -v merged_genera_table.txt jocelyn@betula.uqam.ca:/mnt/storage/jocelyn/msc/metaphlan
-
-
----- Export functions from contigs db for analyzing functions related to missing 25 gene calls in pangenome
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ anvi-export-functions -c all_genomes-CONTIGS.db -o all_functions.txt
-
-
-R PROJECT
-~/msc/R_analysis/msc_detection_coverage/msc_detection_coverage.Rproj
-
-- In this project, create R markdown 'data_preparation.Rmd'
-
-
-OOOO
-O   O
-O    O
-O    O
-O   O  
-OOOO 
-O O
-O  O
-O   O
-O    O
-O     O
-
-
-#########################################################################################################
-
-AFTER BETULA CRASH, RESETUP GIT AND GITHUB ON BETULA
-
-# Installing Git
-(base) jocelyn@betula:~$ sudo apt install git
-(base) jocelyn@betula:~$ git --version
-
-# Setting up Github on betula
-
-(base) jocelyn@betula:~$ git config --global user.email "jocelyn.lauzon@gmail.com"
-(base) jocelyn@betula:~$ git config --global user.name "lauzonj"
-
-# Generating a new SSH key
-Reference : https://docs.github.com/en/authentication/connecting-to-github-with-ssh/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent
-(base) jocelyn@betula:~$ ssh-keygen -t ed25519 -C "jocelyn.lauzon@gmail.com"
-Enter passphrase (empty for no passphrase): betula
-
-# verbose:
-Generating public/private ed25519 key pair.
-Enter file in which to save the key (/home/jocelyn/.ssh/id_ed25519): 
-Created directory '/home/jocelyn/.ssh'.
-Enter passphrase (empty for no passphrase): 
-Enter same passphrase again: 
-Your identification has been saved in /home/jocelyn/.ssh/id_ed25519
-Your public key has been saved in /home/jocelyn/.ssh/id_ed25519.pub
-The key fingerprint is:
-SHA256:o99dEbUCHc2o7Y8d/pVpbg29nOsr9HKZJYUAUbcNHM8 jocelyn.lauzon@gmail.com
-The key's randomart image is:
-+--[ED25519 256]--+
-|          o=ooO..|
-|            o+.X.|
-|            ooooE|
-|           . .o..|
-|        S   . .o |
-|       . .   ooo=|
-|      .     . O*X|
-|       . . . =o&o|
-|        . . . *==|
-+----[SHA256]-----+
-
-# Adding a new SSH key to your account
-Reference : https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account#about-addition-of-ssh-keys-to-your-account
-(base) jocelyn@betula:~$ cd .ssh/
-(base) jocelyn@betula:~/.ssh$ nano id_ed25519.pub 
-ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFQs6WFqSEx460rGxrQ45Z8wxZWUFOz3OYlqF0db1aAW jocelyn.lauzon@gmail.com
-
-
-#########################################################################################################
-
----- eggNOG functions
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ anvi-get-sequences-for-gene-calls -c all_genomes-CONTIGS.db --get-aa-sequences -o all_amino-acid-sequences.fa
-
-# With Filezilla, transfer the file 'all_amino-acid-sequences.fa' to local computer. 
-# On local computer, use TextEdit to make files containing 100000 sequences or less so that it is accepted by eggNOG-mapper.
-# Files created :
-amino-acid-sequences-0-99999.fa
-amino-acid-sequences-100000-199999.fa
-amino-acid-sequences-200000-299999.fa
-amino-acid-sequences-300000-399999.fa
-amino-acid-sequences-400000-499999.fa
-amino-acid-sequences-500000-597776.fa
-
-# With Filezilla, transfer those six files to /mnt/storage/jocelyn/msc/anvio_artifacts
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ gzip amino-acid-*.fa
-
-# With Filezilla, transfer those six .gz files back to local computer.
-
-# Manually rename the files, adding a '-02' to make sure to distinguish the files from the previous batch sent to eggNOG mapper web.
-
-amino-acid-sequences-0-99999-02.fa.gz
-amino-acid-sequences-100000-199999-02.fa.gz
-amino-acid-sequences-200000-299999-02.fa.gz
-amino-acid-sequences-300000-399999-02.fa.gz
-amino-acid-sequences-400000-499999-02.fa.gz
-amino-acid-sequences-500000-597776-02.fa.gz
-
-# Give those 6 '-02.fa.gz' files to eggNOG-mapper, website : http://eggnog-mapper.embl.de/
-# Processed on July 14+, 2024, with default setup options. See screencaps 'eggNOG_mapper_default_options'.
-
-# 11 Output files, for each .fa.gz files, named :
-emapper.err
-emapper.out
-info.txt
-out.emapper.annotations
-out.emapper.annotations.xlsx
-out.emapper.decorated.gff
-out.emapper.hits
-out.emapper.orthologs
-out.emapper.seed_orthologs
-queries.fasta
-queries.raw
-
-# On Betula, prepare folders for eggNOG files
-
-(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ mkdir eggNOG-mapper-outputs
-(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs$ mkdir 0-99999
-(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs$ mkdir 100000-199999
-(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs$ mkdir 200000-299999
-(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs$ mkdir 300000-399999
-(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs$ mkdir 400000-499999
-(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs$ mkdir 500000-597776
-
-# Download all eggNOG output files
-
-(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs/0-99999$ wget -r -np -nH --cut-dirs=1 http://eggnog-mapper.embl.de/MM_6dzxftmf/
-(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs/100000-199999$ wget -r -np -nH --cut-dirs=1 http://eggnog-mapper.embl.de/MM_oz1ayens/
-(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs/200000-299999$ wget -r -np -nH --cut-dirs=1 http://eggnog-mapper.embl.de/MM_aialjeaf/
-(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs/300000-399999$ wget -r -np -nH --cut-dirs=1 http://eggnog-mapper.embl.de/MM_62u7gvj9/
-(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs/400000-499999$ wget -r -np -nH --cut-dirs=1 http://eggnog-mapper.embl.de/MM_kvtw_fuj/
-(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs/500000-597776$ wget -r -np -nH --cut-dirs=1 http://eggnog-mapper.embl.de/MM_2el5xaf1/
-
-
-
-# Transfer 6 'out.emapper.annotations' files on local computer, then :
-# with TextEdit, make one big file 'all_out.emapper.annotations' containing all gene calls functions. 
-
-# Import 'all_out.emapper.annotations' to /mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs/
-
-
-#########################################################################################################
-
-# Pangenome statistics
-
-Runs mOTUpan on your gene clusters to estimate whether they are core or accessory.
-
-Function : anvi-script-compute-bayesian-pan-core
-Uses:
-pan-db 			Methylobacterium-ABBA-PAN/
-genomes-storage-db 	Methylobacterium-ABBA-GENOMES.db
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ mkdir anvio_core_pan_genome
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ cp Methylobacterium-ABBA-PAN-PAN.db ../anvio_core_pan_genome/
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ cp Methylobacterium-ABBA-GENOMES.db anvio_core_pan_genome/
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/anvio_core_pan_genome$ pip install mOTUlizer
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/anvio_core_pan_genome$ anvi-script-compute-bayesian-pan-core -p Methylobacterium-ABBA-PAN-PAN.db -g Methylobacterium-ABBA-GENOMES.db -o core_pan_genome -T 6
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/anvio_core_pan_genome$ cp core_pan_genome core_pan_genome_table
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/anvio_core_pan_genome$ sed -i '1,11d' core_pan_genome_table
-
-
-
-#########################################################################################################
-
-# Exporting gene clusters distances
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ anvi-export-items-order -p Methylobacterium-ABBA-PAN-PAN.db --name frequency (newick; distance: euclidean, clustering: ward)
-
-
-#########################################################################################################
+################################################################################
+# pN/pS ratio analyses
+################################################################################
 
 
 -- Selection analyses on M. sp. 018
@@ -1504,6 +1224,114 @@ Below are tests :
 ---- pN/pS ratio (article)
 
 (anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_024.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0.05 --min-coverage 10 --minimum-num-variants 10 --comparison consensus -o pNpS_sp_024-03
+
+
+################################################################################
+
+################################################################################
+
+
+
+
+
+
+
+
+
+
+BELOW CHUNKS OF CODE ARE NO GOOD, AND KEPT HERE ONLY IF NEEDED.
+
+
+#########################################################################################################
+
+
+-- Analyses in R
+
+---- Export functions from contigs db for analyzing functions related to missing 25 gene calls in pangenome
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ anvi-export-functions -c all_genomes-CONTIGS.db -o all_functions.txt
+
+
+
+#########################################################################################################
+
+---- eggNOG functions
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ anvi-get-sequences-for-gene-calls -c all_genomes-CONTIGS.db --get-aa-sequences -o all_amino-acid-sequences.fa
+
+# With Filezilla, transfer the file 'all_amino-acid-sequences.fa' to local computer. 
+# On local computer, use TextEdit to make files containing 100000 sequences or less so that it is accepted by eggNOG-mapper.
+# Files created :
+amino-acid-sequences-0-99999.fa
+amino-acid-sequences-100000-199999.fa
+amino-acid-sequences-200000-299999.fa
+amino-acid-sequences-300000-399999.fa
+amino-acid-sequences-400000-499999.fa
+amino-acid-sequences-500000-597776.fa
+
+# With Filezilla, transfer those six files to /mnt/storage/jocelyn/msc/anvio_artifacts
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ gzip amino-acid-*.fa
+
+# With Filezilla, transfer those six .gz files back to local computer.
+
+# Manually rename the files, adding a '-02' to make sure to distinguish the files from the previous batch sent to eggNOG mapper web.
+
+amino-acid-sequences-0-99999-02.fa.gz
+amino-acid-sequences-100000-199999-02.fa.gz
+amino-acid-sequences-200000-299999-02.fa.gz
+amino-acid-sequences-300000-399999-02.fa.gz
+amino-acid-sequences-400000-499999-02.fa.gz
+amino-acid-sequences-500000-597776-02.fa.gz
+
+# Give those 6 '-02.fa.gz' files to eggNOG-mapper, website : http://eggnog-mapper.embl.de/
+# Processed on July 14+, 2024, with default setup options. See screencaps 'eggNOG_mapper_default_options'.
+
+# 11 Output files, for each .fa.gz files, named :
+emapper.err
+emapper.out
+info.txt
+out.emapper.annotations
+out.emapper.annotations.xlsx
+out.emapper.decorated.gff
+out.emapper.hits
+out.emapper.orthologs
+out.emapper.seed_orthologs
+queries.fasta
+queries.raw
+
+# On Betula, prepare folders for eggNOG files
+
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts$ mkdir eggNOG-mapper-outputs
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs$ mkdir 0-99999
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs$ mkdir 100000-199999
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs$ mkdir 200000-299999
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs$ mkdir 300000-399999
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs$ mkdir 400000-499999
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs$ mkdir 500000-597776
+
+# Download all eggNOG output files
+
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs/0-99999$ wget -r -np -nH --cut-dirs=1 http://eggnog-mapper.embl.de/MM_6dzxftmf/
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs/100000-199999$ wget -r -np -nH --cut-dirs=1 http://eggnog-mapper.embl.de/MM_oz1ayens/
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs/200000-299999$ wget -r -np -nH --cut-dirs=1 http://eggnog-mapper.embl.de/MM_aialjeaf/
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs/300000-399999$ wget -r -np -nH --cut-dirs=1 http://eggnog-mapper.embl.de/MM_62u7gvj9/
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs/400000-499999$ wget -r -np -nH --cut-dirs=1 http://eggnog-mapper.embl.de/MM_kvtw_fuj/
+(base) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs/500000-597776$ wget -r -np -nH --cut-dirs=1 http://eggnog-mapper.embl.de/MM_2el5xaf1/
+
+
+
+# Transfer 6 'out.emapper.annotations' files on local computer, then :
+# with TextEdit, make one big file 'all_out.emapper.annotations' containing all gene calls functions. 
+
+# Import 'all_out.emapper.annotations' to /mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs/
+
+
+#########################################################################################################
+
+
+
+# Exporting gene clusters distances
+
+(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN$ anvi-export-items-order -p Methylobacterium-ABBA-PAN-PAN.db --name frequency (newick; distance: euclidean, clustering: ward)
 
 
 #########################################################################################################
