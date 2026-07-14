@@ -41,8 +41,7 @@ pangenome_char.Rmd
 Descriptive statistics on the number of core, accessory and single genes, as well as hypothetical proteins.
 Analyses of genome openness.
 
-genes_cov_and_detect.Rmd
-Analyses of genes mean coverage and detection distributions.
+
 
 
 
@@ -61,3 +60,12 @@ Creation of figures showing enriched genes for specific functional categories.
 
 selection_v2_251214.Rmd
 Analyses of pN/pS ratio and positively selected genes by host species.
+
+
+
+
+NOT USED
+
+genes_cov_and_detect.Rmd
+Analyses of genes mean coverage and detection distributions.
+
