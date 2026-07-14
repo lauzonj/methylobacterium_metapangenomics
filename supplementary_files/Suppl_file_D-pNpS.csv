@@ -1,0 +1,50 @@
+gene_callers_id,gene_cluster_id,type,genome_name,host_species,DAGCs,genome_occurences,mean_pNpS,log_mean_pNpS,CI_lower.log,COG20_CATEGORY,COG20_PATHWAY,COG20_FUNCTION,KEGG_BRITE,KEGG_Class,KEGG_Module,KOfam,Pfam
+378907,GC_00058603,accessory,M_sp_018,FAGR,non-DAGC,1,3.6570923502697354,1.2966683918617188,0.17151926942857254,,,,,,,,
+458204,GC_00015287,accessory,M_sp_018,FAGR,non-DAGC,3,2.004297692282463,0.695293721233447,0.3822775904572886,,,,,,,,
+66328,GC_00004761,accessory,M_sp_018,COCO,non-DAGC,24,10.496090394369867,2.3510028444331184,0.721115041063387,General function prediction only,,Cupin domain protein related to quercetin dioxygenase (QdoI) (PDB:2H0V),,,,,Cupin domain
+66377,GC_00015108,accessory,M_sp_018,COCO,non-DAGC,5,8.07110853578628,2.0882908378774245,1.3017850227000616,Defense mechanisms,,"VapC family ribonuclease, toxin component of the VapBC toxin-antitoxin module, contains PIN domain (VapC) (PUBMED:30169502)",,,,,PIN domain
+165486,GC_00049500,accessory,M_sp_018,COCO,non-DAGC,1,5.1794052909877095,1.6446902409907382,0.46546434932163516,,,,,,,,
+165494,GC_00003779,accessory,M_sp_018,COCO,non-DAGC,23,4.54630127199843,1.514313995121495,0.7541210372574623,,,,,,,,
+66267,GC_00029049,accessory,M_sp_018,COCO,non-DAGC,2,4.089015497450594,1.4083042314097067,1.2173446451383052,,,,,,,,
+285765,GC_00005130,accessory,M_sp_018,COCO,non-DAGC,22,3.89654748348943,1.360090900417252,0.5118539887813268,,,,Enzymes>>>3. Hydrolases>>>3.1  Acting on ester bonds>>>3.1.->>>3.1.-.-|Prokaryotic defense system>>>Toxin-antitoxin system (TA system)>>>Type II TA system>>>YhaV-PrlF,,,toxin YhaV [EC:3.1.-.-],"Toxin with endonuclease activity, of toxin-antitoxin system"
+551849,GC_00002783,accessory,M_sp_018,COCO,non-DAGC,63,3.747122568211584,1.320988230301799,0.37254168155805284,,,,,,,,
+551142,GC_00064973,accessory,M_sp_018,COCO,non-DAGC,1,3.528456785482154,1.2608606041064796,0.2834411628840794,,,,,,,,
+285334,GC_00068416,accessory,M_sp_018,COCO,non-DAGC,1,3.269836866182667,1.1847400956471805,0.8546650993365561,,,,,,,,
+285088,GC_00005545,accessory,M_sp_018,COCO,broadleaf_vs_conifer,22,3.1562429258959117,1.149382372738716,0.4305271290640573,"Replication, recombination and repair",,Very-short-patch-repair endonuclease (YcjD) (PDB:3HRL),,,,,Protein of unknown function (DUF559)
+458437,GC_00005247,accessory,M_sp_018,COCO,non-DAGC,24,3.1376899160891973,1.1434868336504191,0.6619657236087636,"Replication, recombination and repair",,Very-short-patch-repair endonuclease (YcjD) (PDB:3HRL),,,,,Protein of unknown function (DUF559)
+379209,GC_00040931,accessory,M_sp_018,COCO,non-DAGC,1,2.8425933323710013,1.0447167807107225,0.5837262006315637,,,,,,,,
+458210,GC_00052441,accessory,M_sp_018,COCO,non-DAGC,1,2.5596635557418366,0.9398758263162961,0.5884120943064475,,,,,,,,
+379016,GC_00042187,accessory,M_sp_018,COCO,non-DAGC,1,2.45142007177498,0.8966674777738335,0.5661717468594719,,,,,,,,
+66722,GC_00009704,accessory,M_sp_018,COCO,non-DAGC,11,2.3300709959176342,0.8458987374643134,0.053704122783575337,,,,,,,,
+166055,GC_00056521,accessory,M_sp_018,COCO,non-DAGC,1,2.287301479514666,0.8273727294898895,0.12698752566187205,,,,,,,,
+552276,GC_00041957,accessory,M_sp_018,COCO,broadleaf_vs_conifer,1,2.244568414781566,0.8085132598542,0.5175744819618489,"Mobilome: prophages, transposons|Defense mechanisms",CRISPR-Cas system,"Transposase|CRISPR-associated protein Csa3, CARF domain (Csa3) (PDB:2WTE) (PUBMED:21093452)",,,,,
+552199,GC_00061095,accessory,M_sp_018,COCO,non-DAGC,1,2.0194214399337787,0.7028110545138861,0.5894293837557955,Inorganic ion transport and metabolism,,Ferritin-like metal-binding protein YciE (YciE) (PDB:2GS4),,,,,
+166030,GC_00022398,accessory,M_sp_018,COCO,non-DAGC,3,1.8828810524996016,0.6328030785345679,0.4292317821957128,,,,,,,,
+378790,GC_00046526,accessory,M_sp_018,COCO,non-DAGC,1,1.8626840294080111,0.6220184741262597,0.35624208925920725,,,,,,,,
+551210,GC_00002973,accessory,M_sp_018,COCO,non-DAGC,21,1.8384144503305524,0.6089034883570023,0.19063811012370097,,,,,,,,
+66827,GC_00013381,accessory,M_sp_018,COCO,broadleaf_vs_conifer,6,1.6386444902332238,0.4938693697259736,0.254056846646369,Transcription,,"DNA-binding transcriptional regulator YiaG, XRE-type HTH domain (YiaG) (PDB:5JAA)",Transcription factors>>>Prokaryotic type>>>Helix-turn-helix>>>Other families,,,putative transcriptional regulator,Helix-turn-helix domain
+285828,GC_00029088,accessory,M_sp_018,COCO,non-DAGC,2,1.588788268829393,0.4629716306142113,0.08447201422456971,,,,,,,,
+458233,GC_00000459,accessory,M_sp_018,COCO,non-DAGC,61,1.5513821131424324,0.43914621951379773,0.39666219059439556,Signal transduction mechanisms,,"CheY-like REC (receiver) domain, includes chemotaxis protein CheY  and sporulation regulator Spo0F (CheY) (PDB:6QRJ)",,,,,
+552277,GC_00008486,accessory,M_sp_018,COCO,non-DAGC,9,1.537419353125778,0.43010526607128957,0.09174798858784737,,,,,,,,
+551999,GC_00054149,accessory,M_sp_018,COCO,non-DAGC,1,1.4904291546170225,0.3990641017195402,0.11720397485534641,,,,,,,,
+285423,GC_00002976,accessory,M_sp_018,COCO,non-DAGC,57,1.4867722055482004,0.39660746512323103,0.08908048032707334,Energy production and conversion,Non-phosphorylated Entner-Doudoroff pathway,"Aldehyde, CO or xanthine dehydrogenase, Mo-binding subunit (CoxL) (PDB:1DGJ) (PUBMED:10095793)",,,,,
+458126,GC_00056950,accessory,M_sp_018,COCO,non-DAGC,1,1.4710678353381288,0.3859885556737257,0.10947570383598998,,,,,,,,
+66844,GC_00007249,accessory,M_sp_018,COCO,broadleaf_vs_conifer,13,1.3893292919529314,0.3288211069156721,0.18368626041814684,Signal transduction mechanisms,,"Chemotaxis response regulator CheB, contains REC and protein-glutamate methylesterase domains (CheB) (PDB:1A2O)",,,,,CheB methylesterase
+378907,GC_00058603,accessory,M_sp_018,COCO,non-DAGC,1,1.3817026902246008,0.3233165721181808,0.155576411111124,,,,,,,,
+165800,GC_00043721,accessory,M_sp_018,COCO,non-DAGC,1,1.3802852670215215,0.32229019303945017,0.08445023992357534,,,,,,,,
+66777,GC_00045794,accessory,M_sp_018,COCO,non-DAGC,1,1.3706788905014127,0.3153061576123607,0.040044193833182445,,,,,,,,
+458252,GC_00004521,accessory,M_sp_018,COCO,non-DAGC,30,1.3102191713215006,0.27019442957120376,0.057955433817730356,,,,,,,,Protein of unknown function (DUF2380)
+458826,GC_00021692,accessory,M_sp_018,COCO,non-DAGC,3,1.3085035031547634,0.2688841202139511,0.010224211445098028,,,,,,,,
+66268,GC_00028109,accessory,M_sp_018,COCO,non-DAGC,2,1.2905070639686749,0.2550352139846226,0.14028683541471043,,,,,,,,
+66378,GC_00006189,accessory,M_sp_018,COCO,non-DAGC,19,1.2633911316434125,0.23379948002092032,0.06478366769924501,Defense mechanisms,,"Antitoxin component of toxin-antitoxin stability system, DNA-binding transcriptional repressor (Phd) (PDB:3DBO)",,,,,
+67036,GC_00031561,accessory,M_sp_018,COCO,non-DAGC,2,1.217126756734658,0.1964929636635144,0.015572561995055518,,,,,,,,
+67195,GC_00060145,accessory,M_sp_018,COCO,non-DAGC,1,1.205437958023898,0.1868429515526718,0.052971863052830546,,,,,,,,
+551453,GC_00008866,accessory,M_sp_018,COCO,non-DAGC,13,1.2053005108947001,0.18672892248554668,0.02013904661337181,,,,,,,,
+551239,GC_00026991,accessory,M_sp_018,COCO,broadleaf_vs_conifer,2,1.1247656967904898,0.11757474444571067,0.01447086570392131,Signal transduction mechanisms,,"Serine kinase of the HPr protein, regulates carbohydrate metabolism (HprK) (PDB:1JB1)",KEGG Orthology (KO)>>>09190 Not Included in Pathway or Brite>>>09191 Unclassified: metabolism>>>99980 Enzymes with EC numbers|Enzymes>>>2. Transferases>>>2.7  Transferring phosphorus-containing groups>>>2.7.4  Phosphotransferases with a phosphate group as acceptor>>>2.7.4.-|Enzymes>>>2. Transferases>>>2.7  Transferring phosphorus-containing groups>>>2.7.11  Protein-serine/threonine kinases>>>2.7.11.-,,,HPr kinase/phosphorylase [EC:2.7.11.- 2.7.4.-],HPr Serine kinase C-terminal domain
+555302,GC_00050727,accessory,M_sp_021,THOC,non-DAGC,1,3.5957604922253306,1.279755510449445,0.8800418738321886,,,,,,,,
+554552,GC_00018830,accessory,M_sp_021,THOC,non-DAGC,3,3.390805164584145,1.2210674048676649,0.8614197666679554,,,,,,,,
+461537,GC_00005506,accessory,M_sp_021,THOC,non-DAGC,22,3.2688371437907096,1.1844343081440192,0.037646558858824154,Energy production and conversion,,"Heme/copper-type cytochrome/quinol oxidase, subunit 2 (CyoA) (PDB:1CYW)",KEGG Orthology (KO)>>>09100 Metabolism>>>09102 Energy metabolism>>>00190 Oxidative phosphorylation [PATH:ko00190]|Enzymes>>>7. Translocases>>>7.1  Catalysing the translocation of protons>>>7.1.1  Linked to oxidoreductase reactions>>>7.1.1.3  ubiquinol oxidase (H+-transporting),Pathway modules; Energy metabolism; ATP synthesis,Cytochrome o ubiquinol oxidase,cytochrome o ubiquinol oxidase subunit II [EC:7.1.1.3],"Cytochrome C oxidase subunit II, periplasmic domain"
+70706,GC_00022637,accessory,M_sp_021,THOC,non-DAGC,3,3.0179476287146123,1.104577007217827,0.5722236457452443,,,,,,,,
+382150,GC_00037553,accessory,M_sp_021,THOC,non-DAGC,1,1.765556060236052,0.5684656890603486,0.2131094336412201,,,,,,,,
+381901,GC_00035115,accessory,M_sp_021,THOC,non-DAGC,1,1.7636904887295444,0.5674084822858234,0.19815693359875,,,,,,,,
+173051,GC_00053957,accessory,M_sp_024,COCO,non-DAGC,1,2.456826045778678,0.8988702915937661,0.18948684052369646,,,,,,,,
