@@ -37,7 +37,7 @@ THOC_summary <- read.delim("../data/anvio_outputs/Methylobacterium-THOC-PAN/Meth
 THOC_summary <- THOC_summary[,-1]
 ```
 
-Since these 5 metagenomes files are similar, we will work with only one from nom on, but merge gene type (core vs. accessory), gene coverage depth, and gene horizontal coverage data.
+Since these 5 metagenomes files are similar, we will work with only one from nom on, but merge gene type (core vs. accessory), gene coverage depth, and gene horizontal coverage data for all samples.
 
 Remove unnecessary metagenomes files
 ```{r}
@@ -119,10 +119,56 @@ gene.detection <- merge(gene.detection,THOC.gene.detect, by= "gene_callers_id")
 rm(ABBA.gene.detect,ACSA.gene.detect,COCO.gene.detect,FAGR.gene.detect,THOC.gene.detect)
 ```
 
+## Gene coverage (coverage depth)
 
+Import gene coverage data
+```{r}
+# ABBA
+ABBA.txtFileName2 <- paste("../data/anvio_outputs/ABBA/ABBA_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_coverages.txt",sep="")
+ABBA.gene.cov <- rbindlist(sapply(ABBA.txtFileName2, fread, simplify = FALSE),
+                use.names = TRUE, idcol = "FileName")
+ABBA.gene.cov$gene_callers_id <- as.factor(ABBA.gene.cov$gene_callers_id)
 
+# ACSA
+ACSA.txtFileName2 <- paste("../data/anvio_outputs/ACSA/ACSA_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_coverages.txt",sep="")
+ACSA.gene.cov <- rbindlist(sapply(ACSA.txtFileName2, fread, simplify = FALSE),
+                use.names = TRUE, idcol = "FileName")
+ACSA.gene.cov$gene_callers_id <- as.factor(ACSA.gene.cov$gene_callers_id)
 
+# COCO
+COCO.txtFileName2 <- paste("../data/anvio_outputs/COCO/COCO_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_coverages.txt",sep="")
+COCO.gene.cov <- rbindlist(sapply(COCO.txtFileName2, fread, simplify = FALSE),
+                use.names = TRUE, idcol = "FileName")
+COCO.gene.cov$gene_callers_id <- as.factor(COCO.gene.cov$gene_callers_id)
 
+# FAGR
+FAGR.txtFileName2 <- paste("../data/anvio_outputs/FAGR/FAGR_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_coverages.txt",sep="")
+FAGR.gene.cov <- rbindlist(sapply(FAGR.txtFileName2, fread, simplify = FALSE),
+                use.names = TRUE, idcol = "FileName")
+FAGR.gene.cov$gene_callers_id <- as.factor(FAGR.gene.cov$gene_callers_id)
+
+# THOC
+THOC.txtFileName2 <- paste("../data/anvio_outputs/THOC/THOC_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_coverages.txt",sep="")
+THOC.gene.cov <- rbindlist(sapply(THOC.txtFileName2, fread, simplify = FALSE),
+                use.names = TRUE, idcol = "FileName")
+THOC.gene.cov$gene_callers_id <- as.factor(THOC.gene.cov$gene_callers_id)
+
+rm(ABBA.txtFileName2,ACSA.txtFileName2,COCO.txtFileName2,FAGR.txtFileName2,THOC.txtFileName2)
+```
+
+Create gene.coverage dataframe
+```{r}
+ABBA.gene.cov <- ABBA.gene.cov[,-1]
+ACSA.gene.cov <- ACSA.gene.cov[,-1]
+COCO.gene.cov <- COCO.gene.cov[,-1]
+FAGR.gene.cov <- FAGR.gene.cov[,-1]
+THOC.gene.cov <- THOC.gene.cov[,-1]
+gene.coverage <- merge(ABBA.gene.cov,ACSA.gene.cov, by= "gene_callers_id")
+gene.coverage <- merge(gene.coverage,COCO.gene.cov, by= "gene_callers_id")
+gene.coverage <- merge(gene.coverage,FAGR.gene.cov, by= "gene_callers_id")
+gene.coverage <- merge(gene.coverage,THOC.gene.cov, by= "gene_callers_id")
+rm(ABBA.gene.cov,ACSA.gene.cov,COCO.gene.cov,FAGR.gene.cov,THOC.gene.cov)
+```
 
 -################################################################################
 
@@ -154,311 +200,28 @@ data.fct.det <- data.fct.det[,c(2,1,3,30,31,17,18,11,12,19,20,25,26,23,24,27,28,
 data.fct.det <- readRDS("../rds/data.fct.det.rds")
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-## Functions and gene coverage stats df
+## Merge 'gene.coverage' with 'data'
 ```{r}
-data.fct.cov <- subset(data, select = c(1:5,36:54))
-data.fct.cov <- data.fct.cov[,c(1:5,10:13,22:23,8:9,6:7,14:17,18:21,24)] # rearrange column order
-# Import eggNOG functions 
-data.fct.cov <- merge(data.fct.cov, eggNOG, by = "gene_callers_id", all.x = TRUE)
+data.fct.cov <- merge(data, gene.coverage, by = "gene_callers_id")
 data.fct.cov <- data.fct.cov[order(match(data.fct.cov$gene_callers_id, data$gene_callers_id)), ]
 rownames(data.fct.cov) <- NULL
-data.fct.cov <- data.fct.cov[,c(2,1,3,4:41)] # rearrange column order
+data.fct.cov <- data.fct.cov[,c(2,1,3,30,31,17,18,11,12,19,20,25,26,23,24,27,28,13,14,21,22,15,16,29,35:59)]
 ```
 
-
-Save dataframes as RDS files for subsequent analyses.
+## Create data.fct.cov RDS file
 ```{r}
 #saveRDS(data.fct.cov, "../rds/data.fct.cov.rds")
-```
-
-
-
-
-
-################################################################################
-
-# Gene detection
-
-Load 'data.fct.cov'
-```{r}
 data.fct.cov <- readRDS("../rds/data.fct.cov.rds")
 ```
 
+-################################################################################
 
-
-
-
-
-Merge gene.detection and data
+# Descriptive statistics : number of individual genes and functional annotations from 3 databases
 ```{r}
-data.fct.det <- merge(data.fct.cov, gene.detection, by= "gene_callers_id")
-data.fct.det <- data.fct.det[order(match(data.fct.det$gene_callers_id, data.fct.cov$gene_callers_id)), ]
-rownames(data.fct.det) <- NULL
-data.fct.det <- data.fct.det[,c(2,1,3,4:66)] # rearrange column order
-```
-
-
-
-Save dataframe
-```{r}
-#saveRDS(data.fct.det, file = "../rds/data.fct.det.rds")
-```
-
-################################################################################
-
-# Gene coverage
-
-Import gene coverage data
-```{r}
-# ABBA
-ABBA.txtFileName2 <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/ABBA/ABBA_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_coverages.txt",sep="")
-ABBA.gene.cov <- rbindlist(sapply(ABBA.txtFileName2, fread, simplify = FALSE),
-                use.names = TRUE, idcol = "FileName")
-ABBA.gene.cov$gene_callers_id <- as.factor(ABBA.gene.cov$gene_callers_id)
-
-# ACSA
-ACSA.txtFileName2 <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/ACSA/ACSA_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_coverages.txt",sep="")
-ACSA.gene.cov <- rbindlist(sapply(ACSA.txtFileName2, fread, simplify = FALSE),
-                use.names = TRUE, idcol = "FileName")
-ACSA.gene.cov$gene_callers_id <- as.factor(ACSA.gene.cov$gene_callers_id)
-
-# COCO
-COCO.txtFileName2 <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/COCO/COCO_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_coverages.txt",sep="")
-COCO.gene.cov <- rbindlist(sapply(COCO.txtFileName2, fread, simplify = FALSE),
-                use.names = TRUE, idcol = "FileName")
-COCO.gene.cov$gene_callers_id <- as.factor(COCO.gene.cov$gene_callers_id)
-
-# FAGR
-FAGR.txtFileName2 <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/FAGR/FAGR_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_coverages.txt",sep="")
-FAGR.gene.cov <- rbindlist(sapply(FAGR.txtFileName2, fread, simplify = FALSE),
-                use.names = TRUE, idcol = "FileName")
-FAGR.gene.cov$gene_callers_id <- as.factor(FAGR.gene.cov$gene_callers_id)
-
-# THOC
-THOC.txtFileName2 <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/THOC/THOC_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_coverages.txt",sep="")
-THOC.gene.cov <- rbindlist(sapply(THOC.txtFileName2, fread, simplify = FALSE),
-                use.names = TRUE, idcol = "FileName")
-THOC.gene.cov$gene_callers_id <- as.factor(THOC.gene.cov$gene_callers_id)
-
-rm(ABBA.txtFileName2,ACSA.txtFileName2,COCO.txtFileName2,FAGR.txtFileName2,THOC.txtFileName2)
-```
-
-Create gene.coverage dataframe
-```{r}
-ABBA.gene.cov <- ABBA.gene.cov[,-1]
-ACSA.gene.cov <- ACSA.gene.cov[,-1]
-COCO.gene.cov <- COCO.gene.cov[,-1]
-FAGR.gene.cov <- FAGR.gene.cov[,-1]
-THOC.gene.cov <- THOC.gene.cov[,-1]
-gene.coverage <- merge(ABBA.gene.cov,ACSA.gene.cov, by= "gene_callers_id")
-gene.coverage <- merge(gene.coverage,COCO.gene.cov, by= "gene_callers_id")
-gene.coverage <- merge(gene.coverage,FAGR.gene.cov, by= "gene_callers_id")
-gene.coverage <- merge(gene.coverage,THOC.gene.cov, by= "gene_callers_id")
-```
-
-Merge gene.coverage and data
-```{r}
-data.fct.cov <- merge(data.fct.cov, gene.coverage, by= "gene_callers_id")
-data.fct.cov <- data.fct.cov[order(match(data.fct.cov$gene_callers_id, data.fct.det$gene_callers_id)), ]
-rownames(data.fct.cov) <- NULL
-data.fct.cov <- data.fct.cov[,c(2,1,3,4:66)] # rearrange column order
-```
-
-Remove
-```{r}
-rm(ABBA.gene.cov,ACSA.gene.cov,COCO.gene.cov,FAGR.gene.cov,THOC.gene.cov,gene.coverage)
-```
-
-Save dataframe
-```{r}
-#saveRDS(data.fct.cov, file = "../rds/data.fct.cov.rds")
-```
-
-
-################################################################################
-
-# Annotations statistics
-```{r}
-# anvio intergrated annotations
+length(unique(data.pangenome$gene_callers_id))
 sum(data.fct.cov$COG20_FUNCTION_ACC!="")
 sum(data.fct.cov$KOfam_ACC!="")
-sum(data.fct.cov$CAZyme_ACC!="")
 sum(data.fct.cov$Pfam_ACC!="")
-
-# eggNOG annotations
-test <- data.fct.cov
-test[test=="-"] <- ""
-sum(!is.na(test$COG_category))
-sum(!is.na(test$KEGG_ko))
-sum(!is.na(test$CAZy))
-sum(!is.na(test$PFAMs))
 ```
 
-
-
-
-################################################################################
-
-# Missing gene calls
-
-Verification of missing gene calls
-
-See important note below chunk.
-
-In 'TREE.gene.detect' objects (tables created after merging TREE profiles with anvi-merge), there is 594478 gene calls.
-In 'TREE_summary' and 'data' objects (tables created after pangenomes construction with anvi-pan-genome), there is 594053 gene calls. 401 gene calls have been dropped because they are rRNA gene calls, and 24 gene calls have been lost for a yet unknown reason.
-Below, I inspect what are those 24 missing gene calls.
-```{r}
-# Create table with 425 gene calls not included in metapangenome data
-missing.gene.calls <- anti_join(ABBA.gene.detect, data.fct.cov, by = "gene_callers_id")
-# Import all gene calls from contigs database that have functional annotation
-all.functions <- read.delim("/mnt/storage/jocelyn/msc/anvio_artifacts/all_functions.txt", header = TRUE, sep = "\t", dec = ".", quote="", fill=FALSE)
-all.functions$gene_callers_id <- as.factor(all.functions$gene_callers_id)
-# How many unique gene calls have an assigned function?
-all.functions %>% distinct(gene_callers_id) # 472 447 unique gene calls are functionaly annotated
-# Merge missing gene calls with functionaly annotated gene calls to see if missing gene calls have an annotated function
-missing.gene.calls.functions <- merge(missing.gene.calls,all.functions, by = "gene_callers_id")
-
-# Second analysis similar to the one above but comparing missing gene calls with all gene calls (functionaly annotated or not)
-
-# Import all gene calls from contigs database
-ABBA.txtFileNameX <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/ABBA/ABBA_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_calls.txt",sep="")
-gene.calls <- rbindlist(sapply(ABBA.txtFileNameX, fread, simplify = FALSE),
-                use.names = TRUE, idcol = "FileName")
-gene.calls$gene_callers_id <- as.factor(gene.calls$gene_callers_id)
-# Merge missing gene calls with all gene calls to see if missing gene calls have an annotated function
-missing.gene.calls.functions.2 <- merge(missing.gene.calls,gene.calls, by = "gene_callers_id")
-```
-Conclusion : No missing gene calls in metapangenome have any annotated functions.
-
-Remove
-```{r}
-rm(ABBA.gene.detect,ACSA.gene.detect,COCO.gene.detect,FAGR.gene.detect,THOC.gene.detect)
-rm(missing.gene.calls,missing.gene.calls.functions,missing.gene.calls.functions.2,ABBA.txtFileNameX)
-```
-
-#IMPORTANT NOTE
-
-Gene callers ID tracking through anvio pipeline.
-
--- After contigs database (anvi-gen-contigs-database) and HMM (anvi-run-hmms)
-
-* 'prodigal' (597,777 gene calls)
-* 'Ribosomal_RNA_23S' (202 gene calls)
-* 'Ribosomal_RNA_16S' (199 gene calls)
-
-For a total of 598 178 gene calls --> gene_callers_id from 0 to 598177
-Prodigal genes (ORF) --> gene_callers_id from 0 to 597776
-Ribosomal_RNA_23S --> gene_callers_id from 597777 to 597978
-Ribosomal_RNA_16S --> gene_callers_id from 597979 to 598177
-
-
--- After profiling TREE mapping results (anvi-profile), so consequently after merging TREE profiles (anvi-merge)
-
-Because choice of minimum contig length (-M) = 1000,
-We went from 598178 to 594478 gene calls (this include rRNA genes) (loss of 3700 gene calls, 0.6% of total gene calls)
-
-
--- After summarizing (anvi-summarize)
-
-Loss of 401 gene calls (rRNA gene calls)
-We went from 594478 to 594077 gene calls
-
-
--- Gene clustering (anvi-pan-genome)
-
-Loss of 24 gene calls 
-We went from 594077 to 594053 gene calls
-I don't know why those gene calls were lost BUT
-Those 24 gene calls have no functions assigned (verified in the chunk above).
-
-
-
-################################################################################
-
-
-
-
-
-
-
-
-
-
-
-
-
-################################################################################
-
-SECTION BELOW NOT DONE, BECAUSE USELESS.
-
-Import gene non outlier coverage data
-```{r}
-# ABBA
-ABBA.txtFileName3 <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/ABBA/ABBA_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_non_outlier_coverages.txt",sep="")
-ABBA.gene.no.cov <- rbindlist(sapply(ABBA.txtFileName3, fread, simplify = FALSE),
-                use.names = TRUE, idcol = "FileName")
-ABBA.gene.no.cov$gene_callers_id <- as.factor(ABBA.gene.no.cov$gene_callers_id)
-
-# ACSA
-ACSA.txtFileName3 <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/ACSA/ACSA_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_non_outlier_coverages.txt",sep="")
-ACSA.gene.no.cov <- rbindlist(sapply(ACSA.txtFileName3, fread, simplify = FALSE),
-                use.names = TRUE, idcol = "FileName")
-ACSA.gene.no.cov$gene_callers_id <- as.factor(ACSA.gene.no.cov$gene_callers_id)
-
-# COCO
-COCO.txtFileName3 <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/COCO/COCO_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_non_outlier_coverages.txt",sep="")
-COCO.gene.no.cov <- rbindlist(sapply(COCO.txtFileName3, fread, simplify = FALSE),
-                use.names = TRUE, idcol = "FileName")
-COCO.gene.no.cov$gene_callers_id <- as.factor(COCO.gene.no.cov$gene_callers_id)
-
-# FAGR
-FAGR.txtFileName3 <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/FAGR/FAGR_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_non_outlier_coverages.txt",sep="")
-FAGR.gene.no.cov <- rbindlist(sapply(FAGR.txtFileName3, fread, simplify = FALSE),
-                use.names = TRUE, idcol = "FileName")
-FAGR.gene.no.cov$gene_callers_id <- as.factor(FAGR.gene.no.cov$gene_callers_id)
-
-# THOC
-THOC.txtFileName3 <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/THOC/THOC_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_non_outlier_coverages.txt",sep="")
-THOC.gene.no.cov <- rbindlist(sapply(THOC.txtFileName3, fread, simplify = FALSE),
-                use.names = TRUE, idcol = "FileName")
-THOC.gene.no.cov$gene_callers_id <- as.factor(THOC.gene.no.cov$gene_callers_id)
-
-rm(ABBA.txtFileName3,ACSA.txtFileName3,COCO.txtFileName3,FAGR.txtFileName3,THOC.txtFileName3)
-```
-
-Create gene.no.coverage dataframe
-```{r}
-ABBA.gene.no.cov <- ABBA.gene.no.cov[,-1]
-ACSA.gene.no.cov <- ACSA.gene.no.cov[,-1]
-COCO.gene.no.cov <- COCO.gene.no.cov[,-1]
-FAGR.gene.no.cov <- FAGR.gene.no.cov[,-1]
-THOC.gene.no.cov <- THOC.gene.no.cov[,-1]
-gene.no.coverage <- merge(ABBA.gene.no.cov,ACSA.gene.no.cov, by= "gene_callers_id")
-gene.no.coverage <- merge(gene.no.coverage,COCO.gene.no.cov, by= "gene_callers_id")
-gene.no.coverage <- merge(gene.no.coverage,FAGR.gene.no.cov, by= "gene_callers_id")
-gene.no.coverage <- merge(gene.no.coverage,THOC.gene.no.cov, by= "gene_callers_id")
-```
-
-Merge gene.no.coverage and data
-```{r}
-data.gene.no.cov <- merge(data,gene.no.coverage, by= "gene_callers_id")
-```
-
-Save dataframe
-```{r}
-#saveRDS(data.gene.no.cov, file = "data.gene.no.cov.rds")
-```
+-################################################################################
