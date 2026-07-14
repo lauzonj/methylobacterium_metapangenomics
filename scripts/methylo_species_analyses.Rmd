@@ -1,5 +1,5 @@
 ---
-title: "Methylobacterium species beta diversity analyses"
+title: "Methylobacterium species analyses"
 output: html_document
 date: "2024-04-24"
 ---
@@ -117,7 +117,7 @@ ggtree(meth.tree) +
 
 # Horizontal coverage threshold
 
-Keep genomes with detection threshold >= 0.34 (outliers based on z values)
+Keep genomes with detection threshold >= 0.34 (outliers based on z values, see script 'genomes_horizontal_cov_hist.Rmd')
 ```{r}
 genome.detect_0.34 <- data.frame(ifelse(genome.detect < 0.34, 0, 1))
 genome.detect_0.34 <- genome.detect_0.34[rowSums(genome.detect_0.34)>0,]
