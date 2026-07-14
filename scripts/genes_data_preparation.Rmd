@@ -53,7 +53,6 @@ data <- subset(data, select = -c(2,12:15))
 data <- data %>% mutate(across(c(gene_cluster_id, genome_name, gene_callers_id, KEGG_Class_ACC, KEGG_Class, KEGG_BRITE_ACC, KEGG_BRITE, KEGG_Module_ACC, KEGG_Module, KOfam_ACC, KOfam, Pfam_ACC, Pfam, CAZyme_ACC, CAZyme, COG20_FUNCTION_ACC, COG20_FUNCTION, COG20_PATHWAY_ACC, COG20_PATHWAY, COG20_CATEGORY_ACC, COG20_CATEGORY), as.factor))
 # Change vectors to numeric
 data <- data %>% mutate(across(c(num_genomes_gene_cluster_has_hits, num_genes_in_gene_cluster, max_num_paralogs, SCG), as.numeric))
-str(data)
 ```
 
 ## mOTUpan data
@@ -62,7 +61,6 @@ mOTUpan.import <- read.delim("../data/anvio_outputs/core_pan_genome_table", head
 colnames(mOTUpan.import)[1] <- "gene_cluster_id"
 mOTUpan <- mOTUpan.import[,-7]
 mOTUpan <- mOTUpan %>% mutate(across(c(gene_cluster_id, type), as.factor))
-str(mOTUpan)
 ```
 
 ## Gene 'detection' (horizontal coverage)
@@ -75,31 +73,31 @@ genomes <- unique(data$genome_name)
 Import gene detection data
 ```{r}
 # ABBA
-ABBA.txtFileName <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/ABBA/ABBA_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_detection.txt",sep="")
+ABBA.txtFileName <- paste("../data/anvio_outputs/ABBA/ABBA_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_detection.txt",sep="")
 ABBA.gene.detect <- rbindlist(sapply(ABBA.txtFileName, fread, simplify = FALSE),
                 use.names = TRUE, idcol = "FileName")
 ABBA.gene.detect$gene_callers_id <- as.factor(ABBA.gene.detect$gene_callers_id)
 
 # ACSA
-ACSA.txtFileName <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/ACSA/ACSA_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_detection.txt",sep="")
+ACSA.txtFileName <- paste("../data/anvio_outputs/ACSA/ACSA_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_detection.txt",sep="")
 ACSA.gene.detect <- rbindlist(sapply(ACSA.txtFileName, fread, simplify = FALSE),
                 use.names = TRUE, idcol = "FileName")
 ACSA.gene.detect$gene_callers_id <- as.factor(ACSA.gene.detect$gene_callers_id)
 
 # COCO
-COCO.txtFileName <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/COCO/COCO_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_detection.txt",sep="")
+COCO.txtFileName <- paste("../data/anvio_outputs/COCO/COCO_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_detection.txt",sep="")
 COCO.gene.detect <- rbindlist(sapply(COCO.txtFileName, fread, simplify = FALSE),
                 use.names = TRUE, idcol = "FileName")
 COCO.gene.detect$gene_callers_id <- as.factor(COCO.gene.detect$gene_callers_id)
 
 # FAGR
-FAGR.txtFileName <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/FAGR/FAGR_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_detection.txt",sep="")
+FAGR.txtFileName <- paste("../data/anvio_outputs/FAGR/FAGR_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_detection.txt",sep="")
 FAGR.gene.detect <- rbindlist(sapply(FAGR.txtFileName, fread, simplify = FALSE),
                 use.names = TRUE, idcol = "FileName")
 FAGR.gene.detect$gene_callers_id <- as.factor(FAGR.gene.detect$gene_callers_id)
 
 # THOC
-THOC.txtFileName <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/THOC/THOC_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_detection.txt",sep="")
+THOC.txtFileName <- paste("../data/anvio_outputs/THOC/THOC_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_detection.txt",sep="")
 THOC.gene.detect <- rbindlist(sapply(THOC.txtFileName, fread, simplify = FALSE),
                 use.names = TRUE, idcol = "FileName")
 THOC.gene.detect$gene_callers_id <- as.factor(THOC.gene.detect$gene_callers_id)
@@ -107,32 +105,55 @@ THOC.gene.detect$gene_callers_id <- as.factor(THOC.gene.detect$gene_callers_id)
 rm(ABBA.txtFileName,ACSA.txtFileName,COCO.txtFileName,FAGR.txtFileName,THOC.txtFileName)
 ```
 
+Create gene.detection dataframe
+```{r}
+ABBA.gene.detect <- ABBA.gene.detect[,-1]
+ACSA.gene.detect <- ACSA.gene.detect[,-1]
+COCO.gene.detect <- COCO.gene.detect[,-1]
+FAGR.gene.detect <- FAGR.gene.detect[,-1]
+THOC.gene.detect <- THOC.gene.detect[,-1]
+gene.detection <- merge(ABBA.gene.detect,ACSA.gene.detect, by= "gene_callers_id")
+gene.detection <- merge(gene.detection,COCO.gene.detect, by= "gene_callers_id")
+gene.detection <- merge(gene.detection,FAGR.gene.detect, by= "gene_callers_id")
+gene.detection <- merge(gene.detection,THOC.gene.detect, by= "gene_callers_id")
+rm(ABBA.gene.detect,ACSA.gene.detect,COCO.gene.detect,FAGR.gene.detect,THOC.gene.detect)
+```
+
+
+
+
 
 
 -################################################################################
 
-# Edit dataframes
+# Edit dataframes and create RDS files for subsequent analyses
 
 ## Merge 'mOTUpan' with 'data'
 ```{r}
 data <- merge(data, mOTUpan, by = "gene_cluster_id")
-
-
-
-
-
-
-
-
-#data <- data[c(1:3,50:54,4:49)] # rearrange column order
+data.pangenome <- data[c(1:3,30:34,4:10)]
 ```
 
 ## Create data.pangenome RDS file
 ```{r}
-data.pangenome <- data[c(1:3,30:34,4:10)]
 #saveRDS(data.pangenome, "../rds/data.pangenome.rds")
 data.pangenome <- readRDS("../rds/data.pangenome.rds")
 ```
+
+## Merge 'gene.detection' with 'data'
+```{r}
+data.fct.det <- merge(data, gene.detection, by = "gene_callers_id")
+data.fct.det <- data.fct.det[order(match(data.fct.det$gene_callers_id, data$gene_callers_id)), ]
+rownames(data.fct.det) <- NULL
+data.fct.det <- data.fct.det[,c(2,1,3,30,31,17,18,11,12,19,20,25,26,23,24,27,28,13,14,21,22,15,16,29,35:59)]
+```
+
+## Create data.fct.det RDS file
+```{r}
+#saveRDS(data.fct.det, "../rds/data.fct.det.rds")
+data.fct.det <- readRDS("../rds/data.fct.det.rds")
+```
+
 
 
 
@@ -176,58 +197,10 @@ Load 'data.fct.cov'
 data.fct.cov <- readRDS("../rds/data.fct.cov.rds")
 ```
 
-Create new factorial vector with 104 genome names
-```{r}
-genomes <- unique(data.fct.cov$genome_name)
-```
 
-Import gene detection data
-```{r}
-# ABBA
-ABBA.txtFileName <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/ABBA/ABBA_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_detection.txt",sep="")
-ABBA.gene.detect <- rbindlist(sapply(ABBA.txtFileName, fread, simplify = FALSE),
-                use.names = TRUE, idcol = "FileName")
-ABBA.gene.detect$gene_callers_id <- as.factor(ABBA.gene.detect$gene_callers_id)
 
-# ACSA
-ACSA.txtFileName <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/ACSA/ACSA_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_detection.txt",sep="")
-ACSA.gene.detect <- rbindlist(sapply(ACSA.txtFileName, fread, simplify = FALSE),
-                use.names = TRUE, idcol = "FileName")
-ACSA.gene.detect$gene_callers_id <- as.factor(ACSA.gene.detect$gene_callers_id)
 
-# COCO
-COCO.txtFileName <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/COCO/COCO_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_detection.txt",sep="")
-COCO.gene.detect <- rbindlist(sapply(COCO.txtFileName, fread, simplify = FALSE),
-                use.names = TRUE, idcol = "FileName")
-COCO.gene.detect$gene_callers_id <- as.factor(COCO.gene.detect$gene_callers_id)
 
-# FAGR
-FAGR.txtFileName <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/FAGR/FAGR_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_detection.txt",sep="")
-FAGR.gene.detect <- rbindlist(sapply(FAGR.txtFileName, fread, simplify = FALSE),
-                use.names = TRUE, idcol = "FileName")
-FAGR.gene.detect$gene_callers_id <- as.factor(FAGR.gene.detect$gene_callers_id)
-
-# THOC
-THOC.txtFileName <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/THOC/THOC_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_detection.txt",sep="")
-THOC.gene.detect <- rbindlist(sapply(THOC.txtFileName, fread, simplify = FALSE),
-                use.names = TRUE, idcol = "FileName")
-THOC.gene.detect$gene_callers_id <- as.factor(THOC.gene.detect$gene_callers_id)
-
-rm(ABBA.txtFileName,ACSA.txtFileName,COCO.txtFileName,FAGR.txtFileName,THOC.txtFileName)
-```
-
-Create gene.detection dataframe
-```{r}
-ABBA.gene.detect <- ABBA.gene.detect[,-1]
-ACSA.gene.detect <- ACSA.gene.detect[,-1]
-COCO.gene.detect <- COCO.gene.detect[,-1]
-FAGR.gene.detect <- FAGR.gene.detect[,-1]
-THOC.gene.detect <- THOC.gene.detect[,-1]
-gene.detection <- merge(ABBA.gene.detect,ACSA.gene.detect, by= "gene_callers_id")
-gene.detection <- merge(gene.detection,COCO.gene.detect, by= "gene_callers_id")
-gene.detection <- merge(gene.detection,FAGR.gene.detect, by= "gene_callers_id")
-gene.detection <- merge(gene.detection,THOC.gene.detect, by= "gene_callers_id")
-```
 
 Merge gene.detection and data
 ```{r}
@@ -237,10 +210,7 @@ rownames(data.fct.det) <- NULL
 data.fct.det <- data.fct.det[,c(2,1,3,4:66)] # rearrange column order
 ```
 
-Remove
-```{r}
-rm(ABBA.gene.detect,ACSA.gene.detect,COCO.gene.detect,FAGR.gene.detect,THOC.gene.detect,gene.detection)
-```
+
 
 Save dataframe
 ```{r}
