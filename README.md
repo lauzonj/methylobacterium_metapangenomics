@@ -28,16 +28,14 @@ Analyses on total bacterial communities (genus level).
 methylo_species_analyses.Rmd
 Analyses of Methylobacterium species' community diversity, composition and phylogenetic relatedness.
 
-
-
-
 gene_data_preparation.Rmd
-Preparation of data for gene composition and diversity analyses.
-Merging metapangenome table with detection and coverage stats.
+Preparation of data for gene composition and diversity analyses based on anvio analyses outputs.
+Merging metapangenome table with horizontal coverage ('detection') and coverage depth statistics.
 Creation of 3 dataframes to work from.
 'data.pangenome.rds' -> for pangenome analyses
-'data.fct.det.rds' -> for gene coverage and detection statistics analyses
-'data.fct.cov.rds' -> for gene coverage analyses (diversity and differential abundances analyses)
+'data.fct.det.rds' -> for gene horizontal coverage ('detection') analyses
+'data.fct.cov.rds' -> for gene coverage depth (diversity and differential abundances analyses)
+Also contains descriptive statistics on the number of individual genes and functional annotations from the three databases
 
 
 
