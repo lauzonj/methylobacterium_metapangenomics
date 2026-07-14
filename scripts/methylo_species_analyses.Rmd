@@ -65,7 +65,6 @@ metadata$shrub_tree <- c("tree","tree","tree","tree","tree","tree","tree","tree"
 metadata$shrub_tree <- factor(x = metadata$shrub_tree, levels = c("shrub","tree"))
 metadata$gymno_angio_tree <- c("gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_shrub","angiosperm_shrub","angiosperm_shrub","angiosperm_shrub","angiosperm_shrub","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree")
 metadata$gymno_angio_tree <- factor(x = metadata$gymno_angio_tree, levels = c("gymnosperm_tree","angiosperm_tree","angiosperm_shrub"))
-metadata.bac.comm <- metadata
 ```
 
 ## Reference genomes table
