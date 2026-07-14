@@ -37,12 +37,9 @@ Creation of 3 dataframes to work from.
 'data.fct.cov.rds' -> for gene coverage depth (diversity and differential abundances analyses)
 Also contains descriptive statistics on the number of individual genes and functional annotations from the three databases
 
-
-
-
-
 pangenome_char.Rmd
-Calculate number of core and accessory genes, and number of hypothetical proteins.
+Descriptive statistics on the number of core, accessory and single genes, as well as hypothetical proteins.
+Analyses of genome openness.
 
 
 
