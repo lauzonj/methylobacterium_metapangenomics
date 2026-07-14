@@ -4,94 +4,94 @@ output: html_document
 date: "2024-04-24"
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+-################################################################################
 
 # Libraries
 ```{r}
 library(tidyverse)
 library(vegan)
-library(ggplot2)
+library(picante)
 library(ggtree)
+library(adespatial)
+library(ggordiplots)
+
+
 library(patchwork)
 library(rlang)
 library(ggrepel)
 library(ggdark)
-library(pairwiseAdonis)
-library(extrafont)
-library(ggordiplots)
-library(betapart)
-library(picante)
+#library(pairwiseAdonis)
+#library(extrafont)
+#library(betapart)
+
+
 library(gridExtra)
 ```
 
-################################################################################
+-################################################################################
 
-# Data import
-
-## Detection
-
-Import anvio genome detection data
-```{r}
-genome.detect <- read.delim("/mnt/storage/jocelyn/msc/anvio_analysis/ABBA/ABBA_PROFILE-SUMMARY/bins_across_samples/detection.txt", header = T, sep = "\t", dec = ".")
-genome.detect <- merge(genome.detect, read.delim("/mnt/storage/jocelyn/msc/anvio_analysis/ACSA/ACSA_PROFILE-SUMMARY/bins_across_samples/detection.txt", header = T, sep = "\t", dec = "."), by = "bins")
-genome.detect <- merge(genome.detect, read.delim("/mnt/storage/jocelyn/msc/anvio_analysis/COCO/COCO_PROFILE-SUMMARY/bins_across_samples/detection.txt", header = T, sep = "\t", dec = "."), by = "bins")
-genome.detect <- merge(genome.detect, read.delim("/mnt/storage/jocelyn/msc/anvio_analysis/FAGR/FAGR_PROFILE-SUMMARY/bins_across_samples/detection.txt", header = T, sep = "\t", dec = "."), by = "bins")
-genome.detect <- merge(genome.detect, read.delim("/mnt/storage/jocelyn/msc/anvio_analysis/THOC/THOC_PROFILE-SUMMARY/bins_across_samples/detection.txt", header = T, sep = "\t", dec = "."), by = "bins")
-colnames(genome.detect)[1] <- "species"
-rownames(genome.detect) <- genome.detect$species
-genome.detect <- genome.detect[,-1]
-#saveRDS(genome.detect, "../rds/genome.detect.rds")
-genome.detect <- readRDS("../rds/genome.detect.rds")
-```
+# Import data
 
 ## Mean coverage
 
 Import anvio genome mean coverage data
 ```{r}
-genome.mean.cov <- read.delim("/mnt/storage/jocelyn/msc/anvio_analysis/ABBA/ABBA_PROFILE-SUMMARY/bins_across_samples/mean_coverage.txt", header = T, sep = "\t", dec = ".")
-genome.mean.cov <- merge(genome.mean.cov, read.delim("/mnt/storage/jocelyn/msc/anvio_analysis/ACSA/ACSA_PROFILE-SUMMARY/bins_across_samples/mean_coverage.txt", header = T, sep = "\t", dec = "."), by = "bins")
-genome.mean.cov <- merge(genome.mean.cov, read.delim("/mnt/storage/jocelyn/msc/anvio_analysis/COCO/COCO_PROFILE-SUMMARY/bins_across_samples/mean_coverage.txt", header = T, sep = "\t", dec = "."), by = "bins")
-genome.mean.cov <- merge(genome.mean.cov, read.delim("/mnt/storage/jocelyn/msc/anvio_analysis/FAGR/FAGR_PROFILE-SUMMARY/bins_across_samples/mean_coverage.txt", header = T, sep = "\t", dec = "."), by = "bins")
-genome.mean.cov <- merge(genome.mean.cov, read.delim("/mnt/storage/jocelyn/msc/anvio_analysis/THOC/THOC_PROFILE-SUMMARY/bins_across_samples/mean_coverage.txt", header = T, sep = "\t", dec = "."), by = "bins")
+genome.mean.cov <- read.delim("../data/anvio_outputs/ABBA/ABBA_PROFILE-SUMMARY/bins_across_samples/mean_coverage.txt", header = T, sep = "\t", dec = ".")
+genome.mean.cov <- merge(genome.mean.cov, read.delim("../data/anvio_outputs/ACSA/ACSA_PROFILE-SUMMARY/bins_across_samples/mean_coverage.txt", header = T, sep = "\t", dec = "."), by = "bins")
+genome.mean.cov <- merge(genome.mean.cov, read.delim("../data/anvio_outputs/COCO/COCO_PROFILE-SUMMARY/bins_across_samples/mean_coverage.txt", header = T, sep = "\t", dec = "."), by = "bins")
+genome.mean.cov <- merge(genome.mean.cov, read.delim("../data/anvio_outputs/FAGR/FAGR_PROFILE-SUMMARY/bins_across_samples/mean_coverage.txt", header = T, sep = "\t", dec = "."), by = "bins")
+genome.mean.cov <- merge(genome.mean.cov, read.delim("../data/anvio_outputs/THOC/THOC_PROFILE-SUMMARY/bins_across_samples/mean_coverage.txt", header = T, sep = "\t", dec = "."), by = "bins")
 colnames(genome.mean.cov)[1] <- "species"
 rownames(genome.mean.cov) <- genome.mean.cov$species
 genome.mean.cov <- genome.mean.cov[,-1]
-#saveRDS(genome.mean.cov, "../rds/genome.mean.cov.rds")
-genome.mean.cov <- readRDS("../rds/genome.mean.cov.rds")
 ```
 
-## Metadata
-```{r}
-metadata <- read.delim("../data_imported/samples_metadata.txt", header = TRUE, sep = "\t", dec = ".", row.names = 1)
-metadata <- metadata %>% arrange(row.names(.))
-metadata <- metadata %>% mutate(across(c(plant_clade,plant_order,plant_family,host_species,plot,tree,leaf_wash_batch,extraction_batch), as.factor))
-metadata$host_species <- factor(x = metadata$host_species, levels = c("ABBA","THOC","ACSA","FAGR","COCO"))
-metadata$shrub_tree <- c("tree","tree","tree","tree","tree","tree","tree","tree","tree","tree","shrub","shrub","shrub","shrub","shrub","tree","tree","tree","tree","tree","tree","tree","tree","tree","tree")
-metadata$shrub_tree <- factor(x = metadata$shrub_tree, levels = c("shrub","tree"))
-metadata$gymno_angio_tree <- c("gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_shrub","angiosperm_shrub","angiosperm_shrub","angiosperm_shrub","angiosperm_shrub","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree")
-metadata$gymno_angio_tree <- factor(x = metadata$gymno_angio_tree, levels = c("gymnosperm_tree","angiosperm_tree","angiosperm_shrub"))
-```
+## Horizontal coverage
 
-## Reference genomes table
+Import anvio genome 'detection' data
 ```{r}
-ref.genomes <- read.delim("../data_imported/meth_all_genomes.txt", header = TRUE, sep = "\t", dec = ",")
-ref.genomes <- ref.genomes[,c(2:4)]
-ref.genomes <- ref.genomes %>% mutate(across(c(species,strain_original_name,group), as.factor))
-colnames(ref.genomes) <- c("Meth_species","strain","clade")
+genome.detect <- read.delim("../data/anvio_outputs/ABBA/ABBA_PROFILE-SUMMARY/bins_across_samples/detection.txt", header = T, sep = "\t", dec = ".")
+genome.detect <- merge(genome.detect, read.delim("../data/anvio_outputs/ACSA/ACSA_PROFILE-SUMMARY/bins_across_samples/detection.txt", header = T, sep = "\t", dec = "."), by = "bins")
+genome.detect <- merge(genome.detect, read.delim("../data/anvio_outputs/COCO/COCO_PROFILE-SUMMARY/bins_across_samples/detection.txt", header = T, sep = "\t", dec = "."), by = "bins")
+genome.detect <- merge(genome.detect, read.delim("../data/anvio_outputs/FAGR/FAGR_PROFILE-SUMMARY/bins_across_samples/detection.txt", header = T, sep = "\t", dec = "."), by = "bins")
+genome.detect <- merge(genome.detect, read.delim("../data/anvio_outputs/THOC/THOC_PROFILE-SUMMARY/bins_across_samples/detection.txt", header = T, sep = "\t", dec = "."), by = "bins")
+colnames(genome.detect)[1] <- "species"
+rownames(genome.detect) <- genome.detect$species
+genome.detect <- genome.detect[,-1]
 ```
 
 ## Reads data
 ```{r}
-reads.data <- read.delim("../data_imported/nb_reads.txt", header = TRUE, sep = "\t", dec = ",", row.names = 1)
+reads.data <- read.delim("../data/nb_reads.txt", header = TRUE, sep = "\t", dec = ",", row.names = 1)
+```
+
+## Metadata
+```{r}
+metadata <- read.delim("../data/samples_metadata.txt", header = TRUE, sep = "\t", dec = ".", row.names = 1)
+metadata <- metadata %>% arrange(row.names(.))
+metadata <- metadata %>% mutate(across(c(plant_clade,plant_order,plant_family,host_species,tree), as.factor))
+reads.data$host_species <- metadata$host_species
+metadata$host_species <- factor(x = metadata$host_species, levels = c("ABBA","THOC","ACSA","FAGR","COCO"))
+reads.data$host_species <- factor(x = reads.data$host_species, levels = c("ABBA","THOC","ACSA","FAGR","COCO"))
+metadata$shrub_tree <- c("tree","tree","tree","tree","tree","tree","tree","tree","tree","tree","shrub","shrub","shrub","shrub","shrub","tree","tree","tree","tree","tree","tree","tree","tree","tree","tree")
+metadata$shrub_tree <- factor(x = metadata$shrub_tree, levels = c("shrub","tree"))
+metadata$gymno_angio_tree <- c("gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_shrub","angiosperm_shrub","angiosperm_shrub","angiosperm_shrub","angiosperm_shrub","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","angiosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree","gymnosperm_tree")
+metadata$gymno_angio_tree <- factor(x = metadata$gymno_angio_tree, levels = c("gymnosperm_tree","angiosperm_tree","angiosperm_shrub"))
+metadata.bac.comm <- metadata
+```
+
+## Reference genomes table
+```{r}
+ref.genomes <- read.delim("../data/meth_all_genomes.txt", header = TRUE, sep = "\t", dec = ",")
+ref.genomes <- ref.genomes[,c(2:4)]
+ref.genomes <- ref.genomes %>% mutate(across(c(species,strain_original_name,group), as.factor))
+colnames(ref.genomes) <- c("species","strain","clade")
 ```
 
 ## Phylogenetic tree
 ```{r}
-meth.tree <- read.tree("/mnt/storage/jocelyn/msc/msc_detection_coverage/data_imported/RAxML_bipartitionsBranchLabels.Partition-Concatenated-genes-nov21-b=500-rooted")
-# <- root(meth.tree, outgroup = c("YourOutgroupSpecies",), resolve.root = TRUE)
-strains.list <- read.csv2("/mnt/storage/jocelyn/msc/msc_detection_coverage/data_imported/List-genomes.csv", sep = ";", dec = ".")
+meth.tree <- read.tree("../data/RAxML_bipartitionsBranchLabels.Partition-Concatenated-genes-nov21-b=500-rooted")
+strains.list <- read.csv2("../data/List-genomes.csv", sep = ";", dec = ".")
 # rename tips of the tree - prepare data
 st.sp <- strains.list[,c(1,2,4)]
 colnames(st.sp) <- c("st","strain","Meth_species")
@@ -116,38 +116,20 @@ meth.tree.sp[["tip.label"]] <- gsub("Meth", "M", meth.tree.sp[["tip.label"]])
 meth.tree.sp[["tip.label"]]
 ```
 
-Plot tree (verification test)
+Plot tree
 ```{r}
 plot(meth.tree, show.tip.label = T)
 ggtree(meth.tree) + 
   theme_tree() +
   geom_tiplab(size=2)
-ggsave("../figures/meth_tree_test.tiff", width = 8, height = 16)
 ```
 
 
-################################################################################
+-################################################################################
 
-# Dectection threshold
+# Horizontal coverage threshold
 
-Statistics if I would keep genomes with detection threshold >= 0.5
-```{r}
-genome.detect_0.5 <- data.frame(ifelse(genome.detect < 0.5, 0, 1))
-genome.detect_0.5 <- genome.detect_0.5[rowSums(genome.detect_0.5)>0,]
-genome.detect_0.5 <- genome.detect_0.5[,colSums(genome.detect_0.5)>0]
-```
-
-Statistics
-```{r}
-length(rownames(genome.detect_0.5))
-rowSums(genome.detect_0.5)
-length(colnames(genome.detect_0.5))
-colSums(genome.detect_0.5)
-sum(genome.detect_0.5)
-```
-With detection threshold >= 0.5 : 20 species, in 23 samples, for a total of 133 detections.
-
-Keep genomes with detection threshold >= 0.34
+Keep genomes with detection threshold >= 0.34 (outliers based on z values)
 ```{r}
 genome.detect_0.34 <- data.frame(ifelse(genome.detect < 0.34, 0, 1))
 genome.detect_0.34 <- genome.detect_0.34[rowSums(genome.detect_0.34)>0,]
@@ -162,17 +144,15 @@ length(colnames(genome.detect_0.34))
 colSums(genome.detect_0.34)
 sum(genome.detect_0.34)
 ```
-With detection threshold >= 0.34 : 23 species, in 24 samples, for a total of 198 detections.
 
-## PA community matrix
+## Presence-absence community matrix
 ```{r}
 genomes.PA.comm <- data.frame(t(genome.detect_0.34))
 ```
 
+-################################################################################
 
-################################################################################
-
-# Coverage, metadata and reads data associated with present genomes
+# Coverage, metadata and reads data associated with 'detected' genomes
 
 ## Mean coverage
 
@@ -181,13 +161,11 @@ genomes.mean.cov_0.34 <- genome.mean.cov[rownames(genome.detect_0.34), colnames(
 genomes.mean.cov_0.34 <- as.data.frame(mapply(function(x, y) ifelse(x == 1, y, 0), genome.detect_0.34, genomes.mean.cov_0.34))
 rownames(genomes.mean.cov_0.34) <- row.names(genome.detect_0.34)
 genomes.cov.comm <- data.frame(t(genomes.mean.cov_0.34))
-#saveRDS(genomes.cov.comm, "../rds/genomes.cov.comm.rds")
 ```
 
 ## Count data : transform mean coverage to count data
 ```{r}
 genomes.cov.comm.c <- round(genomes.cov.comm, digits = 0)
-#saveRDS(genomes.cov.comm.c, "../rds/genomes.cov.comm.c.rds")
 ```
 
 ## Metadata & add reads data
@@ -204,67 +182,19 @@ metadata.comm$richness <- rowSums(genomes.PA.comm)
 metadata.comm$shannon <- vegan::diversity(genomes.cov.comm, index = "shannon")
 ```
 
-################################################################################
+-################################################################################
 
-# Rarefaction ?
+# Correlation between richness and number of filtered pairs.
 
-REFLECTION ON RAREFACTION (paragraph copied from 'genomes_cov_detect.Rmd')
-Try to answer the question: "should I rarefy for Methylobacterium species composition analyses?"
-Whatever the answer, I think I can't rarefy on genome coverage values (even if transformed to count values - i.e. integer) because of my data structure : I would lose too much information - Meth species as well as samples, because many genomes are only detected once per sample, and a few are detected a lot in samples. Furthermore, there is a huge difference among my samples in terms of absolute abundances of detections (based on mean coverage).
-Furthermore, normally rarefaction is applied on number of DNA sequences. Normally, in amplicon analyses, 1 sequence (1 PE read) is tied to 1 ASV. Here, thousands of sequences are tied to 1 genome, and even for genes, it takes a few (dozens?) sequences of 150bp to cover 1 whole gene (~1000bp). However, my gene data structure still allows me to treat genes as "sequences".
-
-## Data structure
-```{r}
-rowSums(genomes.cov.comm.c)
-rowSums(genomes.PA.comm)
-```
-
-## Curve
-```{r}
-rarecurve(genomes.cov.comm.c, step = 1, label = T, xlim=c(0,150))
-rarecurve(genomes.cov.comm.c, step = 1, label = T, xlim=c(0,50))
-```
-
-## Correlation between richness and number of filtered pairs.
-
-### Distributions
-```{r}
-hist(metadata.comm$richness, breaks = 25)
-shapiro.test(metadata.comm$richness)
-hist(metadata.comm$filtered_pairs, breaks = 25)
-shapiro.test(metadata.comm$filtered_pairs)
-hist(reads.data$filtered_pairs, breaks = 25)
-shapiro.test(reads.data$filtered_pairs)
-```
-The two variables distributions are normal.
-
-### Models
-
-Linear
 ```{r}
 lm <- lm(richness ~ filtered_pairs, data = metadata.comm)
 plot(richness ~ filtered_pairs, data = metadata.comm)
 summary(lm)
-anova(lm)
 plot(lm)
 hist(residuals(lm), breaks = 25)
 shapiro.test(residuals(lm))
 ```
-The model's assumptions are met, there is no correlation between the richness of samples and their number of filtered read pairs.
-
-
-Fist, due to my data structure, I cannot rarefy my Methylobacterium species data without losing a huge amount of information.
-
-However, not rarefying might not be a problem considering
-A) There is no correlation between richness and number of filtered read pairs.
-AB) There is no correlation between mapped reads to Methylo genomes and number of filtered read pairs. See script 'mapped_reads.Rmd'.
-C) For some Methylobacterium species, there is a correlation between genome detection and number of filtered reads (sequencing depth). However, the significative correlations are all for species whose genomes were not detected in any samples (count = 0) (detection threshold >= 0.34). See script 'genomes_cov_and_detect.Rmd'.
-D) For some Methylobacterium species, there is a correlation between mean genome coverage and number of filtered reads (sequencing depth). However, the significative correlations are all for species whose genomes were in average poorly covered across all samples. See script 'genomes_cov_and_detect.Rmd'.
-
-## Conclusion : I will not rarefy my Methylobacterium species data.
-
-
-################################################################################
+-################################################################################
 
 # Prevalence of species across samples
 
@@ -280,6 +210,7 @@ species.cov.across$isolated_from <- c("Cerastium holosteoides","Haplocladium mic
 thaliana","Lolium prenne","Pseudosasa japonica","Fagus grandifolia","Fagus grandifolia","Arabidopsis
 thaliana","Arabidopsis thaliana","Arabidopsis thaliana","Acer saccharum","Fagus grandifolia","Fagus grandifolia","Fagus grandifolia","Fagus grandifolia","Fagus grandifolia","Fagus grandifolia","Acer saccharum","Fagus grandifolia","Acer saccharum","Fagus grandifolia","Cerastium holosteoides","Trifolium repens")
 ```
+
 Plot
 ```{r}
 ggplot(species.cov.across, aes(x = species, y = cov.across))+
@@ -287,7 +218,7 @@ ggplot(species.cov.across, aes(x = species, y = cov.across))+
   labs(x = "Methylobacterium species", y = "Coverage across samples") +
   ylim(0,400) +
   theme_bw() +
-  theme(text = element_text(family = "Arial"),
+  theme(text = element_text(),
       panel.grid.major = element_blank(), 
       panel.grid.minor = element_blank(), 
       plot.title = element_text(hjust = 0.5),
@@ -296,10 +227,9 @@ ggplot(species.cov.across, aes(x = species, y = cov.across))+
       axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
       axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
       )
-ggsave("../figures/Methylo_species_cov_across_samples.tiff", width = 6, height = 4)
 ```
 
-## PA
+## Presence-absence
 ```{r}
 species.PA.across <- as.data.frame(rowSums(t(genomes.PA.comm)))
 species.PA.across$species <- as.factor(rownames(species.PA.across))
@@ -309,6 +239,7 @@ species.PA.across$isolated_from <- c("Cerastium holosteoides","Haplocladium micr
 thaliana","Lolium prenne","Pseudosasa japonica","Fagus grandifolia","Fagus grandifolia","Arabidopsis
 thaliana","Arabidopsis thaliana","Arabidopsis thaliana","Acer saccharum","Fagus grandifolia","Fagus grandifolia","Fagus grandifolia","Fagus grandifolia","Fagus grandifolia","Fagus grandifolia","Acer saccharum","Fagus grandifolia","Acer saccharum","Fagus grandifolia","Cerastium holosteoides","Trifolium repens")
 ```
+
 Plot
 ```{r}
 ggplot(species.PA.across, aes(x = species, y = presence.across))+
@@ -316,7 +247,7 @@ ggplot(species.PA.across, aes(x = species, y = presence.across))+
   labs(x = "Methylobacterium species", y = "Number of samples") +
   ylim(0,25) +
   theme_bw() +
-  theme(text = element_text(family = "Arial"),
+  theme(text = element_text(),
       panel.grid.major = element_blank(), 
       panel.grid.minor = element_blank(), 
       plot.title = element_text(hjust = 0.5),
@@ -325,7 +256,6 @@ ggplot(species.PA.across, aes(x = species, y = presence.across))+
       axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
       axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
       )
-ggsave("../figures/Methylo_species_PA_across_samples.tiff", width = 6, height = 4)
 ```
 
 ```{r}
@@ -333,7 +263,7 @@ hist(species.PA.across$presence.across, breaks = 50)
 ```
 
 
-################################################################################
+-################################################################################
 
 # Alpha diversity
 
@@ -343,7 +273,6 @@ hist(species.PA.across$presence.across, breaks = 50)
 lm <- lm(richness ~ host_species, data = metadata.comm)
 plot(richness ~ host_species, data = metadata.comm)
 summary(lm)
-anova(lm)
 plot(lm)
 hist(residuals(lm))
 shapiro.test(residuals(lm))
@@ -362,6 +291,7 @@ var(metadata.comm[metadata.comm$shrub_tree == "tree",]$richness)
 var(metadata.comm[metadata.comm$shrub_tree == "shrub",]$richness)
 ## unequal variance so welch t-test
 t1 <- t.test(richness ~ shrub_tree, data = metadata.comm, var.equal = F)
+t1
 
 # Gymno vs. angio trees
 
@@ -374,6 +304,7 @@ var(metadata.comm[metadata.comm$gymno_angio_tree == "gymnosperm_tree",]$richness
 var(metadata.comm[metadata.comm$gymno_angio_tree == "angiosperm_tree",]$richness)
 ## unequal variance so welch t-test
 t2 <- t.test(richness ~ gymno_angio_tree, data = metadata.comm[c(1:9,15:24),], var.equal = F)
+t2
 
 # p-values adjustement
 p.adjust(c(t1[["p.value"]],t2[["p.value"]]), method = "bonferroni")
@@ -390,11 +321,11 @@ geom_point(aes(color = host_species),
 scale_fill_manual(values=c("#63AFF9","#1EA670","#CA0E78","#F39635","#6104BB"))+
 scale_color_manual(values=c("black","black","black","black","black"))+
 labs(x = "Host Species", 
-     y = "Methylobacterium species richness")+
-scale_x_discrete(labels = c("ABBA" = "A. balsamea", "THOC" = "T. occidentalis","ACSA" = "A. Saccharum", "FAGR" = "F. grandifolia", "COCO" = "C. cornuta"))+
+     y = expression(bolditalic("Methylobacterium") ~ bold("species richness")))+
+scale_x_discrete(labels = c("ABBA" = "A. balsamea", "THOC" = "T. occidentalis","ACSA" = "A. saccharum", "FAGR" = "F. grandifolia", "COCO" = "C. cornuta"))+
 ylim(0,25) +
 theme_bw()+
-theme(text = element_text(family = "Arial"),
+theme(text = element_text(),
       panel.grid.major = element_blank(), 
       panel.grid.minor = element_blank(), 
       plot.title = element_text(hjust = 0.5),
@@ -403,7 +334,7 @@ theme(text = element_text(family = "Arial"),
       axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
       axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
       )
-ggsave("../figures/Methylo_species_richness.tiff", width = 6, height = 4)
+ggsave("../figures/figure_S8_Methylo_species_richness.pdf", width = 6, height = 4)
 ```
 
 ## Shannon index
@@ -411,41 +342,9 @@ ggsave("../figures/Methylo_species_richness.tiff", width = 6, height = 4)
 ```{r}
 hist(metadata.comm$shannon, breaks = 25)
 shapiro.test(metadata.comm$shannon)
-# Non normal distribution, so will use Kruskall-Wallis
 kruskal.test(shannon ~ host_species, data = metadata.comm)
 rstatix::kruskal_effsize(shannon ~ host_species, data = metadata.comm)
-# Can't use parametric ANOVA below
-summary(lm(shannon ~ host_species, data = metadata.comm))
-anova(lm(shannon ~ host_species, data = metadata.comm))
 ```
-
-Plot
-```{r}
-ggplot(metadata.comm, aes(x = host_species, y = shannon)) +
-geom_boxplot(alpha = 1, aes(fill = host_species), show.legend = FALSE, outlier.shape = NA)+
-geom_point(aes(color = host_species), 
-           position = position_jitter(0.075), 
-           shape = 16, 
-           size = 3, show.legend = FALSE)+
-scale_fill_manual(values=c("#63AFF9","#1EA670","#CA0E78","#F39635","#6104BB"))+
-scale_color_manual(values=c("black","black","black","black","black"))+
-labs(x = "Host Species", 
-     y = "Shannon Index")+
-scale_x_discrete(labels = c("ABBA" = "A. balsamea", "THOC" = "T. occidentalis","ACSA" = "A. Saccharum", "FAGR" = "F. grandifolia", "COCO" = "C. cornuta"))+
-ylim(-0.1,2.5) +
-theme_bw()+
-theme(text = element_text(family = "Arial"),
-      panel.grid.major = element_blank(), 
-      panel.grid.minor = element_blank(), 
-      plot.title = element_text(hjust = 0.5),
-      axis.text.x = element_text(color = "black", size = 11, angle = 0, hjust = 0.5, vjust = 0, face = "italic"),
-      axis.text.y = element_text(color = "black", size = 11, angle = 0, hjust = 0, vjust = 0.5),  
-      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
-      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
-      )
-ggsave("../figures/Methylo_species_shannon.tiff", width = 6, height = 4)
-```
-
 
 ## Pielou Index
 
@@ -461,7 +360,6 @@ Model
 lm <- lm(pielou ~ host_species, metadata.comm)
 plot(pielou ~ host_species, metadata.comm)
 summary(lm)
-anova(lm)
 hist(residuals(lm))
 shapiro.test(residuals(lm))
 ```
@@ -478,10 +376,10 @@ scale_fill_manual(values=c("#63AFF9","#1EA670","#CA0E78","#F39635","#6104BB"))+
 scale_color_manual(values=c("black","black","black","black","black"))+
 labs(x = "Host Species", 
      y = "Pielou Index")+
-scale_x_discrete(labels = c("ABBA" = "A. balsamea", "THOC" = "T. occidentalis","ACSA" = "A. Saccharum", "FAGR" = "F. grandifolia", "COCO" = "C. cornuta"))+
+scale_x_discrete(labels = c("ABBA" = "A. balsamea", "THOC" = "T. occidentalis","ACSA" = "A. saccharum", "FAGR" = "F. grandifolia", "COCO" = "C. cornuta"))+
 ylim(0.5,1) +
 theme_bw()+
-theme(text = element_text(family = "Arial"),
+theme(text = element_text(),
       panel.grid.major = element_blank(), 
       panel.grid.minor = element_blank(), 
       plot.title = element_text(hjust = 0.5),
@@ -490,21 +388,20 @@ theme(text = element_text(family = "Arial"),
       axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
       axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
       )
-ggsave("../figures/Methylo_species_pielou.tiff", width = 6, height = 4)
+ggsave("../figures/figure_S9_Methylo_species_pielou.pdf", width = 6, height = 4)
 ```
+
 
 Correlation between richness and evenness
 ```{r}
 lm <- lm(pielou ~ richness, metadata.comm)
 plot(pielou ~ richness, metadata.comm)
 summary(lm)
-anova(lm)
 hist(residuals(lm))
-shapiro.test(residuals(lm))
 ```
 
 
-################################################################################
+-################################################################################
 
 # Beta diversity
 
@@ -516,7 +413,7 @@ abundances <- picante::matrix2sample(genomes.cov.comm)
 colnames(abundances) <- c("sample","abund","Meth_species")
 abundances$sample <- factor(x = abundances$sample, levels =c ("ABBA_M11","ABBA_M12","ABBA_M13","ABBA_M14","ABBA_M15","THOC_M06","THOC_M07","THOC_M08","THOC_M09","THOC_M10","ACSA_M21","ACSA_M22","ACSA_M24","ACSA_M25","FAGR_M16","FAGR_M17","FAGR_M18","FAGR_M19","FAGR_M20","COCO_M01","COCO_M02","COCO_M03","COCO_M04","COCO_M05"))
 abundances$Meth_species <- factor(x = abundances$Meth_species, 
-                                  levels = c(
+levels = c(
 "M_sp_026",
 "M_sp_024",
 "M_sp_029",
@@ -542,40 +439,18 @@ abundances$Meth_species <- factor(x = abundances$Meth_species,
 "M_haplocladii"
 ))
 
-
-palette <- c("#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", 
-"#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888",
-"#EE7744",  # Complement of #88CCEE
-"#77CC99",  # Complement of #CC6677
-"#7733CC",  # Complement of #DDCC77
-"#CC88EE",  # Complement of #117733
-"#88DD77",  # Complement of #332288
-"#44BB66",  # Complement of #AA4499
-"#BB4455",  # Complement of #44AA99
-"#336699",  # Complement of #999933
-"#55AA00",  # Complement of #882255
-"#99EEFF",  # Complement of #661100
-"#CC3366",  # Complement of #6699CC
-"#777777")   # Complement of #888888
-
-
-# Composition with abundances
 ggplot(abundances, aes(x = sample, y = abund, fill = Meth_species)) +
-  geom_bar(stat = "identity",
-#          position = "fill" # add to get relative abundances
-  ) +
+  geom_bar(stat = "identity") +
   labs(x = "Sample", y = "Genome coverage") +
   scale_fill_manual(values=c(
   "#C2B280",
   "#1A8A00",
   "#8E6A48",
-    "#B5D192",  
-
+  "#B5D192",  
   "#3B5B29",
   "#E1B05D",  
-    "#0095C8",
+  "#0095C8",
   "#B66D3B",  
-
   "#4E8",
   "#A77B3D",
   "#1F8C8B",
@@ -585,18 +460,16 @@ ggplot(abundances, aes(x = sample, y = abund, fill = Meth_species)) +
   "#FFCC00",
   "#008B5B",
   "#7C9DB8", 
-    "#D9C3B2",
+  "#D9C3B2",
   "#5A9C6A", 
-    "#F4A300",
-
+  "#F4A300",
   "#C4A65D",
   "#A6C8C4", 
-      "#4B8C2A" 
-
-), name = "Methylobacterium species") +
+  "#4B8C2A" 
+), name = expression(italic("Methylobacterium") ~ "species")) +
   guides(fill = guide_legend(ncol = 1)) +
   theme_bw() +
-  theme(text = element_text(family = "Arial"),
+  theme(text = element_text(),
       legend.justification = c(0.5, 1),
       legend.text = element_text(size = 10.5),
       legend.key.size = unit(0.43, "cm"),
@@ -609,171 +482,13 @@ ggplot(abundances, aes(x = sample, y = abund, fill = Meth_species)) +
       axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
       axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
       )
-ggsave("../figures/Methylo_species_barplot-241220.tiff", width = 8, height = 5.5)
+ggsave("../figures/figure_2_Methylo_species_barplot.pdf", width = 8, height = 5.5)
 ```
 
-
-*** DO NOT RUN 2 CHUNKS BELOW ***
-Baselga partition method - with 'betapart' package
-Sorensen distance matrix
-```{r}
-# Compute 3 distance matrices
-genomes.sor <- beta.pair(genomes.PA.comm, index.family = "sorensen")
-
-write.table(t(genomes.PA.comm), file = "../genomes_PA_comm.csv", sep = ",", quote = TRUE)
-
-# Proportion of turnover on total betadiv
-matrix.sor.sim <- data.frame(as.matrix(genomes.sor[["beta.sim"]]))
-#matrix.sor.sim <- data.frame(mapply(function(x) ifelse(x == 0, 0.000000000000001, x), matrix.sor.sim))
-matrix.sor <- data.frame(as.matrix(genomes.sor[["beta.sor"]]))
-rownames(matrix.sor.sim) <- rownames(matrix.sor)
-
-sim.sor <- matrix.sor.sim/matrix.sor
-sim.sor.2 <- picante::matrix2sample(sim.sor)
-#sim.sor.2 <- sim.sor.2[sim.sor.2$abund!=Inf,]
-#sim.sor.2$abund <- ifelse(sim.sor.2$abund < 0.001, 0, sim.sor.2$abund)
-colnames(sim.sor.2)[2] <- "turnover_betadiv"
-
-sim.sor.2$pairs <- paste0(gsub("_M[0-9]{2}", "", sim.sor.2$plot), "-", gsub("_M[0-9]{2}", "", sim.sor.2$id))
-sim.sor.2$pairs <- as.factor(sim.sor.2$pairs)
-#sim.sor.2 <- sim.sor.2[!gsub("-.*", "", sim.sor.2$pairs) == gsub(".*-", "", sim.sor.2$pairs), ]
-sim.sor.2 <- sim.sor.2 %>% filter(pairs %in% c("ABBA-ACSA","ABBA-COCO","ABBA-FAGR","ABBA-THOC","ACSA-COCO","ACSA-FAGR","ACSA-THOC","COCO-FAGR","COCO-THOC","FAGR-THOC"))
-sim.sor.2$pairs <- droplevels(sim.sor.2$pairs)
-
-# Contribution of nestedness between species
-mean(sim.sor.2$turnover_betadiv)
-#mean(sim.sor.2$turnover_betadiv[sim.sor.2$turnover_betadiv!=0])
-
-####
-
-# Proportion of nestedness on total betadiv
-matrix.sor.sne <- data.frame(as.matrix(genomes.sor[["beta.sne"]]))
-matrix.sor.sne <- data.frame(mapply(function(x) ifelse(x == 0, 0.000000000000001, x), matrix.sor.sne))
-rownames(matrix.sor.sne) <- rownames(matrix.sor)
-
-sne.sor <- matrix.sor.sne/matrix.sor
-sne.sor.2 <- picante::matrix2sample(sne.sor)
-sne.sor.2 <- sne.sor.2[sne.sor.2$abund!=Inf,]
-sne.sor.2$abund <- ifelse(sne.sor.2$abund < 0.001, 0, sne.sor.2$abund)
-colnames(sne.sor.2)[2] <- "nestedness_betadiv"
-
-sne.sor.2$pairs <- paste0(gsub("_M[0-9]{2}", "", sne.sor.2$plot), "-", gsub("_M[0-9]{2}", "", sne.sor.2$id))
-sne.sor.2$pairs <- as.factor(sne.sor.2$pairs)
-#sne.sor.2 <- sne.sor.2[!gsub("-.*", "", sne.sor.2$pairs) == gsub(".*-", "", sne.sor.2$pairs), ]
-sne.sor.2 <- sne.sor.2 %>% filter(pairs %in% c("ABBA-ACSA","ABBA-COCO","ABBA-FAGR","ABBA-THOC","ACSA-COCO","ACSA-FAGR","ACSA-THOC","COCO-FAGR","COCO-THOC","FAGR-THOC"))
-sne.sor.2$pairs <- droplevels(sne.sor.2$pairs)
-
-# Contribution of nestedness between species
-mean(sne.sor.2$nestedness_betadiv)
-
-# Overall partitioning of turnover and nestedness
-genomes.sor.multi <- beta.multi(genomes.PA.comm, index.family = "sorensen")
-
-# Partition the turnover and nestedness within samples of same host species
-genomes.sor.ABBA <- data.frame(beta.multi(genomes.PA.comm[c(1:5),], index.family = "sorensen"))
-genomes.sor.ACSA <- data.frame(beta.multi(genomes.PA.comm[c(6:9),], index.family = "sorensen"))
-genomes.sor.COCO <- data.frame(beta.multi(genomes.PA.comm[c(10:14),], index.family = "sorensen"))
-genomes.sor.FAGR <- data.frame(beta.multi(genomes.PA.comm[c(15:19),], index.family = "sorensen"))
-genomes.sor.THOC <- data.frame(beta.multi(genomes.PA.comm[c(20:24),], index.family = "sorensen"))
-genomes.sor.multi.hosts <- rbind(genomes.sor.ABBA,genomes.sor.ACSA,genomes.sor.COCO,genomes.sor.FAGR,genomes.sor.THOC)
-genomes.sor.multi.hosts$host_species <- c("ABBA","ACSA","COCO","FAGR","THOC")
-rm(genomes.sor.ABBA,genomes.sor.ACSA,genomes.sor.COCO,genomes.sor.FAGR,genomes.sor.THOC)
-
-mean(genomes.sor.multi.hosts$beta.SIM)
-mean(genomes.sor.multi.hosts$beta.SNE)
-mean(genomes.sor.multi.hosts$beta.SOR)
-```
-Plot turnover/betadiv
-```{r}
-ggplot(sim.sor.2, aes(x = pairs, y = turnover_betadiv)) +
-#geom_boxplot(alpha = 1, aes(fill = NA), show.legend = FALSE, outlier.shape = NA)+
-geom_point(aes(color = NA), 
-           position = position_jitter(0.075), 
-           shape = 16, 
-           size = 3, show.legend = FALSE)+
-#scale_fill_manual(values=c("#63AFF9","#CA0E78","#6104BB","#F39635","#1EA670"))+
-#scale_color_manual(values=c("black","black","black","black","black"))+
-labs(x = "Pairs", 
-     y = "Turnover contribution to beta diversity (proportion)")+
-ylim(0,1) +
-theme_bw()+
-theme(text = element_text(family = "Arial"),
-      panel.grid.major = element_blank(), 
-      panel.grid.minor = element_blank(), 
-      plot.title = element_text(hjust = 0.5),
-      axis.text.x = element_text(color = "black", size = 12, angle = 90, hjust = 0.5, vjust = 0),
-      axis.text.y = element_text(color = "black", size = 11, angle = 0, hjust = 0, vjust = 0.5),  
-      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
-      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
-      )
-#ggsave("../figures/Methylo_species_richness.tiff", width = 6, height = 4)
-```
-*** DO NOT RUN 2 CHUNKS ABOVE ***
-
-
-## Beta diversity partitioning
-
-### Bray-Curtis distance partitioning
-
-Use of Baselga Bray-Curtis on quantitative matrix
+## Bray-Curtis distance
 ```{r}
 genomes.cov.beta <- adespatial::beta.div.comp(genomes.cov.comm, coef = "BS", quant = TRUE)
-genomes.cov.beta[["part"]]
 genomes.bray.dist <- genomes.cov.beta[["D"]]
-genomes.bray <- data.frame(as.matrix(genomes.cov.beta[["D"]]))
-
-genomes.cov.beta.host <- data.frame(genomes.cov.beta[["part"]])
-colnames(genomes.cov.beta.host) <- "All samples"
-genomes.cov.beta.ABBA <- adespatial::beta.div.comp(genomes.cov.comm[c(1:5),], coef = "BS", quant = TRUE)
-genomes.cov.beta.host$ABBA <- genomes.cov.beta.ABBA[["part"]]
-genomes.cov.beta.ACSA <- adespatial::beta.div.comp(genomes.cov.comm[c(6:9),], coef = "BS", quant = TRUE)
-genomes.cov.beta.host$ACSA <- genomes.cov.beta.ACSA[["part"]]
-genomes.cov.beta.COCO <- adespatial::beta.div.comp(genomes.cov.comm[c(10:14),], coef = "BS", quant = TRUE)
-genomes.cov.beta.host$COCO <- genomes.cov.beta.COCO[["part"]]
-genomes.cov.beta.FAGR <- adespatial::beta.div.comp(genomes.cov.comm[c(15:19),], coef = "BS", quant = TRUE)
-genomes.cov.beta.host$FAGR <- genomes.cov.beta.FAGR[["part"]]
-genomes.cov.beta.THOC <- adespatial::beta.div.comp(genomes.cov.comm[c(20:24),], coef = "BS", quant = TRUE)
-genomes.cov.beta.host$THOC <- genomes.cov.beta.THOC[["part"]]
-#write.csv(t(round(genomes.cov.beta.host, digits = 4)), "../genomes.cov.beta.csv")
-
-# Proportion of turnover on total betadiv for pairs of different hosts
-matrix.repl <- data.frame(as.matrix(genomes.cov.beta[["repl"]]))
-
-repl.D <- matrix.repl/genomes.bray
-repl.D <- picante::matrix2sample(repl.D)
-colnames(repl.D)[2] <- "turnover_betadiv"
-
-repl.D$pairs <- paste0(gsub("_M[0-9]{2}", "", repl.D$plot), "-", gsub("_M[0-9]{2}", "", repl.D$id))
-repl.D$pairs <- as.factor(repl.D$pairs)
-repl.D <- repl.D %>% filter(pairs %in% c("ABBA-ACSA","ABBA-COCO","ABBA-FAGR","ABBA-THOC","ACSA-COCO","ACSA-FAGR","ACSA-THOC","COCO-FAGR","COCO-THOC","FAGR-THOC"))
-repl.D$pairs <- droplevels(repl.D$pairs)
-
-# Contribution of nestedness between species
-mean(repl.D$turnover_betadiv)
-```
-Plot turnover/betadiv
-```{r}
-ggplot(repl.D, aes(x = pairs, y = turnover_betadiv)) +
-#geom_boxplot(alpha = 1, aes(fill = NA), show.legend = FALSE, outlier.shape = NA)+
-geom_point(aes(color = NA), 
-           position = position_jitter(0.075), 
-           shape = 16, 
-           size = 3, show.legend = FALSE)+
-#scale_fill_manual(values=c("#63AFF9","#CA0E78","#6104BB","#F39635","#1EA670"))+
-#scale_color_manual(values=c("black","black","black","black","black"))+
-labs(x = "Pairs", 
-     y = "Turnover contribution to beta diversity (proportion)")+
-ylim(0,1) +
-theme_bw()+
-theme(text = element_text(family = "Arial"),
-      panel.grid.major = element_blank(), 
-      panel.grid.minor = element_blank(), 
-      plot.title = element_text(hjust = 0.5),
-      axis.text.x = element_text(color = "black", size = 12, angle = 90, hjust = 0.5, vjust = 0),
-      axis.text.y = element_text(color = "black", size = 11, angle = 0, hjust = 0, vjust = 0.5),  
-      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
-      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
-      )
 ```
 
 ## PERMANOVA
@@ -785,7 +500,6 @@ genomes.bray.perm
 ## BETADISPER
 ```{r}
 genomes.bray.disper <- betadisper(genomes.bray.dist, metadata.comm$host_species)
-summary(genomes.bray.disper)
 anova(genomes.bray.disper)
 plot(genomes.bray.disper)
 ```
@@ -808,18 +522,17 @@ anova(gymno_angio_tree_DISP)
 plot(gymno_angio_tree_DISP, label = F)
 ```
 
-
 ## PCoA
 ```{r}
 genomes.pcoa <- cmdscale(genomes.bray.dist, k =(nrow(genomes.cov.comm) - 1), eig = TRUE)
-pcoa.eig <- eigenvals(genomes.pcoa) # extract eigenvalues
-pcoa.eig <- abs(pcoa.eig) # absolute values
-sum.pcoa.eig <- sum(pcoa.eig) # total of eigenvalues
-pcoa.prop.exp <- pcoa.eig/sum.pcoa.eig # proportion explained by each axis
+pcoa.eig <- eigenvals(genomes.pcoa)
+pcoa.eig <- abs(pcoa.eig) 
+sum.pcoa.eig <- sum(pcoa.eig) 
+pcoa.prop.exp <- pcoa.eig/sum.pcoa.eig 
 (pcoa.axis1 <- pcoa.prop.exp[1])
 (pcoa.axis2 <- pcoa.prop.exp[2])
-site.scores.pcoa <- scores(genomes.pcoa) # site scores
-sp.scores.pcoa <- wascores(genomes.pcoa$points, genomes.cov.comm) # species scores 
+site.scores.pcoa <- scores(genomes.pcoa) 
+sp.scores.pcoa <- wascores(genomes.pcoa$points, genomes.cov.comm) 
 site.scores.pcoa <- data.frame(site.scores.pcoa)
 sp.scores.pcoa <- data.frame(sp.scores.pcoa)
 host_species <- metadata.comm$host_species
@@ -827,6 +540,7 @@ site.scores.pcoa <- cbind(site.scores.pcoa, host_species)
 pcoa.ggordiplot <- gg_ordiplot(genomes.pcoa, choices = c(1,2), groups = metadata.comm$host_species, kind = "sd", conf = 0.95, pt.size = 3)
 pcoa.ellipses <- pcoa.ggordiplot$df_ellipse # extract confidence ellipse
 ```
+
 Plot
 ```{r}
 ggplot(data = site.scores.pcoa, 
@@ -837,18 +551,14 @@ ggplot(data = site.scores.pcoa,
              size=3) +
   xlab(paste("PCoA1 (",round(pcoa.axis1*100, digits = 2),"%)", sep = "")) +
   ylab(paste("PCoA2 (",round(pcoa.axis2*100, digits = 2),"%)", sep = "")) +
-  #geom_text_repel(data = sp.scores.pcoa, 
-  #                aes(x = X1, y = X2), 
-  #                label=rownames(sp.scores.pcoa), 
-  #                color = "black") +
   scale_shape_manual(values = c(16,16,16,16,16)) +
   guides(shape = "none") +
   geom_path(data = pcoa.ellipses, 
             aes(x = x, y = y, color = Group), 
             show.legend = FALSE) + 
-  scale_color_manual(values=c("#63AFF9","#1EA670","#CA0E78","#F39635","#6104BB"), name = "Host species", labels = c("ABBA" = expression(italic("A. balsamea")), "THOC" = expression(italic("T. occidentalis")),"ACSA" = expression(italic("A. Saccharum")), "FAGR" = expression(italic("F. grandifolia")), "COCO" = expression(italic("C. cornuta")))) +
+  scale_color_manual(values=c("#63AFF9","#1EA670","#CA0E78","#F39635","#6104BB"), name = "Host species", labels = c("ABBA" = expression(italic("A. balsamea")), "THOC" = expression(italic("T. occidentalis")),"ACSA" = expression(italic("A. saccharum")), "FAGR" = expression(italic("F. grandifolia")), "COCO" = expression(italic("C. cornuta")))) +
   theme_bw() +
-  theme(text = element_text(family = "Arial"),
+  theme(text = element_text(),
       legend.justification = c(0.5, 0),
       legend.text = element_text(size = 11),
       panel.grid.major = element_line(color = "gray90", size = 0.25), 
@@ -859,11 +569,10 @@ ggplot(data = site.scores.pcoa,
       axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
       axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
       )
-ggsave("../figures/genomes_pcoa.tiff", width = 6, height = 4)
+ggsave("../figures/figure_3A_genomes_pcoa.pdf", width = 6, height = 4)
 ```
 
-
-################################################################################
+-################################################################################
 
 # Phylogeny
 
