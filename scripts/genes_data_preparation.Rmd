@@ -16,25 +16,44 @@ library(data.table)
 
 # Import Data
 
-## all-tree-metapangenome
+## Metapangenomes
+
+Import individual tree species metapangenomes
 ```{r}
-data.import <- read.delim("../data/anvio_outputs/ALL_TREE_METAPANGENOME/Methylobacterium-ALL-TREE-METAPAN-SUMMARY/Methylobacterium-ABBA-PAN_gene_clusters_summary.txt", header = TRUE, sep = "\t", dec = ".", quote="", fill=FALSE, row.names = 1)
+# ABBA
+ABBA_summary <- read.delim("../data/anvio_outputs/Methylobacterium-ABBA-PAN/Methylobacterium-ABBA-METAPAN-SUMMARY/Methylobacterium-ABBA-PAN_gene_clusters_summary.txt.gz", header = TRUE, sep = "\t", dec = ".", quote="", fill=FALSE)
+ABBA_summary <- ABBA_summary[,-1]
+# ACSA
+ACSA_summary <- read.delim("../data/anvio_outputs/Methylobacterium-ACSA-PAN/Methylobacterium-ACSA-METAPAN-SUMMARY/Methylobacterium-ACSA-PAN_gene_clusters_summary.txt.gz", header = TRUE, sep = "\t", dec = ".", quote="", fill=FALSE)
+ACSA_summary <- ACSA_summary[,-1]
+# COCO
+COCO_summary <- read.delim("../data/anvio_outputs/Methylobacterium-COCO-PAN/Methylobacterium-COCO-METAPAN-SUMMARY/Methylobacterium-COCO-PAN_gene_clusters_summary.txt.gz", header = TRUE, sep = "\t", dec = ".", quote="", fill=FALSE)
+COCO_summary <- COCO_summary[,-1]
+# FAGR
+FAGR_summary <- read.delim("../data/anvio_outputs/Methylobacterium-FAGR-PAN/Methylobacterium-FAGR-METAPAN-SUMMARY/Methylobacterium-FAGR-PAN_gene_clusters_summary.txt.gz", header = TRUE, sep = "\t", dec = ".", quote="", fill=FALSE)
+FAGR_summary <- FAGR_summary[,-1]
+# THOC
+THOC_summary <- read.delim("../data/anvio_outputs/Methylobacterium-THOC-PAN/Methylobacterium-THOC-METAPAN-SUMMARY/Methylobacterium-THOC-PAN_gene_clusters_summary.txt.gz", header = TRUE, sep = "\t", dec = ".", quote="", fill=FALSE)
+THOC_summary <- THOC_summary[,-1]
+```
 
+Since these 5 metagenomes files are similar, we will work with only one from nom on, but merge gene type (core vs. accessory), gene coverage depth, and gene horizontal coverage data.
 
+Remove unnecessary metagenomes files
+```{r}
+rm(ACSA_summary, COCO_summary, FAGR_summary, THOC_summary)
+```
 
-
-# Remove EAG and ECG stats that are redundant for ABBA
-data <- subset(data.import, select = -c(12:15))
-
-
-
-data <- data.import
-
-
+Edit ABBA_summary
+```{r}
+data <- ABBA_summary
+# Remove unwanted columns
+data <- subset(data, select = -c(2,12:15))
 # Change vectors to factors
-data <- data %>% mutate(across(c(gene_cluster_id, bin_name, genome_name, gene_callers_id, KEGG_Class_ACC, KEGG_Class, KEGG_BRITE_ACC, KEGG_BRITE, KEGG_Module_ACC, KEGG_Module, KOfam_ACC, KOfam, Pfam_ACC, Pfam, CAZyme_ACC, CAZyme, COG20_FUNCTION_ACC, COG20_FUNCTION, COG20_PATHWAY_ACC, COG20_PATHWAY, COG20_CATEGORY_ACC, COG20_CATEGORY), as.factor))
+data <- data %>% mutate(across(c(gene_cluster_id, genome_name, gene_callers_id, KEGG_Class_ACC, KEGG_Class, KEGG_BRITE_ACC, KEGG_BRITE, KEGG_Module_ACC, KEGG_Module, KOfam_ACC, KOfam, Pfam_ACC, Pfam, CAZyme_ACC, CAZyme, COG20_FUNCTION_ACC, COG20_FUNCTION, COG20_PATHWAY_ACC, COG20_PATHWAY, COG20_CATEGORY_ACC, COG20_CATEGORY), as.factor))
 # Change vectors to numeric
-data <- data %>% mutate(across(c(num_genomes_gene_cluster_has_hits, num_genes_in_gene_cluster, max_num_paralogs, SCG, ABBA.ECGs_and_EAGs.EAG, ABBA.ECGs_and_EAGs.ECG, ABBA.ECGs_and_EAGs.NA, THOC.ECGs_and_EAGs.EAG, THOC.ECGs_and_EAGs.ECG, THOC.ECGs_and_EAGs.NA, FAGR.ECGs_and_EAGs.EAG, FAGR.ECGs_and_EAGs.ECG, FAGR.ECGs_and_EAGs.NA, COCO.ECGs_and_EAGs.EAG, COCO.ECGs_and_EAGs.ECG, COCO.ECGs_and_EAGs.NA, ACSA.ECGs_and_EAGs.EAG, ACSA.ECGs_and_EAGs.ECG, ACSA.ECGs_and_EAGs.NA), as.numeric))
+data <- data %>% mutate(across(c(num_genomes_gene_cluster_has_hits, num_genes_in_gene_cluster, max_num_paralogs, SCG), as.numeric))
+str(data)
 ```
 
 ## mOTUpan data
@@ -43,52 +62,89 @@ mOTUpan.import <- read.delim("../data/anvio_outputs/core_pan_genome_table", head
 colnames(mOTUpan.import)[1] <- "gene_cluster_id"
 mOTUpan <- mOTUpan.import[,-7]
 mOTUpan <- mOTUpan %>% mutate(across(c(gene_cluster_id, type), as.factor))
+str(mOTUpan)
 ```
 
-## eggNOG functions
+## Gene 'detection' (horizontal coverage)
+
+Create new factorial vector with 104 genome names
 ```{r}
-#eggNOG.import <- read.delim("/mnt/storage/jocelyn/msc/anvio_artifacts/eggNOG-mapper-outputs/all_out.emapper.annotations", header = TRUE, sep = "\t", dec = ".", quote="", fill=FALSE)
-#colnames(eggNOG.import)[1] <- "gene_callers_id"
-#eggNOG <- eggNOG.import[,-c(2,3,4)]
-# Change vectors to factors
-#eggNOG <- eggNOG %>% mutate(across(c(gene_callers_id, max_annot_lvl, COG_category, GOs, EC, KEGG_ko, KEGG_Pathway, KEGG_Module, KEGG_Reaction, KEGG_rclass, BRITE, KEGG_TC, CAZy, BiGG_Reaction, PFAMs), as.factor))
+genomes <- unique(data$genome_name)
 ```
 
-No need to run this chunk
-Import individual tree species metapangenomes to attest that the all-tree metapan is ok.
+Import gene detection data
 ```{r}
 # ABBA
-ABBA_summary <- read.delim("/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ABBA-PAN/Methylobacterium-ABBA-METAPAN-SUMMARY/Methylobacterium-ABBA-PAN_gene_clusters_summary.txt.gz", header = TRUE, sep = "\t", dec = ".", quote="", fill=FALSE)
+ABBA.txtFileName <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/ABBA/ABBA_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_detection.txt",sep="")
+ABBA.gene.detect <- rbindlist(sapply(ABBA.txtFileName, fread, simplify = FALSE),
+                use.names = TRUE, idcol = "FileName")
+ABBA.gene.detect$gene_callers_id <- as.factor(ABBA.gene.detect$gene_callers_id)
+
 # ACSA
-ACSA_summary <- read.delim("/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-ACSA-PAN/Methylobacterium-ACSA-METAPAN-SUMMARY/Methylobacterium-ACSA-PAN_gene_clusters_summary.txt.gz", header = TRUE, sep = "\t", dec = ".", quote="", fill=FALSE)
+ACSA.txtFileName <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/ACSA/ACSA_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_detection.txt",sep="")
+ACSA.gene.detect <- rbindlist(sapply(ACSA.txtFileName, fread, simplify = FALSE),
+                use.names = TRUE, idcol = "FileName")
+ACSA.gene.detect$gene_callers_id <- as.factor(ACSA.gene.detect$gene_callers_id)
+
 # COCO
-COCO_summary <- read.delim("/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-COCO-PAN/Methylobacterium-COCO-METAPAN-SUMMARY/Methylobacterium-COCO-PAN_gene_clusters_summary.txt.gz", header = TRUE, sep = "\t", dec = ".", quote="", fill=FALSE)
+COCO.txtFileName <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/COCO/COCO_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_detection.txt",sep="")
+COCO.gene.detect <- rbindlist(sapply(COCO.txtFileName, fread, simplify = FALSE),
+                use.names = TRUE, idcol = "FileName")
+COCO.gene.detect$gene_callers_id <- as.factor(COCO.gene.detect$gene_callers_id)
+
 # FAGR
-FAGR_summary <- read.delim("/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-FAGR-PAN/Methylobacterium-FAGR-METAPAN-SUMMARY/Methylobacterium-FAGR-PAN_gene_clusters_summary.txt.gz", header = TRUE, sep = "\t", dec = ".", quote="", fill=FALSE)
+FAGR.txtFileName <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/FAGR/FAGR_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_detection.txt",sep="")
+FAGR.gene.detect <- rbindlist(sapply(FAGR.txtFileName, fread, simplify = FALSE),
+                use.names = TRUE, idcol = "FileName")
+FAGR.gene.detect$gene_callers_id <- as.factor(FAGR.gene.detect$gene_callers_id)
+
 # THOC
-THOC_summary <- read.delim("/mnt/storage/jocelyn/msc/anvio_artifacts/Methylobacterium-THOC-PAN/Methylobacterium-THOC-METAPAN-SUMMARY/Methylobacterium-THOC-PAN_gene_clusters_summary.txt.gz", header = TRUE, sep = "\t", dec = ".", quote="", fill=FALSE)
-```
-All is good.
-```{r}
-rm(ABBA_summary,ACSA_summary,COCO_summary,FAGR_summary,THOC_summary)
+THOC.txtFileName <- paste("/mnt/storage/jocelyn/msc/anvio_analysis/THOC/THOC_PROFILE-SUMMARY/bin_by_bin/",genomes,"/",genomes,"-gene_detection.txt",sep="")
+THOC.gene.detect <- rbindlist(sapply(THOC.txtFileName, fread, simplify = FALSE),
+                use.names = TRUE, idcol = "FileName")
+THOC.gene.detect$gene_callers_id <- as.factor(THOC.gene.detect$gene_callers_id)
+
+rm(ABBA.txtFileName,ACSA.txtFileName,COCO.txtFileName,FAGR.txtFileName,THOC.txtFileName)
 ```
 
 
-################################################################################
+
+-################################################################################
 
 # Edit dataframes
 
-## Import mOTUpan in data df
+## Merge 'mOTUpan' with 'data'
 ```{r}
 data <- merge(data, mOTUpan, by = "gene_cluster_id")
-data <- data[,-2] # remove 'bin_name' made by hand in anvio --> exploratory analysis only!!!
-data <- data[c(1:3,50:54,4:49)] # rearrange column order
+
+
+
+
+
+
+
+
+#data <- data[c(1:3,50:54,4:49)] # rearrange column order
 ```
 
-## Pangenome stats df
+## Create data.pangenome RDS file
 ```{r}
-data.pangenome <- subset(data, select = c(1:15))
+data.pangenome <- data[c(1:3,30:34,4:10)]
+#saveRDS(data.pangenome, "../rds/data.pangenome.rds")
+data.pangenome <- readRDS("../rds/data.pangenome.rds")
 ```
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## Functions and gene coverage stats df
 ```{r}
@@ -104,9 +160,11 @@ data.fct.cov <- data.fct.cov[,c(2,1,3,4:41)] # rearrange column order
 
 Save dataframes as RDS files for subsequent analyses.
 ```{r}
-#saveRDS(data.pangenome, "../rds/data.pangenome.rds")
 #saveRDS(data.fct.cov, "../rds/data.fct.cov.rds")
 ```
+
+
+
 
 
 ################################################################################
