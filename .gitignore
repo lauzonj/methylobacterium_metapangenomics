@@ -51,11 +51,8 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 
-# RDS files
-#*.rds
-
 # csv files
-*.csv
+#*.csv
 !DAGs.functions.all.info-comparisons.csv
 !all_pos_sel_genes.csv
 !DAGCs_fully_annotated.csv
