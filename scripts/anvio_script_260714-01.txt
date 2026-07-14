@@ -24,7 +24,7 @@
 # Sequencing reads (raw metagenomes) are available through the National Center for Biotechnology Information (NCBI) 
 # and can be found under BioSample accession numbers SAMN49978915-39. 
 # Upon download, raw metagenomes should be placed in folder 'anvio/data/raw_metagenomes'.
-# Each of the 104 Methylobacterium genomes should be downloaded (see Supplementary File A for sources),
+# Each of the 104 Methylobacterium genomes should be downloaded (see Supplementary File A table and description for sources),
 # and placed in its corresponding species' folder within 'anvio/data/meth_genomes/'.
 
 # anvio/

@@ -18,7 +18,11 @@ library(data.table)
 
 ## all-tree-metapangenome
 ```{r}
-data.import <- read.delim("../data/anvio_outputs/Methylobacterium-ABBA-PAN_gene_clusters_summary.txt", header = TRUE, sep = "\t", dec = ".", quote="", fill=FALSE, row.names = 1)
+data.import <- read.delim("../data/anvio_outputs/ALL_TREE_METAPANGENOME/Methylobacterium-ALL-TREE-METAPAN-SUMMARY/Methylobacterium-ABBA-PAN_gene_clusters_summary.txt", header = TRUE, sep = "\t", dec = ".", quote="", fill=FALSE, row.names = 1)
+
+
+
+
 # Remove EAG and ECG stats that are redundant for ABBA
 data <- subset(data.import, select = -c(12:15))
 
