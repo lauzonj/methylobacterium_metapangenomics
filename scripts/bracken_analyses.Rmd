@@ -6,7 +6,7 @@ date: "2024-04-23"
 
 -################################################################################
 
-## Load libraries
+# Libraries
 ```{r}
 library(tidyverse)
 library(vegan)
