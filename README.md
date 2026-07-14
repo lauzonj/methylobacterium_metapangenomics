@@ -1,9 +1,9 @@
 # methylobacterium_metapangenomics
 
 R scripts for "Metapangenomics reveals host-driven adaptation of Methylobacterium to the phyllosphere"
-Script author: Jocelyn Lauzon, Département des sciences biologiques, Université du Québec à Montréal
+Scripts author: Jocelyn Lauzon, Département des sciences biologiques, Université du Québec à Montréal
 
-These R markdown scripts cover all statistical analyses and figures related to the article.
+These Bash and R markdown scripts cover all meta/pangenomic and statistical analyses, as well as figures related to the article.
 
 Scripts should be run in the order listed below.
 
@@ -11,17 +11,6 @@ Scripts should be run in the order listed below.
 
 anvio_script.txt
 This script contains all commands related to the analyses performed with anvio v.8
-
-
-
-
-How did I do the nb_reads.txt table?
-
-In general, What are the output files of anvio I used in R scripts?
---> must include in 'data' folder anvio's output files that are inputed directly in R scripts.
-
-
-
 
 ## R markdown scripts descriptions
 
