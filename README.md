@@ -43,22 +43,19 @@ Analyses of genome openness.
 
 genes_diversity_v5-3.Rmd
 Alpha and beta diversity analyses on gene clusters.
-DAGCs analyses.
-!! DO NOT use code for the creation of the DAGCs table nor for the COG categories figures. This code
-was used for my M.Sc. thesis, but for the article, use 'DAGCs_analyses_folloup.Rmd'
 
+DAGCs analyses.Rmd
+Differentially abundant gene clusters analyses.
 
-
-
-
-
-DAGCs_analyses_followup.Rmd
 Followup of the DAGCs analyses, of the 757 annotated DAGCs. Table : To include all COG categories and pathways, as well as all KEGG brite, 
 classes, modules, etc. No missing info on DAGCs functions. Figures : creation of the article figure for COG categories and KEGG categories 
 (manually curated based on the BRITE functional hierarchy).
 
+
 DAGCs_figure.Rmd
 Creation of figures showing enriched genes for specific functional categories.
+
+
 
 selection_v2_251214.Rmd
 Analyses of pN/pS ratio and positively selected genes by host species.
