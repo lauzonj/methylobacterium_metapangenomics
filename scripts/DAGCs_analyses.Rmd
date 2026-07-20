@@ -1,0 +1,1681 @@
+---
+title: "DAGCs Analyses"
+output: html_document
+date: "2025-11-17"
+---
+
+-################################################################################
+
+# Libraries
+```{r}
+library(tidyverse)
+#library(patchwork)
+#library(purrr)
+library(viridis)
+library(DESeq2)
+library(scales)
+library(picante)
+#library(ggh4x)
+#library(legendry)
+```
+
+-################################################################################
+
+# Import data
+
+Import rarefied and filtered data
+Use data after 'rarefying' at 44,221 and after filtering low abundant GC
+```{r}
+GC.rar.filt <- readRDS("../rds/GC.rar.filt.rds")
+```
+
+Metadata
+```{r}
+metadata.rar <- readRDS("../rds/metadata.rar.rds")
+```
+
+```{r}
+all(rownames(GC.rar.filt) == rownames(metadata.rar))
+```
+
+-################################################################################
+
+# Setup
+
+Tur off scientific notation
+```{r}
+options(scipen = 999)
+```
+
+-################################################################################
+
+# Prepare data
+
+Preparation for DESeq2
+```{r}
+countData <- as.data.frame(t(GC.rar.filt))
+sum(rowSums(countData)==0)
+colSums(countData)
+all(rownames(metadata.rar) == colnames(countData))
+```
+
+Prepare dataframe containing rarefied and filtered GC and their (rarefied) coverage values, and functional annotations.
+```{r}
+# Edit rarefied and filtered GC dataframe
+GC.rar.filt.t <- as.data.frame(t(GC.rar.filt))
+GC.rar.filt.t$gene_cluster_id <- rownames(GC.rar.filt.t)
+row.names(GC.rar.filt.t) <- NULL
+
+# Load and edit 'data.fct.cov.c' to remove coverage values
+data.fct.cov.c <- readRDS("../rds/data.fct.cov.c.rds")
+data.fct <- data.fct.cov.c[,c(1:24)]
+
+# Merge dataframes to have GC that were kept after rarefaction and filtering, with their coverage values (rarefied values)
+GC.rar.fct.cov <- merge(data.fct, GC.rar.filt.t, by = "gene_cluster_id")
+GC.rar.fct.cov <- GC.rar.fct.cov[order(GC.rar.fct.cov$gene_cluster_id, GC.rar.fct.cov$genome_name), ]
+GC.rar.fct.cov <- droplevels(GC.rar.fct.cov)
+
+#saveRDS(GC.rar.fct.cov, "../rds/GC.rar.fct.cov.rds")
+GC.rar.fct.cov <- readRDS("../rds/GC.rar.fct.cov.rds")
+```
+
+-################################################################################
+
+# DESeq2 Analyses
+
+## Trees & Shrub
+
+### Analysis
+```{r}
+GC.dds.2 <- DESeqDataSetFromMatrix(countData = countData,
+                              colData = metadata.rar, 
+                              design = ~ shrub_tree)
+GC.dds.2$host_species <- relevel(GC.dds.2$shrub_tree, ref = "shrub")
+GC.dds.2 <- DESeq(GC.dds.2)
+```
+
+Save and load GC.dds.2 as RDS file
+```{r}
+#saveRDS(GC.dds.2, "../rds/GC.dds.2.rds")
+GC.dds.2 <- readRDS("../rds/GC.dds.2.rds")
+```
+
+Output DESeq results
+```{r}
+GC.res.tree.shrub <- results(GC.dds.2, contrast=c("shrub_tree","tree","shrub"), alpha = 0.05)
+GC.sig.tree.shrub <- GC.res.tree.shrub[is.na(GC.res.tree.shrub$padj)==F&GC.res.tree.shrub$padj<0.05,] # 271 DAGs
+```
+
+### Trees vs COCO
+
+Create table of genes that are more abundant in tree species compared to the shrub species COCO.
+```{r}
+GC.sig.Trees.COCO <- as.data.frame(GC.res.tree.shrub[is.na(GC.res.tree.shrub$padj)==F&GC.res.tree.shrub$padj<0.05&GC.res.tree.shrub$log2FoldChange>0,]) # 231 DAGCs
+```
+
+Edit table
+```{r}
+# Arrange the results dataframe in decreasing log2FoldChange
+GC.sig.Trees.COCO$gene_cluster_id <- as.factor(rownames(GC.sig.Trees.COCO))
+GC.sig.Trees.COCO <- GC.sig.Trees.COCO[order(-GC.sig.Trees.COCO$log2FoldChange), ]
+row.names(GC.sig.Trees.COCO) <- NULL
+
+DAG.Trees.COCO <- GC.sig.Trees.COCO
+
+# Add comparison types (1: focal species, 0: species not considered in this analysis, -1: reference species)
+DAG.Trees.COCO$ABBA <- rep(1,nrow(DAG.Trees.COCO))
+DAG.Trees.COCO$THOC <- rep(1,nrow(DAG.Trees.COCO))
+DAG.Trees.COCO$ACSA <- rep(1,nrow(DAG.Trees.COCO))
+DAG.Trees.COCO$FAGR <- rep(1,nrow(DAG.Trees.COCO))
+DAG.Trees.COCO$COCO <- rep(-1,nrow(DAG.Trees.COCO))
+
+# Merge DAGCs with function and coverage df
+DAG.Trees.COCO.fct <- merge(GC.rar.fct.cov, DAG.Trees.COCO, by = "gene_cluster_id")
+
+# Keep rows with unique functional annotation
+DAG.Trees.COCO.fct.distinct <- DAG.Trees.COCO.fct %>%
+  distinct(gene_cluster_id, COG20_FUNCTION, KOfam, Pfam, CAZyme, .keep_all = TRUE)
+DAG.Trees.COCO.fct.distinct <- DAG.Trees.COCO.fct.distinct[,-c(2:3)] # remove gene caller id and genome name because irrelevant
+DAG.Trees.COCO.fct.distinct <- DAG.Trees.COCO.fct.distinct[c(1:3,46:51,4:45,52:56)] # rearrange column order
+DAG.Trees.COCO.fct.distinct <- DAG.Trees.COCO.fct.distinct[order(-DAG.Trees.COCO.fct.distinct$log2FoldChange), ] # place rows in order of decreasing mean_log2FC
+row.names(DAG.Trees.COCO.fct.distinct) <- NULL
+DAG.Trees.COCO.fct.distinct <- droplevels(DAG.Trees.COCO.fct.distinct)
+str(DAG.Trees.COCO.fct.distinct)
+```
+
+### COCO vs Trees
+
+```{r}
+GC.res.shrub.tree <- results(GC.dds.2, contrast=c("shrub_tree","shrub","tree"), alpha = 0.05)
+GC.sig.COCO.Trees <- as.data.frame(GC.res.shrub.tree[is.na(GC.res.shrub.tree$padj)==F&GC.res.shrub.tree$padj<0.05&GC.res.shrub.tree$log2FoldChange>0,]) # 40 DAGCs
+```
+
+```{r}
+# Arrange the results dataframe in decreasing log2FoldChange
+GC.sig.COCO.Trees$gene_cluster_id <- as.factor(rownames(GC.sig.COCO.Trees))
+GC.sig.COCO.Trees <- GC.sig.COCO.Trees[order(-GC.sig.COCO.Trees$log2FoldChange), ]
+row.names(GC.sig.COCO.Trees) <- NULL
+
+DAG.COCO.Trees <- GC.sig.COCO.Trees
+
+# Add comparisons
+DAG.COCO.Trees$ABBA <- rep(-1,nrow(DAG.COCO.Trees))
+DAG.COCO.Trees$THOC <- rep(-1,nrow(DAG.COCO.Trees))
+DAG.COCO.Trees$ACSA <- rep(-1,nrow(DAG.COCO.Trees))
+DAG.COCO.Trees$FAGR <- rep(-1,nrow(DAG.COCO.Trees))
+DAG.COCO.Trees$COCO <- rep(1,nrow(DAG.COCO.Trees))
+
+# Merge DAGCs with function and coverage df
+DAG.COCO.Trees.fct <- merge(GC.rar.fct.cov, DAG.COCO.Trees, by = "gene_cluster_id")
+
+# Keep rows with unique functional annotation
+DAG.COCO.Trees.fct.distinct <- DAG.COCO.Trees.fct %>%
+  distinct(gene_cluster_id, COG20_FUNCTION, KOfam, Pfam, CAZyme, .keep_all = TRUE)
+DAG.COCO.Trees.fct.distinct <- DAG.COCO.Trees.fct.distinct[,-c(2:3)] # remove gene caller id and genome name because irrelevant
+DAG.COCO.Trees.fct.distinct <- DAG.COCO.Trees.fct.distinct[c(1:3,46:51,4:45,52:56)] # rearrange column order
+DAG.COCO.Trees.fct.distinct <- DAG.COCO.Trees.fct.distinct[order(-DAG.COCO.Trees.fct.distinct$log2FoldChange), ] # place rows in order of decreasing mean_log2FC
+row.names(DAG.COCO.Trees.fct.distinct) <- NULL
+DAG.COCO.Trees.fct.distinct <- droplevels(DAG.COCO.Trees.fct.distinct)
+str(DAG.COCO.Trees.fct.distinct)
+```
+
+
+## Angio vs Gymno
+
+### Analysis
+```{r}
+GC.dds.3 <- DESeqDataSetFromMatrix(countData = countData,
+                              colData = metadata.rar, 
+                              design = ~ plant_clade)
+GC.dds.3$plant_clade <- relevel(GC.dds.3$plant_clade, ref = "Gymnospermae")
+GC.dds.3 <- DESeq(GC.dds.3)
+```
+
+Save and load GC.dds as RDS file
+```{r}
+saveRDS(GC.dds.3, "../rds/GC.dds.3.rds")
+GC.dds.3 <- readRDS("../rds/GC.dds.3.rds")
+```
+
+```{r}
+GC.res.angio.gymno <- results(GC.dds.3, contrast=c("plant_clade","Angiospermae","Gymnospermae"), alpha = 0.05)
+GC.sig.angio.gymno <- GC.res.angio.gymno[is.na(GC.res.angio.gymno$padj)==F&GC.res.angio.gymno$padj<0.05,] # 738 DAGCs
+```
+
+### Angio vs Gymno
+```{r}
+GC.sig.Angio.Gymno <- as.data.frame(GC.res.angio.gymno[is.na(GC.res.angio.gymno$padj)==F&GC.res.angio.gymno$padj<0.05&GC.res.angio.gymno$log2FoldChange>0,]) # 468 DAGCs
+```
+
+```{r}
+# Arrange the results dataframe in decreasing log2FoldChange
+GC.sig.Angio.Gymno$gene_cluster_id <- as.factor(rownames(GC.sig.Angio.Gymno))
+GC.sig.Angio.Gymno <- GC.sig.Angio.Gymno[order(-GC.sig.Angio.Gymno$log2FoldChange), ]
+row.names(GC.sig.Angio.Gymno) <- NULL
+
+DAG.Angio.Gymno <- GC.sig.Angio.Gymno
+
+# Add comparisons
+DAG.Angio.Gymno$ABBA <- rep(-1,nrow(DAG.Angio.Gymno))
+DAG.Angio.Gymno$THOC <- rep(-1,nrow(DAG.Angio.Gymno))
+DAG.Angio.Gymno$ACSA <- rep(1,nrow(DAG.Angio.Gymno))
+DAG.Angio.Gymno$FAGR <- rep(1,nrow(DAG.Angio.Gymno))
+DAG.Angio.Gymno$COCO <- rep(1,nrow(DAG.Angio.Gymno))
+
+# Merge DAGCs with function and coverage df
+DAG.Angio.Gymno.fct <- merge(GC.rar.fct.cov, DAG.Angio.Gymno, by = "gene_cluster_id")
+
+# Keep rows with unique functional annotation
+DAG.Angio.Gymno.fct.distinct <- DAG.Angio.Gymno.fct %>%
+  distinct(gene_cluster_id, COG20_FUNCTION, KOfam, Pfam, CAZyme, .keep_all = TRUE)
+DAG.Angio.Gymno.fct.distinct <- DAG.Angio.Gymno.fct.distinct[,-c(2:3)] # remove gene caller id and genome name because irrelevant
+DAG.Angio.Gymno.fct.distinct <- DAG.Angio.Gymno.fct.distinct[c(1:3,46:51,4:45,52:56)] # rearrange column order
+DAG.Angio.Gymno.fct.distinct <- DAG.Angio.Gymno.fct.distinct[order(-DAG.Angio.Gymno.fct.distinct$log2FoldChange), ] # place rows in order of decreasing mean_log2FC
+row.names(DAG.Angio.Gymno.fct.distinct) <- NULL
+DAG.Angio.Gymno.fct.distinct <- droplevels(DAG.Angio.Gymno.fct.distinct)
+str(DAG.Angio.Gymno.fct.distinct)
+
+# Remove from 'DAG.Angio.Gymno.fct.distinct' DAGCs that are also in 'DAG.COCO.Trees.fct.distinct'
+which(DAG.COCO.Trees.fct.distinct$gene_cluster_id %in% DAG.Angio.Gymno.fct.distinct$gene_cluster_id)
+GC.levels.temp <- levels(DAG.COCO.Trees.fct.distinct$gene_cluster_id)
+DAG.Angio.Gymno.fct.distinct.only <- subset(DAG.Angio.Gymno.fct.distinct, !(gene_cluster_id %in% GC.levels.temp))
+row.names(DAG.Angio.Gymno.fct.distinct.only) <- NULL
+DAG.Angio.Gymno.fct.distinct.only <- droplevels(DAG.Angio.Gymno.fct.distinct.only)
+str(DAG.Angio.Gymno.fct.distinct.only)
+rm(GC.levels.temp)
+```
+
+### Gymno vs Angio
+```{r}
+GC.res.gymno.angio <- results(GC.dds.3, contrast=c("plant_clade","Gymnospermae","Angiospermae"), alpha = 0.05)
+GC.sig.Gymno.Angio <- as.data.frame(GC.res.gymno.angio[is.na(GC.res.gymno.angio$padj)==F&GC.res.gymno.angio$padj<0.05&GC.res.gymno.angio$log2FoldChange>0,]) # 270 DAGCs
+```
+
+```{r}
+# Arrange the results dataframe in decreasing log2FoldChange
+GC.sig.Gymno.Angio$gene_cluster_id <- as.factor(rownames(GC.sig.Gymno.Angio))
+GC.sig.Gymno.Angio <- GC.sig.Gymno.Angio[order(-GC.sig.Gymno.Angio$log2FoldChange), ]
+row.names(GC.sig.Gymno.Angio) <- NULL
+
+DAG.Gymno.Angio <- GC.sig.Gymno.Angio
+
+# Add comparisons
+DAG.Gymno.Angio$ABBA <- rep(1,nrow(DAG.Gymno.Angio))
+DAG.Gymno.Angio$THOC <- rep(1,nrow(DAG.Gymno.Angio))
+DAG.Gymno.Angio$ACSA <- rep(-1,nrow(DAG.Gymno.Angio))
+DAG.Gymno.Angio$FAGR <- rep(-1,nrow(DAG.Gymno.Angio))
+DAG.Gymno.Angio$COCO <- rep(-1,nrow(DAG.Gymno.Angio))
+
+# Merge DAGCs with function and coverage df
+DAG.Gymno.Angio.fct <- merge(GC.rar.fct.cov, DAG.Gymno.Angio, by = "gene_cluster_id")
+
+# Keep rows with unique functional annotation
+DAG.Gymno.Angio.fct.distinct <- DAG.Gymno.Angio.fct %>%
+  distinct(gene_cluster_id, COG20_FUNCTION, KOfam, Pfam, CAZyme, .keep_all = TRUE)
+DAG.Gymno.Angio.fct.distinct <- DAG.Gymno.Angio.fct.distinct[,-c(2:3)] # remove gene caller id and genome name because irrelevant
+DAG.Gymno.Angio.fct.distinct <- DAG.Gymno.Angio.fct.distinct[c(1:3,46:51,4:45,52:56)] # rearrange column order
+DAG.Gymno.Angio.fct.distinct <- DAG.Gymno.Angio.fct.distinct[order(-DAG.Gymno.Angio.fct.distinct$log2FoldChange), ] # place rows in order of decreasing mean_log2FC
+row.names(DAG.Gymno.Angio.fct.distinct) <- NULL
+DAG.Gymno.Angio.fct.distinct <- droplevels(DAG.Gymno.Angio.fct.distinct)
+str(DAG.Gymno.Angio.fct.distinct)
+
+# Remove from 'DAG.Trees.COCO.fct.distinct' DAGs that are also in 'DAG.Gymno.Angio.fct.distinct'
+which(DAG.Trees.COCO.fct.distinct$gene_cluster_id %in% DAG.Gymno.Angio.fct.distinct$gene_cluster_id)
+GC.levels.temp <- levels(DAG.Gymno.Angio.fct.distinct$gene_cluster_id)
+DAG.Trees.COCO.fct.distinct.only <- subset(DAG.Trees.COCO.fct.distinct, !(gene_cluster_id %in% GC.levels.temp))
+row.names(DAG.Trees.COCO.fct.distinct.only) <- NULL
+DAG.Trees.COCO.fct.distinct.only <- droplevels(DAG.Trees.COCO.fct.distinct.only)
+str(DAG.Trees.COCO.fct.distinct.only)
+rm(GC.levels.temp)
+```
+
+
+## Angio Trees vs Gymno Trees
+
+### Analysis
+```{r}
+GC.dds.4 <- DESeqDataSetFromMatrix(countData = countData[,-c(10:14)],
+                              colData = metadata.rar[-c(10:14),], 
+                              design = ~ plant_clade)
+GC.dds.4$plant_clade <- relevel(GC.dds.4$plant_clade, ref = "Gymnospermae")
+GC.dds.4 <- DESeq(GC.dds.4)
+```
+
+Save and load GC.dds as RDS file
+```{r}
+#saveRDS(GC.dds.4, "../rds/GC.dds.4.rds")
+GC.dds.4 <- readRDS("../rds/GC.dds.4.rds")
+```
+
+### Exploration
+```{r}
+GC.res.angioT.gymnoT <- results(GC.dds.4, contrast=c("plant_clade","Angiospermae","Gymnospermae"), alpha = 0.05)
+GC.sig.angioT.gymnoT <- GC.res.angioT.gymnoT[is.na(GC.res.angioT.gymnoT$padj)==F&GC.res.angioT.gymnoT$padj<0.05,] # 228 DAGCs
+```
+
+### Angio Trees vs Gymno Trees
+
+```{r}
+GC.sig.AngioT.GymnoT <- as.data.frame(GC.res.angioT.gymnoT[is.na(GC.res.angioT.gymnoT$padj)==F&GC.res.angioT.gymnoT$padj<0.05&GC.res.angioT.gymnoT$log2FoldChange>0,]) # 189 DAGCs
+```
+
+```{r}
+# Arrange the results dataframe in decreasing log2FoldChange
+GC.sig.AngioT.GymnoT$gene_cluster_id <- as.factor(rownames(GC.sig.AngioT.GymnoT))
+GC.sig.AngioT.GymnoT <- GC.sig.AngioT.GymnoT[order(-GC.sig.AngioT.GymnoT$log2FoldChange), ]
+row.names(GC.sig.AngioT.GymnoT) <- NULL
+
+DAG.AngioT.GymnoT <- GC.sig.AngioT.GymnoT
+
+# Add comparisons
+DAG.AngioT.GymnoT$ABBA <- rep(-1,nrow(DAG.AngioT.GymnoT))
+DAG.AngioT.GymnoT$THOC <- rep(-1,nrow(DAG.AngioT.GymnoT))
+DAG.AngioT.GymnoT$ACSA <- rep(1,nrow(DAG.AngioT.GymnoT))
+DAG.AngioT.GymnoT$FAGR <- rep(1,nrow(DAG.AngioT.GymnoT))
+DAG.AngioT.GymnoT$COCO <- rep(0,nrow(DAG.AngioT.GymnoT))
+
+# Merge DAGs with function and coverage df
+DAG.AngioT.GymnoT.fct <- merge(GC.rar.fct.cov, DAG.AngioT.GymnoT, by = "gene_cluster_id")
+
+# Keep rows with unique functional annotation
+DAG.AngioT.GymnoT.fct.distinct <- DAG.AngioT.GymnoT.fct %>%
+  distinct(gene_cluster_id, COG20_FUNCTION, KOfam, Pfam, CAZyme, .keep_all = TRUE)
+DAG.AngioT.GymnoT.fct.distinct <- DAG.AngioT.GymnoT.fct.distinct[,-c(2:3)] # remove gene caller id and genome name because irrelevant
+DAG.AngioT.GymnoT.fct.distinct <- DAG.AngioT.GymnoT.fct.distinct[c(1:3,46:51,4:45,52:56)] # rearrange column order
+DAG.AngioT.GymnoT.fct.distinct <- DAG.AngioT.GymnoT.fct.distinct[order(-DAG.AngioT.GymnoT.fct.distinct$log2FoldChange), ] # place rows in order of decreasing mean_log2FC
+row.names(DAG.AngioT.GymnoT.fct.distinct) <- NULL
+DAG.AngioT.GymnoT.fct.distinct <- droplevels(DAG.AngioT.GymnoT.fct.distinct)
+str(DAG.AngioT.GymnoT.fct.distinct)
+
+# Remove from 'DAG.AngioT.GymnoT.fct.distinct' DAGs that are also in 'DAG.Angio.Gymno.fct.distinct.only'
+which(DAG.Angio.Gymno.fct.distinct.only$gene_cluster_id %in% DAG.AngioT.GymnoT.fct.distinct$gene_cluster_id) #
+GC.levels.temp <- levels(DAG.Angio.Gymno.fct.distinct.only$gene_cluster_id)
+DAG.AngioT.GymnoT.fct.distinct.only <- subset(DAG.AngioT.GymnoT.fct.distinct, !(gene_cluster_id %in% GC.levels.temp))
+row.names(DAG.AngioT.GymnoT.fct.distinct.only) <- NULL
+DAG.AngioT.GymnoT.fct.distinct.only <- droplevels(DAG.AngioT.GymnoT.fct.distinct.only)
+str(DAG.AngioT.GymnoT.fct.distinct.only)
+rm(GC.levels.temp)
+```
+
+
+### Gymno Trees vs Angio Trees 
+
+```{r}
+GC.res.gymnoT.angioT <- results(GC.dds.4, contrast=c("plant_clade","Gymnospermae","Angiospermae"), alpha = 0.05)
+GC.sig.GymnoT.AngioT <- as.data.frame(GC.res.gymnoT.angioT[is.na(GC.res.gymnoT.angioT$padj)==F&GC.res.gymnoT.angioT$padj<0.05&GC.res.gymnoT.angioT$log2FoldChange>0,]) # 39 DAGCs
+```
+
+```{r}
+# Arrange the results dataframe in decreasing log2FoldChange
+GC.sig.GymnoT.AngioT$gene_cluster_id <- as.factor(rownames(GC.sig.GymnoT.AngioT))
+GC.sig.GymnoT.AngioT <- GC.sig.GymnoT.AngioT[order(-GC.sig.GymnoT.AngioT$log2FoldChange), ]
+row.names(GC.sig.GymnoT.AngioT) <- NULL
+
+DAG.GymnoT.AngioT <- GC.sig.GymnoT.AngioT
+
+# Add comparisons
+DAG.GymnoT.AngioT$ABBA <- rep(1,nrow(DAG.GymnoT.AngioT))
+DAG.GymnoT.AngioT$THOC <- rep(1,nrow(DAG.GymnoT.AngioT))
+DAG.GymnoT.AngioT$ACSA <- rep(-1,nrow(DAG.GymnoT.AngioT))
+DAG.GymnoT.AngioT$FAGR <- rep(-1,nrow(DAG.GymnoT.AngioT))
+DAG.GymnoT.AngioT$COCO <- rep(0,nrow(DAG.GymnoT.AngioT))
+
+# Merge DAGCs with function and coverage df
+DAG.GymnoT.AngioT.fct <- merge(GC.rar.fct.cov, DAG.GymnoT.AngioT, by = "gene_cluster_id")
+
+# Keep rows with unique functional annotation
+DAG.GymnoT.AngioT.fct.distinct <- DAG.GymnoT.AngioT.fct %>%
+  distinct(gene_cluster_id, COG20_FUNCTION, KOfam, Pfam, CAZyme, .keep_all = TRUE)
+DAG.GymnoT.AngioT.fct.distinct <- DAG.GymnoT.AngioT.fct.distinct[,-c(2:3)] # remove gene caller id and genome name because irrelevant
+DAG.GymnoT.AngioT.fct.distinct <- DAG.GymnoT.AngioT.fct.distinct[c(1:3,46:51,4:45,52:56)] # rearrange column order
+DAG.GymnoT.AngioT.fct.distinct <- DAG.GymnoT.AngioT.fct.distinct[order(-DAG.GymnoT.AngioT.fct.distinct$log2FoldChange), ] # place rows in order of decreasing mean_log2FC
+row.names(DAG.GymnoT.AngioT.fct.distinct) <- NULL
+DAG.GymnoT.AngioT.fct.distinct <- droplevels(DAG.GymnoT.AngioT.fct.distinct)
+str(DAG.GymnoT.AngioT.fct.distinct)
+
+# Remove from 'DAG.GymnoT.AngioT.fct.distinct' DAGs that are also in 'DAG.Gymno.Angio.fct.distinct'
+which(DAG.Gymno.Angio.fct.distinct$gene_cluster_id %in% DAG.GymnoT.AngioT.fct.distinct$gene_cluster_id) #
+GC.levels.temp <- levels(DAG.Gymno.Angio.fct.distinct$gene_cluster_id)
+DAG.GymnoT.AngioT.fct.distinct.only <- subset(DAG.GymnoT.AngioT.fct.distinct, !(gene_cluster_id %in% GC.levels.temp))
+row.names(DAG.GymnoT.AngioT.fct.distinct.only) <- NULL
+DAG.GymnoT.AngioT.fct.distinct.only <- droplevels(DAG.GymnoT.AngioT.fct.distinct.only)
+str(DAG.GymnoT.AngioT.fct.distinct.only)
+rm(GC.levels.temp)
+```
+
+
+
+## ABBA vs THOC & ACSA vs FAGR
+
+### Analysis
+```{r}
+GC.dds.5 <- DESeqDataSetFromMatrix(countData = countData,
+                              colData = metadata.rar, 
+                              design = ~ host_species)
+GC.dds.5$host_species <- relevel(GC.dds.5$host_species, ref = "COCO")
+GC.dds.5 <- DESeq(GC.dds.5)
+```
+
+Save and load GC.dds as RDS file
+```{r}
+#saveRDS(GC.dds.5, "../rds/GC.dds.5.rds")
+GC.dds.5 <- readRDS("../rds/GC.dds.5.rds")
+```
+
+### Exploration
+```{r}
+GC.res.ABBA.THOC <- results(GC.dds.5, contrast=c("host_species","ABBA","THOC"), alpha = 0.05)
+GC.sig.ABBA.THOC <- GC.res.ABBA.THOC[is.na(GC.res.ABBA.THOC$padj)==F&GC.res.ABBA.THOC$padj<0.05,] # 0 DAGC
+
+GC.res.ACSA.FAGR <- results(GC.dds.5, contrast=c("host_species","ACSA","FAGR"), alpha = 0.05)
+GC.sig.ACSA.FAGR <- GC.res.ACSA.FAGR[is.na(GC.res.ACSA.FAGR$padj)==F&GC.res.ACSA.FAGR$padj<0.05,] # 0 DAGC
+```
+
+
+## Angio OR Gymno Trees vs COCO
+
+### Analysis
+```{r}
+GC.dds.6 <- DESeqDataSetFromMatrix(countData = countData,
+                              colData = metadata.rar, 
+                              design = ~ gymno_angio_tree)
+GC.dds.6$gymno_angio_tree <- relevel(GC.dds.6$gymno_angio_tree, ref = "angiosperm_shrub")
+GC.dds.6 <- DESeq(GC.dds.6)
+```
+
+Save and load GC.dds as RDS file
+```{r}
+#saveRDS(GC.dds.6, "../rds/GC.dds.6.rds")
+GC.dds.6 <- readRDS("../rds/GC.dds.6.rds")
+```
+
+```{r}
+GC.res.AngioT.COCO <- results(GC.dds.6, contrast=c("gymno_angio_tree","angiosperm_tree","angiosperm_shrub"), alpha = 0.05)
+GC.res.COCO.AngioT <- results(GC.dds.6, contrast=c("gymno_angio_tree","angiosperm_shrub","angiosperm_tree"), alpha = 0.05)
+GC.res.GymnoT.COCO <- results(GC.dds.6, contrast=c("gymno_angio_tree","gymnosperm_tree","angiosperm_shrub"), alpha = 0.05)
+GC.res.COCO.GymnoT <- results(GC.dds.6, contrast=c("gymno_angio_tree","angiosperm_shrub","gymnosperm_tree"), alpha = 0.05)
+```
+
+### Angio Trees vs COCO
+
+```{r}
+GC.sig.AngioT.COCO <- as.data.frame(GC.res.AngioT.COCO[is.na(GC.res.AngioT.COCO$padj)==F&GC.res.AngioT.COCO$padj<0.05&GC.res.AngioT.COCO$log2FoldChange>0,]) # 118 DAGCs
+```
+
+```{r}
+# Arrange the results dataframe in decreasing log2FoldChange
+GC.sig.AngioT.COCO$gene_cluster_id <- as.factor(rownames(GC.sig.AngioT.COCO))
+GC.sig.AngioT.COCO <- GC.sig.AngioT.COCO[order(-GC.sig.AngioT.COCO$log2FoldChange), ]
+row.names(GC.sig.AngioT.COCO) <- NULL
+
+DAG.AngioT.COCO <- GC.sig.AngioT.COCO
+
+# Add comparisons
+DAG.AngioT.COCO$ABBA <- rep(0,nrow(DAG.AngioT.COCO))
+DAG.AngioT.COCO$THOC <- rep(0,nrow(DAG.AngioT.COCO))
+DAG.AngioT.COCO$ACSA <- rep(1,nrow(DAG.AngioT.COCO))
+DAG.AngioT.COCO$FAGR <- rep(1,nrow(DAG.AngioT.COCO))
+DAG.AngioT.COCO$COCO <- rep(-1,nrow(DAG.AngioT.COCO))
+
+# Merge DAGCs with function and coverage df
+DAG.AngioT.COCO.fct <- merge(GC.rar.fct.cov, DAG.AngioT.COCO, by = "gene_cluster_id")
+
+# Keep rows with unique functional annotation
+DAG.AngioT.COCO.fct.distinct <- DAG.AngioT.COCO.fct %>%
+  distinct(gene_cluster_id, COG20_FUNCTION, KOfam, Pfam, CAZyme, .keep_all = TRUE)
+DAG.AngioT.COCO.fct.distinct <- DAG.AngioT.COCO.fct.distinct[,-c(2:3)] # remove gene caller id and genome name because irrelevant
+DAG.AngioT.COCO.fct.distinct <- DAG.AngioT.COCO.fct.distinct[c(1:3,46:51,4:45,52:56)] # rearrange column order
+DAG.AngioT.COCO.fct.distinct <- DAG.AngioT.COCO.fct.distinct[order(-DAG.AngioT.COCO.fct.distinct$log2FoldChange), ] # place rows in order of decreasing mean_log2FC
+row.names(DAG.AngioT.COCO.fct.distinct) <- NULL
+DAG.AngioT.COCO.fct.distinct <- droplevels(DAG.AngioT.COCO.fct.distinct)
+str(DAG.AngioT.COCO.fct.distinct)
+
+# Remove from 'DAG.AngioT.COCO.fct.distinct' DAGs that are also in 'DAG.Trees.COCO.fct.distinct.only'
+which(DAG.Trees.COCO.fct.distinct.only$gene_cluster_id %in% DAG.AngioT.COCO.fct.distinct$gene_cluster_id) #
+GC.levels.temp <- levels(DAG.Trees.COCO.fct.distinct.only$gene_cluster_id)
+DAG.AngioT.COCO.fct.distinct.only <- subset(DAG.AngioT.COCO.fct.distinct, !(gene_cluster_id %in% GC.levels.temp))
+row.names(DAG.AngioT.COCO.fct.distinct.only) <- NULL
+DAG.AngioT.COCO.fct.distinct.only <- droplevels(DAG.AngioT.COCO.fct.distinct.only)
+str(DAG.AngioT.COCO.fct.distinct.only)
+rm(GC.levels.temp)
+
+# Remove from 'DAG.AngioT.COCO.fct.distinct.only' DAGs that are also in 'DAG.Angio.Gymno.fct.distinct.only'
+which(DAG.Angio.Gymno.fct.distinct.only$gene_cluster_id %in% DAG.AngioT.COCO.fct.distinct.only$gene_cluster_id) #
+GC.levels.temp <- levels(DAG.Angio.Gymno.fct.distinct.only$gene_cluster_id)
+DAG.AngioT.COCO.fct.distinct.only <- subset(DAG.AngioT.COCO.fct.distinct.only, !(gene_cluster_id %in% GC.levels.temp))
+row.names(DAG.AngioT.COCO.fct.distinct.only) <- NULL
+DAG.AngioT.COCO.fct.distinct.only <- droplevels(DAG.AngioT.COCO.fct.distinct.only)
+str(DAG.AngioT.COCO.fct.distinct.only)
+rm(GC.levels.temp)
+
+# Remove from 'DAG.AngioT.COCO.fct.distinct.only' DAGs that are also in 'DAG.Gymno.Angio.fct.distinct'
+which(DAG.Gymno.Angio.fct.distinct$gene_cluster_id %in% DAG.AngioT.COCO.fct.distinct.only$gene_cluster_id) #
+GC.levels.temp <- levels(DAG.Gymno.Angio.fct.distinct$gene_cluster_id)
+DAG.AngioT.COCO.fct.distinct.only <- subset(DAG.AngioT.COCO.fct.distinct.only, !(gene_cluster_id %in% GC.levels.temp))
+row.names(DAG.AngioT.COCO.fct.distinct.only) <- NULL
+DAG.AngioT.COCO.fct.distinct.only <- droplevels(DAG.AngioT.COCO.fct.distinct.only)
+str(DAG.AngioT.COCO.fct.distinct.only)
+rm(GC.levels.temp)
+
+# Modify 'DAG.AngioT.GymnoT.fct.distinct.only' to include '-1' to COCO column to take into account the results from 'DAG.AngioT.COCO.fct.distinct.only'
+which(DAG.AngioT.GymnoT.fct.distinct.only$gene_cluster_id %in% DAG.AngioT.COCO.fct.distinct.only$gene_cluster_id) #
+
+
+
+RENDU LA
+
+
+DAG.AngioT.GymnoT.fct.distinct.only$COCO <- c(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,-1,-1,-1,-1)
+# Then
+# Remove from 'DAG.AngioT.COCO.fct.distinct.only' DAGs that are also in 'DAG.AngioT.GymnoT.fct.distinct.only'
+which(DAG.AngioT.GymnoT.fct.distinct.only$gene_cluster_id %in% DAG.AngioT.COCO.fct.distinct.only$gene_cluster_id) #
+GC.levels.temp <- levels(DAG.AngioT.GymnoT.fct.distinct.only$gene_cluster_id)
+DAG.AngioT.COCO.fct.distinct.only <- subset(DAG.AngioT.COCO.fct.distinct.only, !(gene_cluster_id %in% GC.levels.temp))
+row.names(DAG.AngioT.COCO.fct.distinct.only) <- NULL
+DAG.AngioT.COCO.fct.distinct.only <- droplevels(DAG.AngioT.COCO.fct.distinct.only)
+str(DAG.AngioT.COCO.fct.distinct.only)
+rm(GC.levels.temp)
+```
+
+
+### COCO vs Angio Trees
+
+```{r}
+GC.sig.COCO.AngioT <- as.data.frame(GC.res.COCO.AngioT[is.na(GC.res.COCO.AngioT$padj)==F&GC.res.COCO.AngioT$padj<0.05&GC.res.COCO.AngioT$log2FoldChange>0,]) # 6 DAGs
+```
+
+```{r}
+# Arrange the results dataframe in decreasing log2FoldChange
+GC.sig.COCO.AngioT$gene_cluster_id <- as.factor(rownames(GC.sig.COCO.AngioT))
+GC.sig.COCO.AngioT <- GC.sig.COCO.AngioT[order(-GC.sig.COCO.AngioT$log2FoldChange), ]
+row.names(GC.sig.COCO.AngioT) <- NULL
+
+DAG.COCO.AngioT <- GC.sig.COCO.AngioT
+
+# Add comparisons
+DAG.COCO.AngioT$ABBA <- rep(0,nrow(DAG.COCO.AngioT))
+DAG.COCO.AngioT$THOC <- rep(0,nrow(DAG.COCO.AngioT))
+DAG.COCO.AngioT$ACSA <- rep(-1,nrow(DAG.COCO.AngioT))
+DAG.COCO.AngioT$FAGR <- rep(-1,nrow(DAG.COCO.AngioT))
+DAG.COCO.AngioT$COCO <- rep(1,nrow(DAG.COCO.AngioT))
+
+# Merge DAGs with function and coverage df
+DAG.COCO.AngioT.fct <- merge(GC.rar.fct.cov, DAG.COCO.AngioT, by = "gene_cluster_id")
+
+# Keep rows with unique functional annotation
+DAG.COCO.AngioT.fct.distinct <- DAG.COCO.AngioT.fct %>%
+  distinct(gene_cluster_id, COG20_FUNCTION, KOfam, Pfam, CAZyme, Description, .keep_all = TRUE)
+DAG.COCO.AngioT.fct.distinct <- DAG.COCO.AngioT.fct.distinct[,-c(2:3)] # remove gene caller id and genome name because irrelevant
+DAG.COCO.AngioT.fct.distinct <- DAG.COCO.AngioT.fct.distinct[c(1:3,63:64,4:62,65:73)] # rearrange column order
+DAG.COCO.AngioT.fct.distinct <- DAG.COCO.AngioT.fct.distinct[order(-DAG.COCO.AngioT.fct.distinct$log2FoldChange), ] # place rows in order of decreasing mean_log2FC
+row.names(DAG.COCO.AngioT.fct.distinct) <- NULL
+DAG.COCO.AngioT.fct.distinct <- droplevels(DAG.COCO.AngioT.fct.distinct)
+str(DAG.COCO.AngioT.fct.distinct)
+
+# Remove from 'DAG.COCO.AngioT.fct.distinct' DAGs that are also in 'DAG.COCO.Trees.fct.distinct'
+which(DAG.COCO.Trees.fct.distinct$gene_cluster_id %in% DAG.COCO.AngioT.fct.distinct$gene_cluster_id) #
+GC.levels.temp <- levels(DAG.COCO.Trees.fct.distinct$gene_cluster_id)
+DAG.COCO.AngioT.fct.distinct.only <- subset(DAG.COCO.AngioT.fct.distinct, !(gene_cluster_id %in% GC.levels.temp))
+row.names(DAG.COCO.AngioT.fct.distinct.only) <- NULL
+DAG.COCO.AngioT.fct.distinct.only <- droplevels(DAG.COCO.AngioT.fct.distinct.only)
+str(DAG.COCO.AngioT.fct.distinct.only)
+rm(GC.levels.temp)
+```
+
+
+### Gymno Trees vs COCO
+
+```{r}
+GC.sig.GymnoT.COCO <- as.data.frame(GC.res.GymnoT.COCO[is.na(GC.res.GymnoT.COCO$padj)==F&GC.res.GymnoT.COCO$padj<0.05&GC.res.GymnoT.COCO$log2FoldChange>0,]) # 435 DAGs
+```
+
+```{r}
+# Arrange the results dataframe in decreasing log2FoldChange
+GC.sig.GymnoT.COCO$gene_cluster_id <- as.factor(rownames(GC.sig.GymnoT.COCO))
+GC.sig.GymnoT.COCO <- GC.sig.GymnoT.COCO[order(-GC.sig.GymnoT.COCO$log2FoldChange), ]
+row.names(GC.sig.GymnoT.COCO) <- NULL
+
+DAG.GymnoT.COCO <- GC.sig.GymnoT.COCO
+
+# Add comparisons
+DAG.GymnoT.COCO$ABBA <- rep(1,nrow(DAG.GymnoT.COCO))
+DAG.GymnoT.COCO$THOC <- rep(1,nrow(DAG.GymnoT.COCO))
+DAG.GymnoT.COCO$ACSA <- rep(0,nrow(DAG.GymnoT.COCO))
+DAG.GymnoT.COCO$FAGR <- rep(0,nrow(DAG.GymnoT.COCO))
+DAG.GymnoT.COCO$COCO <- rep(-1,nrow(DAG.GymnoT.COCO))
+
+# Merge DAGs with function and coverage df
+DAG.GymnoT.COCO.fct <- merge(GC.rar.fct.cov, DAG.GymnoT.COCO, by = "gene_cluster_id")
+
+# Keep rows with unique functional annotation
+DAG.GymnoT.COCO.fct.distinct <- DAG.GymnoT.COCO.fct %>%
+  distinct(gene_cluster_id, COG20_FUNCTION, KOfam, Pfam, CAZyme, Description, .keep_all = TRUE)
+DAG.GymnoT.COCO.fct.distinct <- DAG.GymnoT.COCO.fct.distinct[,-c(2:3)] # remove gene caller id and genome name because irrelevant
+DAG.GymnoT.COCO.fct.distinct <- DAG.GymnoT.COCO.fct.distinct[c(1:3,63:64,4:62,65:73)] # rearrange column order
+DAG.GymnoT.COCO.fct.distinct <- DAG.GymnoT.COCO.fct.distinct[order(-DAG.GymnoT.COCO.fct.distinct$log2FoldChange), ] # place rows in order of decreasing mean_log2FC
+row.names(DAG.GymnoT.COCO.fct.distinct) <- NULL
+DAG.GymnoT.COCO.fct.distinct <- droplevels(DAG.GymnoT.COCO.fct.distinct)
+str(DAG.GymnoT.COCO.fct.distinct)
+
+# Remove from 'DAG.GymnoT.COCO.fct.distinct' DAGs that are also in 'DAG.Trees.COCO.fct.distinct.only'
+which(DAG.Trees.COCO.fct.distinct.only$gene_cluster_id %in% DAG.GymnoT.COCO.fct.distinct$gene_cluster_id) #
+GC.levels.temp <- levels(DAG.Trees.COCO.fct.distinct.only$gene_cluster_id)
+DAG.GymnoT.COCO.fct.distinct.only <- subset(DAG.GymnoT.COCO.fct.distinct, !(gene_cluster_id %in% GC.levels.temp))
+row.names(DAG.GymnoT.COCO.fct.distinct.only) <- NULL
+DAG.GymnoT.COCO.fct.distinct.only <- droplevels(DAG.GymnoT.COCO.fct.distinct.only)
+str(DAG.GymnoT.COCO.fct.distinct.only)
+rm(GC.levels.temp)
+
+# Remove from 'DAG.GymnoT.COCO.fct.distinct.only' DAGs that are also in 'DAG.Gymno.Angio.fct.distinct'
+which(DAG.Gymno.Angio.fct.distinct$gene_cluster_id %in% DAG.GymnoT.COCO.fct.distinct.only$gene_cluster_id) #
+GC.levels.temp <- levels(DAG.Gymno.Angio.fct.distinct$gene_cluster_id)
+DAG.GymnoT.COCO.fct.distinct.only <- subset(DAG.GymnoT.COCO.fct.distinct.only, !(gene_cluster_id %in% GC.levels.temp))
+row.names(DAG.GymnoT.COCO.fct.distinct.only) <- NULL
+DAG.GymnoT.COCO.fct.distinct.only <- droplevels(DAG.GymnoT.COCO.fct.distinct.only)
+str(DAG.GymnoT.COCO.fct.distinct.only)
+rm(GC.levels.temp)
+```
+
+
+### COCO vs Gymno Trees
+
+```{r}
+GC.sig.COCO.GymnoT <- as.data.frame(GC.res.COCO.GymnoT[is.na(GC.res.COCO.GymnoT$padj)==F&GC.res.COCO.GymnoT$padj<0.05&GC.res.COCO.GymnoT$log2FoldChange>0,]) # 341 DAGs
+```
+
+```{r}
+# Arrange the results dataframe in decreasing log2FoldChange
+GC.sig.COCO.GymnoT$gene_cluster_id <- as.factor(rownames(GC.sig.COCO.GymnoT))
+GC.sig.COCO.GymnoT <- GC.sig.COCO.GymnoT[order(-GC.sig.COCO.GymnoT$log2FoldChange), ]
+row.names(GC.sig.COCO.GymnoT) <- NULL
+
+DAG.COCO.GymnoT <- GC.sig.COCO.GymnoT
+
+# Add comparisons
+DAG.COCO.GymnoT$ABBA <- rep(-1,nrow(DAG.COCO.GymnoT))
+DAG.COCO.GymnoT$THOC <- rep(-1,nrow(DAG.COCO.GymnoT))
+DAG.COCO.GymnoT$ACSA <- rep(0,nrow(DAG.COCO.GymnoT))
+DAG.COCO.GymnoT$FAGR <- rep(0,nrow(DAG.COCO.GymnoT))
+DAG.COCO.GymnoT$COCO <- rep(1,nrow(DAG.COCO.GymnoT))
+
+# Merge DAGs with function and coverage df
+DAG.COCO.GymnoT.fct <- merge(GC.rar.fct.cov, DAG.COCO.GymnoT, by = "gene_cluster_id")
+
+# Keep rows with unique functional annotation
+DAG.COCO.GymnoT.fct.distinct <- DAG.COCO.GymnoT.fct %>%
+  distinct(gene_cluster_id, COG20_FUNCTION, KOfam, Pfam, CAZyme, Description, .keep_all = TRUE)
+DAG.COCO.GymnoT.fct.distinct <- DAG.COCO.GymnoT.fct.distinct[,-c(2:3)] # remove gene caller id and genome name because irrelevant
+DAG.COCO.GymnoT.fct.distinct <- DAG.COCO.GymnoT.fct.distinct[c(1:3,63:64,4:62,65:73)] # rearrange column order
+DAG.COCO.GymnoT.fct.distinct <- DAG.COCO.GymnoT.fct.distinct[order(-DAG.COCO.GymnoT.fct.distinct$log2FoldChange), ] # place rows in order of decreasing mean_log2FC
+row.names(DAG.COCO.GymnoT.fct.distinct) <- NULL
+DAG.COCO.GymnoT.fct.distinct <- droplevels(DAG.COCO.GymnoT.fct.distinct)
+str(DAG.COCO.GymnoT.fct.distinct)
+
+# Remove from 'DAG.COCO.GymnoT.fct.distinct' DAGs that are also in 'DAG.COCO.Trees.fct.distinct'
+which(DAG.COCO.Trees.fct.distinct$gene_cluster_id %in% DAG.COCO.GymnoT.fct.distinct$gene_cluster_id) #
+GC.levels.temp <- levels(DAG.COCO.Trees.fct.distinct$gene_cluster_id)
+DAG.COCO.GymnoT.fct.distinct.only <- subset(DAG.COCO.GymnoT.fct.distinct, !(gene_cluster_id %in% GC.levels.temp))
+row.names(DAG.COCO.GymnoT.fct.distinct.only) <- NULL
+DAG.COCO.GymnoT.fct.distinct.only <- droplevels(DAG.COCO.GymnoT.fct.distinct.only)
+str(DAG.COCO.GymnoT.fct.distinct.only)
+rm(GC.levels.temp)
+
+# Remove from 'DAG.COCO.GymnoT.fct.distinct' DAGs that are also in 'DAG.Angio.Gymno.fct.distinct.only'
+which(DAG.Angio.Gymno.fct.distinct.only$gene_cluster_id %in% DAG.COCO.GymnoT.fct.distinct.only$gene_cluster_id) #
+GC.levels.temp <- levels(DAG.Angio.Gymno.fct.distinct.only$gene_cluster_id)
+DAG.COCO.GymnoT.fct.distinct.only <- subset(DAG.COCO.GymnoT.fct.distinct.only, !(gene_cluster_id %in% GC.levels.temp))
+row.names(DAG.COCO.GymnoT.fct.distinct.only) <- NULL
+DAG.COCO.GymnoT.fct.distinct.only <- droplevels(DAG.COCO.GymnoT.fct.distinct.only)
+str(DAG.COCO.GymnoT.fct.distinct.only)
+rm(GC.levels.temp)
+```
+
+
+
+## Plots DAGs
+
+### Preparation - Combine all DAGs GC dataframes
+
+List of DAGs dataframes
+```{r}
+str(DAG.Trees.COCO.fct.distinct.only)
+str(DAG.COCO.Trees.fct.distinct)
+str(DAG.Angio.Gymno.fct.distinct.only)
+str(DAG.Gymno.Angio.fct.distinct)
+str(DAG.AngioT.GymnoT.fct.distinct.only)
+str(DAG.GymnoT.AngioT.fct.distinct.only)
+str(DAG.AngioT.COCO.fct.distinct.only)
+str(DAG.COCO.AngioT.fct.distinct.only)
+str(DAG.GymnoT.COCO.fct.distinct.only)
+str(DAG.COCO.GymnoT.fct.distinct.only)
+```
+
+Verify if DAGs duplicates
+```{r}
+which(DAG.Trees.COCO.fct.distinct.only$gene_cluster_id %in% DAG.COCO.Trees.fct.distinct$gene_cluster_id)
+which(DAG.Trees.COCO.fct.distinct.only$gene_cluster_id %in% DAG.Angio.Gymno.fct.distinct.only$gene_cluster_id)
+which(DAG.Trees.COCO.fct.distinct.only$gene_cluster_id %in% DAG.Gymno.Angio.fct.distinct$gene_cluster_id)
+which(DAG.Trees.COCO.fct.distinct.only$gene_cluster_id %in% DAG.AngioT.GymnoT.fct.distinct.only$gene_cluster_id)
+which(DAG.Trees.COCO.fct.distinct.only$gene_cluster_id %in% DAG.GymnoT.AngioT.fct.distinct.only$gene_cluster_id)
+which(DAG.Trees.COCO.fct.distinct.only$gene_cluster_id %in% DAG.AngioT.COCO.fct.distinct.only$gene_cluster_id)
+which(DAG.Trees.COCO.fct.distinct.only$gene_cluster_id %in% DAG.COCO.AngioT.fct.distinct.only$gene_cluster_id)
+which(DAG.Trees.COCO.fct.distinct.only$gene_cluster_id %in% DAG.GymnoT.COCO.fct.distinct.only$gene_cluster_id)
+which(DAG.Trees.COCO.fct.distinct.only$gene_cluster_id %in% DAG.COCO.GymnoT.fct.distinct.only$gene_cluster_id)
+
+which(DAG.COCO.Trees.fct.distinct$gene_cluster_id %in% DAG.Angio.Gymno.fct.distinct.only$gene_cluster_id)
+which(DAG.COCO.Trees.fct.distinct$gene_cluster_id %in% DAG.Gymno.Angio.fct.distinct$gene_cluster_id)
+which(DAG.COCO.Trees.fct.distinct$gene_cluster_id %in% DAG.AngioT.GymnoT.fct.distinct.only$gene_cluster_id)
+which(DAG.COCO.Trees.fct.distinct$gene_cluster_id %in% DAG.GymnoT.AngioT.fct.distinct.only$gene_cluster_id)
+which(DAG.COCO.Trees.fct.distinct$gene_cluster_id %in% DAG.AngioT.COCO.fct.distinct.only$gene_cluster_id)
+which(DAG.COCO.Trees.fct.distinct$gene_cluster_id %in% DAG.COCO.AngioT.fct.distinct.only$gene_cluster_id)
+which(DAG.COCO.Trees.fct.distinct$gene_cluster_id %in% DAG.GymnoT.COCO.fct.distinct.only$gene_cluster_id)
+which(DAG.COCO.Trees.fct.distinct$gene_cluster_id %in% DAG.COCO.GymnoT.fct.distinct.only$gene_cluster_id)
+
+which(DAG.Angio.Gymno.fct.distinct.only$gene_cluster_id %in% DAG.Gymno.Angio.fct.distinct$gene_cluster_id)
+which(DAG.Angio.Gymno.fct.distinct.only$gene_cluster_id %in% DAG.AngioT.GymnoT.fct.distinct.only$gene_cluster_id)
+which(DAG.Angio.Gymno.fct.distinct.only$gene_cluster_id %in% DAG.GymnoT.AngioT.fct.distinct.only$gene_cluster_id)
+which(DAG.Angio.Gymno.fct.distinct.only$gene_cluster_id %in% DAG.AngioT.COCO.fct.distinct.only$gene_cluster_id)
+which(DAG.Angio.Gymno.fct.distinct.only$gene_cluster_id %in% DAG.COCO.AngioT.fct.distinct.only$gene_cluster_id)
+which(DAG.Angio.Gymno.fct.distinct.only$gene_cluster_id %in% DAG.GymnoT.COCO.fct.distinct.only$gene_cluster_id)
+which(DAG.Angio.Gymno.fct.distinct.only$gene_cluster_id %in% DAG.COCO.GymnoT.fct.distinct.only$gene_cluster_id)
+
+which(DAG.Gymno.Angio.fct.distinct$gene_cluster_id %in% DAG.AngioT.GymnoT.fct.distinct.only$gene_cluster_id)
+which(DAG.Gymno.Angio.fct.distinct$gene_cluster_id %in% DAG.GymnoT.AngioT.fct.distinct.only$gene_cluster_id)
+which(DAG.Gymno.Angio.fct.distinct$gene_cluster_id %in% DAG.AngioT.COCO.fct.distinct.only$gene_cluster_id)
+which(DAG.Gymno.Angio.fct.distinct$gene_cluster_id %in% DAG.COCO.AngioT.fct.distinct.only$gene_cluster_id)
+which(DAG.Gymno.Angio.fct.distinct$gene_cluster_id %in% DAG.GymnoT.COCO.fct.distinct.only$gene_cluster_id)
+which(DAG.Gymno.Angio.fct.distinct$gene_cluster_id %in% DAG.COCO.GymnoT.fct.distinct.only$gene_cluster_id)
+
+which(DAG.AngioT.GymnoT.fct.distinct.only$gene_cluster_id %in% DAG.GymnoT.AngioT.fct.distinct.only$gene_cluster_id)
+which(DAG.AngioT.GymnoT.fct.distinct.only$gene_cluster_id %in% DAG.AngioT.COCO.fct.distinct.only$gene_cluster_id)
+which(DAG.AngioT.GymnoT.fct.distinct.only$gene_cluster_id %in% DAG.COCO.AngioT.fct.distinct.only$gene_cluster_id)
+which(DAG.AngioT.GymnoT.fct.distinct.only$gene_cluster_id %in% DAG.GymnoT.COCO.fct.distinct.only$gene_cluster_id)
+which(DAG.AngioT.GymnoT.fct.distinct.only$gene_cluster_id %in% DAG.COCO.GymnoT.fct.distinct.only$gene_cluster_id)
+
+which(DAG.GymnoT.AngioT.fct.distinct.only$gene_cluster_id %in% DAG.AngioT.COCO.fct.distinct.only$gene_cluster_id)
+which(DAG.GymnoT.AngioT.fct.distinct.only$gene_cluster_id %in% DAG.COCO.AngioT.fct.distinct.only$gene_cluster_id)
+which(DAG.GymnoT.AngioT.fct.distinct.only$gene_cluster_id %in% DAG.GymnoT.COCO.fct.distinct.only$gene_cluster_id)
+which(DAG.GymnoT.AngioT.fct.distinct.only$gene_cluster_id %in% DAG.COCO.GymnoT.fct.distinct.only$gene_cluster_id)
+
+which(DAG.AngioT.COCO.fct.distinct.only$gene_cluster_id %in% DAG.COCO.AngioT.fct.distinct.only$gene_cluster_id)
+which(DAG.AngioT.COCO.fct.distinct.only$gene_cluster_id %in% DAG.GymnoT.COCO.fct.distinct.only$gene_cluster_id)
+which(DAG.AngioT.COCO.fct.distinct.only$gene_cluster_id %in% DAG.COCO.GymnoT.fct.distinct.only$gene_cluster_id)
+
+which(DAG.COCO.AngioT.fct.distinct.only$gene_cluster_id %in% DAG.GymnoT.COCO.fct.distinct.only$gene_cluster_id)
+which(DAG.COCO.AngioT.fct.distinct.only$gene_cluster_id %in% DAG.COCO.GymnoT.fct.distinct.only$gene_cluster_id)
+
+which(DAG.GymnoT.COCO.fct.distinct.only$gene_cluster_id %in% DAG.COCO.GymnoT.fct.distinct.only$gene_cluster_id)
+```
+
+### Prepare DAGs dataframe -->'DAGs' is for plotting (565 unique GC)
+```{r}
+DAGs.bind <- rbind(
+  DAG.Trees.COCO.fct.distinct.only,
+  DAG.COCO.Trees.fct.distinct,
+  DAG.Gymno.Angio.fct.distinct,
+  DAG.Angio.Gymno.fct.distinct.only,
+  DAG.GymnoT.AngioT.fct.distinct.only,
+  DAG.AngioT.GymnoT.fct.distinct.only,
+  DAG.GymnoT.COCO.fct.distinct.only,
+  DAG.COCO.GymnoT.fct.distinct.only,
+  DAG.AngioT.COCO.fct.distinct.only,
+  DAG.COCO.AngioT.fct.distinct.only
+  )
+#saveRDS(DAGs.bind, "../rds/DAGs.bind.rds")
+DAGs.bind <- readRDS("../rds/DAGs.bind.rds")
+DAGs <- DAGs.bind %>% distinct(gene_cluster_id, .keep_all = TRUE)
+```
+
+VERIFICATION CHUNK ONLY - Unique DAGs verification
+```{r}
+length(unique(DAGs$gene_cluster_id))
+DAGs.fct <- DAGs[,c(1,5,11,19,21,28)] 
+rownames(DAGs.fct) <- DAGs.fct$gene_cluster_id
+DAGs.fct <- DAGs.fct[,-1]
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-################################################################################
+
+## Importing DAGSs.bind (resulting from DESeq2 results)
+```{r}
+DAGCs <- readRDS("../rds/DAGs.bind.rds")
+# Functionally annotated GC only
+DAGCs.curated <- DAGCs[!(DAGCs$COG20_FUNCTION == "" & DAGCs$KOfam == "" & DAGCs$Pfam == ""), ]
+DAGCs.curated <- droplevels(DAGCs.curated)
+# Keep unique combinations of COG20, KEGG and Pfam functions for every DAGCs, but do not keep unique description nor unique CAZyme
+DAGCs.curated <- DAGCs.curated %>%
+  distinct(gene_cluster_id, COG20_FUNCTION, KOfam, Pfam, .keep_all = TRUE)
+# at this step 'DAGCs.curated' contains all COG, KOfam and Pfam annotations.
+DAGCs.curated <- DAGCs.curated[,c(1:21,65:68)]
+DAGCs.curated <- DAGCs.curated[,c(1:5,22:25,6:21)]
+```
+
+
+# Suppl File B
+
+## DAGCs Table creation (Suppl File B)
+
+```{r}
+# Create function
+clean_collapse <- function(x) {
+  x <- na.omit(x)                # remove NA
+  x <- trimws(x)                 # remove leading/trailing spaces
+  x <- x[x != ""]                # remove empty entries
+  paste(unique(x), collapse = "_or_")
+}
+
+# Bring together all possible functional annotations of a same factor for each GC
+DAGCs.curated_all_functions <- DAGCs.curated %>%
+  mutate(.order = match(gene_cluster_id, unique(gene_cluster_id))) %>%
+  group_by(gene_cluster_id, .order) %>%
+  summarise(
+    type = clean_collapse(type),
+    genome_occurences = clean_collapse(genome_occurences),
+    baseMean = clean_collapse(baseMean),
+    log2FoldChange = clean_collapse(log2FoldChange),
+    lfcSE = clean_collapse(lfcSE),
+    stat = clean_collapse(stat),
+    pvalue = clean_collapse(pvalue),
+    padj = clean_collapse(padj),
+    COG20_CATEGORY_ACC = clean_collapse(COG20_CATEGORY_ACC),
+    COG20_CATEGORY = clean_collapse(COG20_CATEGORY),
+    COG20_PATHWAY_ACC = clean_collapse(COG20_PATHWAY_ACC),
+    COG20_PATHWAY = clean_collapse(COG20_PATHWAY),
+    COG20_FUNCTION_ACC = clean_collapse(COG20_FUNCTION_ACC),
+    COG20_FUNCTION = clean_collapse(COG20_FUNCTION),
+    KEGG_BRITE_ACC = clean_collapse(KEGG_BRITE_ACC),
+    KEGG_BRITE = clean_collapse(KEGG_BRITE),
+    KEGG_Class_ACC = clean_collapse(KEGG_Class_ACC),
+    KEGG_Class = clean_collapse(KEGG_Class),
+    KEGG_Module_ACC = clean_collapse(KEGG_Module_ACC),
+    KEGG_Module = clean_collapse(KEGG_Module.x),
+    KOfam_ACC = clean_collapse(KOfam_ACC),
+    KOfam = clean_collapse(KOfam),
+    Pfam_ACC = clean_collapse(Pfam_ACC),
+    Pfam = clean_collapse(Pfam),
+    .groups = "drop"
+  ) %>%
+arrange(.order) %>%
+select(-.order)
+
+DAGCs.curated_all_functions$gene_cluster_id <- factor(DAGCs.curated_all_functions$gene_cluster_id, levels = unique(DAGCs.curated_all_functions$gene_cluster_id))
+
+DAGCs.curated_all_functions <- DAGCs.curated_all_functions %>% mutate(across(c(type), as.factor))
+DAGCs.curated_all_functions$type <- factor(DAGCs.curated_all_functions$type, levels = c("core","accessory"))
+DAGCs.curated_all_functions <- DAGCs.curated_all_functions %>% mutate(across(c(genome_occurences,baseMean,log2FoldChange,lfcSE,stat,pvalue,padj), as.numeric))
+str(DAGCs.curated_all_functions)
+
+
+# Import focal and reference host types (hand-made table)
+DAGCs_host_types <- read_delim("../data_imported/DAGCs_host_types.csv")
+DAGCs_host_types <- DAGCs_host_types %>% mutate(across(c(gene_cluster_id,focal,reference), as.factor))
+DAGCs_host_types$gene_cluster_id <- factor(DAGCs_host_types$gene_cluster_id, levels = levels(DAGCs.curated_all_functions$gene_cluster_id))
+str(DAGCs_host_types)
+all(DAGCs_host_types$gene_cluster_id == DAGCs.curated_all_functions$gene_cluster_id)
+identical(DAGCs_host_types$gene_cluster_id, DAGCs.curated_all_functions$gene_cluster_id)
+
+
+# Combine both tables
+DAGCs_fully_annotated <- cbind(DAGCs.curated_all_functions, DAGCs_host_types[2:3])
+DAGCs_fully_annotated <- DAGCs_fully_annotated[,c(1,26:27,2:25)]
+str(DAGCs_fully_annotated)
+```
+
+Save DAGCs table as csv
+```{r}
+#write_csv(DAGCs_fully_annotated, file = "../DAGCs_fully_annotated.csv")
+```
+
+
+# Suppl File C  
+
+## Importing and exporting functions and coverage of individual genes
+
+Import data.fct.cov (data on functional annotation and coverage of gene callers) and export data concerning DAGCs only to csv
+```{r}
+data.fct.cov <- readRDS("../rds/data.fct.cov.rds")
+data.fct.cov.DAGCs <- data.fct.cov[data.fct.cov$gene_cluster_id %in% DAGCs_fully_annotated$gene_cluster_id,]
+data.fct.cov.DAGCs <- data.fct.cov.DAGCs[,c(1:21,42:66)]
+data.fct.cov.DAGCs <- droplevels(data.fct.cov.DAGCs)
+str(data.fct.cov.DAGCs)
+
+#Create Suppl_File_C
+#write_csv(data.fct.cov.DAGCs, file = "../data.fct.cov.DAGCs.csv")
+```
+
+
+I imported these two csv tables (DAGCs_fully_annotated and data.fct.cov.DAGCs) in excel and manually edited the 'DAGCs_fully_annotated' table to remove doubles (e.g. T|T -> T) and to select most covered functions (at the level of individual genes, non normalized abundances) when multiple different functions were assigned.
+The result is : "Supplementary File B - This table presents all DAGCs functional annotation and differential abundance analyses’ statistics (DESeq2 results). ‘|’ indicates alternative annotations originally proposed by COG or KEGG databases based on a same amino acid sequence from an individual gene; while ‘_or_’ indicates alternatives annotations when the differential abundance could arise from differentially annotated amino acid sequences from multiple individual genes."
+
+
+-###############################################################################
+
+
+# Import hand-edited DAGCs table
+
+```{r}
+Suppl_B_DAGCs <- read_delim("../data_imported/Suppl_file_B-DAGCs.csv")
+```
+
+
+-###############################################################################
+
+
+# COG categories
+
+
+## Plot COGs
+
+Relative abundances of COG categories by comparison.
+
+### Prepare data
+```{r}
+DAGCs <- Suppl_B_DAGCs # This table have all 757 functionally annotated DAGCs (annotation from COG, KEGG and Pfam)
+
+# Preparation comparison types: by combining focal and reference columns into a new vector 'comp'
+DAGCs$comp <- apply(DAGCs[,c(2:3)], 1, function(x) {
+  paste(x, collapse = "_vs_")
+})
+DAGCs$comp <- factor(DAGCs$comp, levels = unique(DAGCs$comp))
+str(DAGCs)
+levels(DAGCs$comp)
+
+# Change NA values (COG20 Categories) for "No COG annotation"
+DAGCs$COG20_CATEGORY <- factor(ifelse(is.na(DAGCs$COG20_CATEGORY == TRUE), "No COG annotation", as.character(DAGCs$COG20_CATEGORY)))
+
+# For every gene call that have multiple (n) COG categories, make n rows, one row per category.
+DAGCs.temp <- DAGCs
+DAGCs.temp$COG20_CATEGORY <- as.character(DAGCs.temp$COG20_CATEGORY)
+# Add row number column
+df_split1 <- DAGCs.temp %>%
+  rowid_to_column()  # Add a column representing the original row number
+# Change '_or_' by '|'
+df_split1$COG20_CATEGORY <- str_replace_all(df_split1$COG20_CATEGORY, "_or_", "|")
+# Split rows based on "|" and unnest
+df_split2 <- df_split1 %>%
+  mutate(COG20_CATEGORY = strsplit(COG20_CATEGORY, "\\|")) %>%
+  unnest(cols = COG20_CATEGORY)
+# Remove duplicates within rows (sanity check, there should not be any duplicat)
+df_split3 <- df_split2 %>%
+  distinct(gene_cluster_id, COG20_CATEGORY, .keep_all = TRUE) 
+# Remove rowid column
+df_split4 <- df_split3 %>%
+  select(-rowid)
+DAGCs.multi <- as.data.frame(df_split4)
+rm(DAGCs.temp, df_split1, df_split2, df_split3, df_split4)
+# arrange vectors
+DAGCs.multi$COG20_CATEGORY <- as.factor(DAGCs.multi$COG20_CATEGORY)
+DAGCs.multi$comp <- factor(DAGCs.multi$comp, levels = unique(DAGCs.multi$comp))
+str(DAGCs.multi)
+
+# Count each COG categories 'hits' for each comparison type
+DAGCs.counts = DAGCs.multi %>% 
+  group_by(comp, COG20_CATEGORY) %>% 
+  summarise(COG.counts.per.cat.per.comp=n())
+
+# Calculate total hits per comparison type, across COG categories
+comp.counts.ORIG <- DAGCs.counts %>%
+  group_by(comp) %>%
+  summarise(total.COG.counts.per.comp = sum(COG.counts.per.cat.per.comp))
+# I CAN USE 'comp.counts.ORIG' TO KNOW HOW MANY HITS FOR EACH COMPARISONS BEFORE REMOVING "No annotation" and "Function unknown", across categories (NOTE: remember it is not how many DAGCs for each comparison, because some DAGCs have multiple categories assigned to).
+
+# Calculate total hits for each COG category across comparisons type
+COG.c.ORIG <- DAGCs.counts %>%
+  group_by(COG20_CATEGORY) %>%
+  summarise(total.COG.counts.per.cat = sum(COG.counts.per.cat.per.comp)) %>% 
+  ungroup()
+#### RESULT ####
+# I CAN USE 'COG.c.ORIG' TO KNOW HOW MANY HITS FOR EACH COG CATEGORIES INCLUDING "No annotation" 
+#and "Function unknown" across comparison types
+# THERE IS 85 COUNTS OF "NO ANNOTATION" (i.e. these are DAGCs only annotated by KEGG or, mostly, Pfam) 
+#AND 47 COUNTS OF "FUNCTION UNKNOWN"
+
+# Remove "No annotation" and "Function unknown"
+DAGCs.counts <- subset(DAGCs.counts, !(COG20_CATEGORY %in% c("No COG annotation", "Function unknown")))
+
+# Re-calculate total hits per comparison type, across COG categories, without "function unknown" nor "no COG annotation" 
+# (Figure top panel, light color)
+comp.counts <- DAGCs.counts %>%
+  group_by(comp) %>%
+  summarise(total.COG.counts.per.comp = sum(COG.counts.per.cat.per.comp))
+
+# Re-calculate total hits for each COG category across comparisons type, without "function unknown" nor "no COG annotation" 
+# (Figure right panel)
+COG.c <- DAGCs.counts %>%
+  group_by(COG20_CATEGORY) %>%
+  summarise(total.COG.counts.per.cat = sum(COG.counts.per.cat.per.comp)) %>% 
+  ungroup()
+COG.c <- COG.c[order(-COG.c$total.COG.counts.per.cat), ]
+COG.c$COG20_CATEGORY <- factor(COG.c$COG20_CATEGORY, levels = unique(COG.c$COG20_CATEGORY))
+levels(COG.c$COG20_CATEGORY)
+
+# sanity check (both should = 720)
+sum(comp.counts$total.COG.counts.per.comp)
+sum(COG.c$total.COG.counts.per.cat)
+
+DAGCs.counts$COG20_CATEGORY <- factor(DAGCs.counts$COG20_CATEGORY, levels = levels(factor(COG.c$COG20_CATEGORY)))
+all(levels(DAGCs.counts$COG20_CATEGORY)==levels(COG.c$COG20_CATEGORY))
+```
+
+
+### DAGCS amount per comparison (Figure top panel, dark color)
+```{r}
+# Preparation comparison types ('comp' vector)
+DAGs.bind <- readRDS("../rds/DAGs.bind.rds")
+DAGCs.comp <- DAGs.bind[,c(1,69:73)]
+DAGCs.comp[,c(2:6)] <- DAGCs.comp[,c(2:6)] + 2  # Transform '-1' to '1'; '0' to '2'; and '1' to '3'
+DAGCs.comp$comp <- apply(DAGCs.comp[,c(2:6)], 1, function(x) {
+  paste(x, collapse = "")  # Combine values into a single string
+})
+DAGCs.comp$comp <- factor(DAGCs.comp$comp, levels = unique(DAGCs.comp$comp))
+
+DAGCs.c <- DAGCs.comp %>%
+  distinct(gene_cluster_id, comp, .keep_all = F)
+
+DAGCs.c <- DAGCs.c %>%
+  group_by(comp) %>%
+  summarise(DAGCs.c = n_distinct(gene_cluster_id))
+
+levels(DAGCs.c$comp) <- levels(comp.counts$comp)
+levels(DAGCs.c$comp)
+
+# sanity check : should be 1159
+sum(DAGCs.c$DAGCs.c)
+```
+
+
+### Plot
+
+#### Center & right panels
+```{r}
+# Plot hits of each COG category in each comparison type
+gg_heat.comp <- ggplot(DAGCs.counts, aes(x = comp, y = COG20_CATEGORY)) + 
+  geom_tile(aes(fill=COG.counts.per.cat.per.comp)) + 
+  scale_fill_viridis(name = "Numbers of\nCOG annotations", option="mako", direction = -1, limits = c(1, 27)) +
+  #scale_fill_gradient(high= "navyblue", low = "skyblue", name = "Numbers of DAGCs") + 
+  theme(legend.position="none") +
+  scale_y_discrete(limits=rev) +
+  labs(x = "Comparisons") +
+    theme_bw() +
+      theme(
+      text = element_text(family = "Arial"),
+      legend.justification = c(0.5, 0),
+      legend.title = element_text(size = 11, margin = margin(b = 15), face = "bold"),
+      legend.text = element_text(size = 11),
+      legend.key.size = unit(0.7, "cm"),
+      legend.spacing.y = unit(0.3, "cm"),
+      legend.position = "right", 
+      panel.grid.major = element_blank(), 
+      panel.background = element_blank(),
+      #panel.grid.minor = element_line(color = "lightgray", size = 0.25), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 11, angle = 90, vjust = 0.35, hjust = 1),
+      axis.text.y = element_text(color = "black", size = 11),
+      axis.title.x = element_text(color = "black", size = 11, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_blank(),
+      axis.ticks.x = element_blank()      
+      ) + coord_fixed(ratio = 1)
+gg_heat.comp
+
+# Plot the number of DAGCs per category across comparison types
+gg_COG.c <-  ggplot(COG.c, aes(x = total.COG.counts.per.cat, y = COG20_CATEGORY)) + 
+  geom_col(fill = "black", width = 0.75) + 
+  theme(legend.position="none") +
+  scale_y_discrete(limits=rev) +
+  labs(x = "Number of\nCOG annotations\nper category") +
+  coord_cartesian(xlim = c(0,70))+
+  scale_x_continuous(breaks = seq(0, 70, by = 10))+
+    theme_bw() +
+      theme(
+      text = element_text(family = "Arial"),
+      legend.justification = c(0.5, 0),
+      legend.title = element_text(size = 11, margin = margin(b = 15)),
+      legend.text = element_text(size = 11),
+      legend.key.size = unit(0.7, "cm"),
+      legend.spacing.y = unit(0.3, "cm"),
+      legend.position = "right", 
+      panel.grid.major.x = element_line(color = "gray", size = 0.25), 
+      panel.grid.major.y = element_blank(),
+      panel.background = element_blank(),
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 11, angle = 0, vjust = 0.35, hjust = 0.5),
+#      axis.text.y = element_text(color = "black", size = 12),
+      axis.title.x = element_text(color = "black", size = 11, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+#      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold"),
+      axis.text.y = element_blank(),
+      axis.title.y = element_blank(),
+      axis.ticks.y = element_blank()
+      ) + coord_fixed(ratio = 6)
+gg_COG.c
+
+(gg_heat.comp + gg_COG.c)
+
+ggsave("../figures/COG_categories_center_right_panels.tiff", width = 11, height = 7)
+```
+
+#### Bottom panel
+
+Prepare data
+```{r}
+comparisons <- unique(DAGCs.comp[,c(2:7)])
+rownames(comparisons) <- comparisons$comp
+comparisons <- comparisons[,-6]
+comparisons <- as.data.frame(t(comparisons))
+comparisons <- picante::matrix2sample(comparisons)
+colnames(comparisons) <- c("host","compare","comp_id")
+comparisons$host <- factor(x = comparisons$host, levels = c("ABBA","THOC","ACSA","FAGR","COCO"))
+comparisons$compare <- factor(x = comparisons$compare, levels = c("3","2","1"))
+```
+
+Plot (Comparison types red-blue heatmap)
+```{r}
+gg_comp.small <- ggplot(comparisons, aes(x = comp_id, y = host)) + 
+  geom_tile(aes(fill=factor(compare))) + 
+  scale_fill_manual(values = c("1" = "blue3", "2" = "white", "3" = "red3")
+#                   , name = "Comparisons", labels = c("Comparison", "Unconsidered", "Reference")
+                    ) + 
+  theme(legend.position="none") +
+  guides(fill = "none") +
+  scale_y_discrete(limits=rev, labels = c("ABBA" = "A. balsamea", "THOC" = "T. occidentalis","ACSA" = "A. saccharum", "FAGR" = "F. grandifolia", "COCO" = "C. cornuta"))+
+  labs(y = "Host\nspecies") +
+  labs(x = "Comparisons") +
+    theme_bw() +
+      theme(
+      text = element_text(family = "Arial"),
+#      legend.justification = c(0.5, 0),
+#      legend.title = element_text(size = 12, margin = margin(b = 1)),
+#      legend.text = element_text(size = 12),
+#      legend.key.size = unit(0.6, "cm"),
+#      legend.spacing.y = unit(0.5, "cm"),
+#      legend.position = "right", 
+      panel.grid.major = element_blank(), 
+      panel.background = element_blank(),
+      #panel.grid.minor = element_line(color = "lightgray", size = 0.25), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_blank(),
+      axis.text.y = element_text(color = "black", size = 11, angle = 0, hjust = 1, vjust = 0.5, face = "italic"),
+      axis.title.x = element_text(color = "black", size = 11, angle = 0, hjust = 0.5, vjust = 2, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 11, angle = 90, hjust = 0.5, vjust = 2, face = "bold"),
+      axis.ticks.x = element_blank()
+      ) + coord_fixed(ratio = 1)  
+gg_comp.small  
+
+ggsave("../figures/COG_categories_bottom_panel.tiff", width = 3.756, height = 1.31)
+```
+
+
+#### Top panel
+
+Plot
+```{r}
+
+# Number of COG annotations per comparison type (without "Function unknown" nor "No COG annotation"), as well as number 
+#of DAGCs per comparison types (notwithstanding functional annotations, so total number of 1159 DAGCs)
+
+# Prepare data
+comp.dagcs.counts <- merge(comp.counts, DAGCs.c, by = "comp")
+comp.dagcs.counts <- comp.dagcs.counts %>%
+  arrange(comp)
+
+# Plot
+gg_comp.dagcs.counts <- ggplot(comp.dagcs.counts, aes(x = comp)) +
+  geom_col(aes(y = DAGCs.c), fill = "black", width = 0.75) +
+  geom_col(aes(y = total.COG.counts.per.comp), fill = "#008A70", width = 0.55) +
+  theme(legend.position="none") +
+  labs(y = "Number of DAGCs (black)\n & COG annotations (teal)\n per comparison") +
+    theme_bw() +
+      theme(
+      text = element_text(family = "Arial"),
+      legend.justification = c(0.5, 0),
+      legend.title = element_text(size = 11, margin = margin(b = 15)),
+      legend.text = element_text(size = 11),
+      legend.key.size = unit(0.7, "cm"),
+      legend.spacing.y = unit(0.3, "cm"),
+      legend.position = "right", 
+      panel.grid.major.x = element_blank(), 
+      panel.grid.major.y = element_line(color = "gray", size = 0.25),
+      panel.background = element_blank(),
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5),
+#      axis.text.x = element_text(color = "black", size = 12, angle = 90, vjust = 0.35, hjust = 1),
+      axis.text.x = element_blank(),
+      axis.text.y = element_text(color = "black", size = 11),
+#      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 11, angle = 90, hjust = 0.5, vjust = 2, face = "bold"),
+#      axis.text.y = element_blank(),
+      axis.title.x = element_blank(),
+      axis.ticks.x = element_blank()
+      )
+gg_comp.dagcs.counts
+
+ggsave("../figures/COG_categories_top_panel.tiff", width = 4.3125, height = 3)
+```
+
+
+
+# KEGG Brite
+
+Here, I will do the same kind of analyses than for COG categories, based on Brite hierarchy. I will need to separate hierarchy levels within a same Brite annotation.
+
+Import Supplementary File B on DAGCs fully annotated
+```{r}
+Suppl_B_DAGCs <- read_delim("../data_imported/Suppl_file_B-DAGCs.csv") # This table have all 757 functionally annotated DAGCs (annotation from COG, KEGG and Pfam)
+```
+
+
+## Prepare data
+```{r}
+DAGCs.KEGG <- Suppl_B_DAGCs 
+
+# Preparation comparison types: by combining focal and reference columns into a new vector 'comp'
+DAGCs.KEGG$comp <- apply(DAGCs.KEGG[,c(2:3)], 1, function(x) {
+  paste(x, collapse = "_vs_")
+})
+DAGCs.KEGG$comp <- factor(DAGCs.KEGG$comp, levels = unique(DAGCs.KEGG$comp))
+str(DAGCs.KEGG)
+levels(DAGCs.KEGG$comp)
+
+# Change NA values (KEGG_BRITE) for "No KEGG annotation"
+DAGCs.KEGG$KEGG_BRITE <- factor(ifelse(is.na(DAGCs.KEGG$KEGG_BRITE == TRUE), "No KEGG annotation", as.character(DAGCs.KEGG$KEGG_BRITE)))
+
+# For every gene call that have multiple (n) KEGG Brite, make n rows, one row per brite.
+DAGCs.KEGG.temp <- DAGCs.KEGG
+DAGCs.KEGG.temp$KEGG_BRITE <- as.character(DAGCs.KEGG.temp$KEGG_BRITE)
+# Add row number column
+df_split1 <- DAGCs.KEGG.temp %>%
+  rowid_to_column()  # Add a column representing the original row number
+# Change '_or_' by '|'
+df_split1$KEGG_BRITE <- str_replace_all(df_split1$KEGG_BRITE, "_or_", "|")
+# Split rows based on "|" and unnest
+df_split2 <- df_split1 %>%
+  mutate(KEGG_BRITE = strsplit(KEGG_BRITE, "\\|")) %>%
+  unnest(cols = KEGG_BRITE)
+# Remove duplicates within rows
+df_split3 <- df_split2 %>%
+  distinct(gene_cluster_id, KEGG_BRITE, .keep_all = TRUE) 
+# Remove rowid column
+df_split4 <- df_split3 %>%
+  select(-rowid)
+DAGCs.KEGG.multi <- as.data.frame(df_split4)
+rm(DAGCs.KEGG.temp, df_split1, df_split2, df_split3, df_split4)
+```
+
+```{r}
+# Separate Brite hierarchies into separate columns
+max_levels <- max(lengths(strsplit(DAGCs.KEGG.multi$KEGG_BRITE, ">>>")))
+
+DAGCs.KEGG.multi.sep <- DAGCs.KEGG.multi %>%
+  mutate(
+    split = strsplit(KEGG_BRITE, ">>>"),
+    # right-align: pad with NA at the start
+    split = map(split, ~{
+      c(rep(NA, max_levels - length(.x)), trimws(.x))
+    })
+  ) %>%
+  unnest_wider(split, names_sep = "_level_")
+
+DAGCs.KEGG.multi.sep <- DAGCs.KEGG.multi.sep[,c(1:3,28,4:11,18:19,29:34,25,20:25,12:17,26:27)]
+names(DAGCs.KEGG.multi.sep)[21] <- "KOfam_function" # Table has 1440 rows
+
+# Observations/reflections
+
+# 373 DAGCs have Brite annotation to KEGG Orthology (ko00001)
+# 111 DAGCs have Brite annotations that are not KEGG Orthology (ko00001)
+# 19 DAGCs have no ko00001, but have Enzymes annotation (ko01000) + other annotations ko#
+# I should not analyze "Enzymes annotations" since they are too general, and they are always annotated as something else too.
+
+# Remove all rows with "No KEGG annotation"
+DAGCs.KEGG.multi.sep <- subset(DAGCs.KEGG.multi.sep, !(KEGG_BRITE %in% c("No KEGG annotation"))) # Table has now 1169 rows
+
+length(unique(DAGCs.KEGG.multi.sep$split_level_5)) # 214
+length(unique(DAGCs.KEGG.multi.sep$split_level_6)) # 496
+length(unique(DAGCs.KEGG.multi.sep$gene_cluster_id)) # 486
+```
+
+# All above code related to KEGG is common for below alternatives
+
+## keep only non KO annotations for DAGCs without KO annotation
+```{r}
+# Remove annotations from DAGCs that are already annotated with KEGG Orthology (KO), because there will be redundancy in functions. I really want all non-KO rows to be DAGCs not annotated with KO that would otherwise be lost functions if we only considered KO annotated GC in our analyses.
+# In other words, if there is no 'KEGG Orthology (KO)' in 'split_level_3', but there is 'ko00001' in 'KEGG_BRITE_ACC', then remove row
+
+DAGCs.KEGG.multi.sep.1.2 <- DAGCs.KEGG.multi.sep %>%
+  filter(
+    !( !str_detect(split_level_3, "KEGG Orthology \\(KO\\)") &
+       str_detect(KEGG_BRITE_ACC, "ko00001")
+     )
+  ) # should now have 742 rows
+
+length(unique(DAGCs.KEGG.multi.sep.1.2$split_level_5)) # 95
+length(unique(DAGCs.KEGG.multi.sep.1.2$split_level_6)) # 230
+length(unique(DAGCs.KEGG.multi.sep$gene_cluster_id)) # 486
+length(unique(DAGCs.KEGG.multi.sep.1.2$gene_cluster_id)) # 486
+```
+
+
+
+## Remove all rows related to "Enzymes" annotation
+```{r}
+DAGCs.KEGG.multi.sep.noenz <- subset(DAGCs.KEGG.multi.sep.1.2, !(split_level_2 %in% c("Enzymes"))) # Table has now 723 rows
+
+length(unique(DAGCs.KEGG.multi.sep.noenz$split_level_5)) # 78
+length(unique(DAGCs.KEGG.multi.sep.noenz$split_level_6)) # 212
+length(unique(DAGCs.KEGG.multi.sep.noenz$gene_cluster_id)) # 486
+```
+
+## Remove other rows
+```{r}
+# Other uncategorized enzymes annotation
+DAGCs.KEGG.multi.sep.noenz.2 <- subset(DAGCs.KEGG.multi.sep.noenz, !(split_level_6 %in% c("99980 Enzymes with EC numbers"))) # Table has now 905 rows
+length(unique(DAGCs.KEGG.multi.sep.noenz.2$split_level_5)) # 78
+length(unique(DAGCs.KEGG.multi.sep.noenz.2$split_level_6)) # 211
+length(unique(DAGCs.KEGG.multi.sep.noenz.2$gene_cluster_id)) # 459
+
+# Remove "09194 Poorly characterized"
+DAGCs.KEGG.multi.sep.noenz.3 <- subset(DAGCs.KEGG.multi.sep.noenz.2, !(split_level_5 %in% c("09194 Poorly characterized"))) # Table has now 881 rows
+length(unique(DAGCs.KEGG.multi.sep.noenz.3$split_level_5)) # 77
+length(unique(DAGCs.KEGG.multi.sep.noenz.3$split_level_6)) # 209
+length(unique(DAGCs.KEGG.multi.sep.noenz.3$gene_cluster_id)) # 435
+
+# Remove "09191 Unclassified: metabolism > 99999 Others"
+DAGCs.KEGG.multi.sep.noenz.4 <- subset(DAGCs.KEGG.multi.sep.noenz.3, !(split_level_6 %in% c("99999 Others"))) # Table has now 879 rows
+length(unique(DAGCs.KEGG.multi.sep.noenz.4$split_level_5)) # 77
+length(unique(DAGCs.KEGG.multi.sep.noenz.4$split_level_6)) # 208
+length(unique(DAGCs.KEGG.multi.sep.noenz.4$gene_cluster_id)) # 433
+
+# Remove "09191 Unclassified: signaling and cellular processes > 99994 Others"
+DAGCs.KEGG.multi.sep.noenz.5 <- subset(DAGCs.KEGG.multi.sep.noenz.4, !(split_level_6 %in% c("99994 Others"))) # Table has now 876 rows
+length(unique(DAGCs.KEGG.multi.sep.noenz.5$split_level_5)) # 77
+length(unique(DAGCs.KEGG.multi.sep.noenz.5$split_level_6)) # 207
+length(unique(DAGCs.KEGG.multi.sep.noenz.5$gene_cluster_id)) # 430
+```
+
+
+## Edit characters strings
+```{r}
+# If annotation of split_level_3 is 'KEGG Orthology (KO)', then remove first 5 numbers + space 'XXXXX ' from split_levels 4, 5 and 6
+DAGCs.KEGG.multi.sep.3 <- DAGCs.KEGG.multi.sep.noenz.5 %>%
+  mutate(
+    across(
+      c(split_level_4, split_level_5, split_level_6),
+      ~ case_when(
+          split_level_3 == "KEGG Orthology (KO)" ~ str_remove(.x, "^[0-9]{5} "),
+          TRUE ~ .x
+        )
+    )
+  )
+length(unique(DAGCs.KEGG.multi.sep.3$split_level_5)) # 77
+length(unique(DAGCs.KEGG.multi.sep.3$split_level_6)) # 207
+length(unique(DAGCs.KEGG.multi.sep.3$gene_cluster_id)) # 430
+
+
+# If 'split_level_6' contains "Biofilm formation - ", remove everything after "formation" until the string reaches a "[". Keep the "[" and all after.
+DAGCs.KEGG.multi.sep.4 <- DAGCs.KEGG.multi.sep.3
+DAGCs.KEGG.multi.sep.4$split_level_6 <- sub(
+  "(Biofilm formation)[^\\[]*(?=\\[)",   # match full phrase
+  "\\1 ",                               # keep "Biofilm formation "
+  DAGCs.KEGG.multi.sep.4$split_level_6,
+  perl = TRUE
+)
+length(unique(DAGCs.KEGG.multi.sep.4$split_level_5)) # 77
+length(unique(DAGCs.KEGG.multi.sep.4$split_level_6)) # 207
+length(unique(DAGCs.KEGG.multi.sep.4$gene_cluster_id)) # 430
+
+
+# If 'split_level_6' contains "Cell cycle - ", remove everything after "cycle" until the string reaches a "[". Keep the "[" and all after.
+DAGCs.KEGG.multi.sep.5 <- DAGCs.KEGG.multi.sep.4
+DAGCs.KEGG.multi.sep.5$split_level_6 <- sub(
+  "(Cell cycle)[^\\[]*(?=\\[)", 
+  "\\1 ",                       
+  DAGCs.KEGG.multi.sep.5$split_level_6,
+  perl = TRUE
+)
+length(unique(DAGCs.KEGG.multi.sep.5$split_level_5)) # 77
+length(unique(DAGCs.KEGG.multi.sep.5$split_level_6)) # 207
+length(unique(DAGCs.KEGG.multi.sep.5$gene_cluster_id)) # 430
+
+```
+
+## Order table and export to hand-curate
+```{r}
+# If annotation of split_level_3 is 'KEGG Orthology (KO)', then merge strings in split_level_4, 5, and 6, then output values to new column "KEGG_category"
+
+DAGCs.KEGG.multi.sep.6 <- DAGCs.KEGG.multi.sep.5 %>%
+  mutate(
+    KEGG_category = if_else(
+      split_level_3 == "KEGG Orthology (KO)",
+      paste0(split_level_4, " > ", split_level_5, " > ", split_level_6),
+      NA_character_
+    )
+  )
+# Order columns
+DAGCs.KEGG.multi.sep.6 <- DAGCs.KEGG.multi.sep.6[,c(1:20,36,21:35)]
+
+# Order rows
+DAGCs.KEGG.multi.sep.6 <- DAGCs.KEGG.multi.sep.6 %>%
+  arrange(split_level_4, split_level_5, split_level_6)
+
+# Export table to csv
+#write_csv(DAGCs.KEGG.multi.sep.6, file = "../DAGCs.KEGG.multi.sep.6.csv")
+```
+
+## Excel : hand curated "KEGG_category"
+
+Exosome annotations have been removed since exosomes are associated with eukaryotic cells & the DAGCs was also annotated as other functions. (3 rows removed, no DAGCs lost)
+I removed 'Peptidases and inhibitors' since they were general enzymes (6 rows removed, 4 DAGCs removed)
+I removed 'Protein kinases>>>Histidine kinases>>>Other' and 'Serine/threonine kinases: Other' since they were annotated another function too (4 rows removed, no DAGCS lost)
+I removed 4 annotations related to mitochondrial function (only one DAGC lost)
+I removed 'Not Included in Pathway or Brite > Unclassified: metabolism > Cofactor metabolism' because this DAGCs had another annotation (1 row removed, no DAGCs lost)
+I removed - Amino acid related enzymes - Aminotransferase (transaminase) - Class III - since it was too vague (1 row removed, 1 DAGCs lost)
+...same for Not Included in Pathway or Brite - Unclassified: metabolism - Energy metabolism (1 row removed, 1 DAGC lost)
+I removed 'Prokaryotic cytoskeleton proteins' because the GC was annotated as something else too. (1 row removed, no DAGC lost)
+I removed 'GC_00005324', 'GC_00010413', GC_00004746 and GC_00003022 rows which level 6 was 'Drug metabolism - other enzymes [PATH:ko00983]' because these DAGCs were also annotated as 'Metabolism of xenobiotics by cytochrome P450 [PATH:ko00980]' (4 rows removed, no DAGCs lost)
+I removed 'Mitophagy - yeast [PATH:ko04139]' because associated with yeast (1 row removed, 1 DAGC removed)
+I changed 'Cellular community - prokaryotes' to 'Cellular community'
+
+Summary: 26 rows (annotations) have been removed, 9 DAGCs removed.
+
+
+## Import hand-curated table
+```{r}
+DAGCs.KEGG.curated <- read_delim("../DAGCs.KEGG.multi.sep.6-05.csv")
+```
+
+## Edit table
+```{r}
+DAGCs.KEGG.curated.2 <- DAGCs.KEGG.curated
+
+# Replace 'Replication and repair' to 'DNA replication and repair'
+DAGCs.KEGG.curated.2$KEGG_category <- gsub("Replication and repair", "DNA replication and repair", DAGCs.KEGG.curated.2$KEGG_category)
+
+# Replace 'Cellular processes' to 'Cellular Processes'
+DAGCs.KEGG.curated.2$KEGG_category <- gsub("Cellular processes", "Cellular Processes", DAGCs.KEGG.curated.2$KEGG_category)
+
+# Replace 'Folding, sorting and degradation' by 'Protein folding, sorting and degradation'
+#DAGCs.KEGG.curated.2$KEGG_category <- gsub("Folding, sorting and degradation", "Protein folding, sorting and degradation", DAGCs.KEGG.curated.2$KEGG_category)
+
+DAGCs.KEGG.curated.3 <- DAGCs.KEGG.curated.2[order(DAGCs.KEGG.curated.2$KEGG_category), ]
+
+# Reorder table
+DAGCs.KEGG.curated.4 <- DAGCs.KEGG.curated.3 %>%
+  mutate(
+    first_word = word(KEGG_category, 1),  
+    first_word = factor(
+      first_word,
+      levels = c("Metabolism", "Genetic", "Environmental", "Cellular")
+    )
+  ) %>%
+  arrange(first_word) %>%
+  select(-first_word) 
+
+# Remove duplicates (two rows with same gene_cluster_ID and KEGG_category)
+DAGCs.KEGG.curated.5 <- DAGCs.KEGG.curated.4 %>%
+  distinct(gene_cluster_id, KEGG_category, .keep_all = TRUE) 
+
+length(unique(DAGCs.KEGG.curated.4$KEGG_category)) # 135
+length(unique(DAGCs.KEGG.curated.4$gene_cluster_id)) # 422
+
+length(unique(DAGCs.KEGG.curated.5$KEGG_category)) # 135
+length(unique(DAGCs.KEGG.curated.5$gene_cluster_id)) # 422
+
+#Remove first hierarchy from 'KEGG_category'
+DAGCs.KEGG.curated.6 <- DAGCs.KEGG.curated.5 %>%
+  mutate(
+    KEGG_category = sub("^\\s*[^>]+>\\s*", "", KEGG_category)
+  )
+#DAGCs.KEGG.curated.6 <- DAGCs.KEGG.curated.5
+
+# Remove ' [PATH:ko#####]' when present
+DAGCs.KEGG.curated.7 <- DAGCs.KEGG.curated.6 %>%
+  mutate(
+    KEGG_category = sub("\\s*\\[PATH:ko[0-9]{5}\\]$", "", KEGG_category)
+  )
+
+# Sanity check : Remove duplicates (no duplicates)
+DAGCs.KEGG.curated.8 <- DAGCs.KEGG.curated.7 %>%
+  distinct(gene_cluster_id, KEGG_category, .keep_all = TRUE) 
+
+length(unique(DAGCs.KEGG.curated.8$KEGG_category)) # 132
+length(unique(DAGCs.KEGG.curated.8$gene_cluster_id)) # 422
+
+DAGCs.KEGG.curated.8$KEGG_category <- factor(DAGCs.KEGG.curated.8$KEGG_category, levels = unique(DAGCs.KEGG.curated.8$KEGG_category))
+levels(DAGCs.KEGG.curated.8$KEGG_category)
+```
+
+## Rearrange and rename KEGG_category levels
+```{r}
+## Rename some categories
+DAGCs.KEGG.curated.9 <- DAGCs.KEGG.curated.8 %>%
+  mutate(
+    KEGG_category = KEGG_category %>%
+      str_replace(
+        "^Metabolism of cofactors and vitamins",
+        "Cofactors and vitamins metabolism"
+      ) %>%
+      str_replace(
+        "^Metabolism of terpenoids and polyketides",
+        "Terpenoids and polyketides metabolism"
+      ) %>%
+      str_replace(
+        "^Signal transduction > MAPK signaling pathway - plant",
+        "Signal transduction > MAPK signaling pathway"
+      )  
+   )
+  
+DAGCs.KEGG.curated.9$KEGG_category <- factor(DAGCs.KEGG.curated.9$KEGG_category, levels = unique(DAGCs.KEGG.curated.9$KEGG_category))
+levels(DAGCs.KEGG.curated.9$KEGG_category)
+
+## Reorder
+DAGCs.KEGG.curated.9_levels <- levels(DAGCs.KEGG.curated.9$KEGG_category)
+new_levels_order <- c(
+  DAGCs.KEGG.curated.9_levels[1:12],
+  DAGCs.KEGG.curated.9_levels[65:69],
+  DAGCs.KEGG.curated.9_levels[19:64],
+  DAGCs.KEGG.curated.9_levels[70:71],
+  DAGCs.KEGG.curated.9_levels[13:18],                         
+  DAGCs.KEGG.curated.9_levels[72:132]
+)
+
+DAGCs.KEGG.curated.9$KEGG_category <- factor(DAGCs.KEGG.curated.9$KEGG_category, levels = new_levels_order)
+levels(DAGCs.KEGG.curated.9$KEGG_category)
+
+## remove yeast associated annotations
+DAGCs.KEGG.curated.10 <- DAGCs.KEGG.curated.9 %>%
+  filter(KEGG_category != "Cell growth and death > Meiosis - yeast" & 
+         KEGG_category != "Signal transduction > MAPK signaling pathway - yeast")
+DAGCs.KEGG.curated.10$KEGG_category <- droplevels(DAGCs.KEGG.curated.10$KEGG_category)
+levels(DAGCs.KEGG.curated.10$KEGG_category)
+str(DAGCs.KEGG.curated.10)
+
+length(unique(DAGCs.KEGG.curated.10$gene_cluster_id)) # 422
+
+## arrange order of table by levels' order
+DAGCs.KEGG.curated.11 <- DAGCs.KEGG.curated.10 %>%
+  arrange(KEGG_category)
+levels(DAGCs.KEGG.curated.11$KEGG_category)
+```
+
+
+## Counting KEGG categories hits
+```{r}
+# Count each KEGG category 'hits' for each comparison type
+KEGG.counts = DAGCs.KEGG.curated.11 %>% 
+  group_by(comp, KEGG_category) %>% 
+  summarise(KEGG.counts.per.cat.per.comp=n())
+KEGG.counts$comp <- factor(KEGG.counts$comp, levels = levels(DAGCs.KEGG$comp))
+str(KEGG.counts)
+
+# Calculate total hits per comparison type, across KEGG categories
+KEGG.comp.counts <- KEGG.counts %>%
+  group_by(comp) %>%
+  summarise(total.KEGG.counts.per.comp = sum(KEGG.counts.per.cat.per.comp))
+KEGG.comp.counts$comp <- factor(KEGG.comp.counts$comp, levels = levels(DAGCs.KEGG$comp))
+KEGG.comp.counts <- KEGG.comp.counts[order(KEGG.comp.counts$comp), ]
+str(KEGG.comp.counts)
+
+# Calculate total hits for each KEGG category across comparisons type
+KEGG.cat.counts <- KEGG.counts %>%
+  group_by(KEGG_category) %>%
+  summarise(total.KEGG.counts.per.cat = sum(KEGG.counts.per.cat.per.comp)) %>% 
+  ungroup()
+str(KEGG.cat.counts)
+
+
+# sanity check (both should = 631)
+sum(KEGG.comp.counts$total.KEGG.counts.per.comp)
+sum(KEGG.cat.counts$total.KEGG.counts.per.cat)
+```
+
+## Plot
+
+### Prepare data
+```{r}
+KEGG.counts.sep <- KEGG.counts[order(KEGG.counts$KEGG_category),]
+
+#KEGG.counts.sep$row_id <- seq_len(nrow(KEGG.counts.sep))
+
+KEGG.counts.sep <- KEGG.counts.sep %>%
+  separate(
+    col = KEGG_category,
+    into = c("cat_2", "cat_3"),
+    sep = " > "
+  )
+#KEGG.counts.sep$cat_1 <- gsub(" ", "_", KEGG.counts.sep$cat_1)
+#KEGG.counts.sep$cat_2 <- gsub(" ", "_", KEGG.counts.sep$cat_2)
+#KEGG.counts.sep$cat_3 <- gsub(" ", "_", KEGG.counts.sep$cat_3)
+#KEGG.counts.sep$cat_1 <- factor(KEGG.counts.sep$cat_1, levels = unique(KEGG.counts.sep$cat_1))
+KEGG.counts.sep$cat_2 <- factor(KEGG.counts.sep$cat_2, levels = unique(KEGG.counts.sep$cat_2))
+KEGG.counts.sep$cat_3 <- factor(KEGG.counts.sep$cat_3, levels = unique(KEGG.counts.sep$cat_3))
+str(KEGG.counts.sep)
+```
+
+
+### Center panel
+```{r}
+# Plot hits of each COG category in each comparison type
+gg_heat.comp.KEGG <- ggplot(KEGG.counts.sep, aes(x = comp, y = cat_3)) + 
+  geom_tile(aes(fill=KEGG.counts.per.cat.per.comp)) + 
+  scale_fill_viridis(name = "Number of\nKEGG annotations", 
+                     option="mako", 
+                     direction = -1, 
+#                     trans = "log",
+#                     breaks = c(0, 1, 3, 6, 12),
+#                     labels = c("0", "1", "3", "6", "12"),
+                     limits = c(1, 12)) +
+  #scale_fill_gradient(high= "navyblue", low = "skyblue", name = "Numbers of DAGCs") + 
+  theme(legend.position="none") +
+  scale_y_discrete(limits=rev) +
+  labs(x = "Comparisons") +
+    theme_bw() +
+      theme(
+      text = element_text(family = "Arial"),
+      legend.justification = c(0.5, 0),
+      legend.title = element_text(size = 6, margin = margin(b = 15), face = "bold"),
+      legend.text = element_text(size = 6),
+      legend.key.size = unit(0.4, "cm"),
+      legend.spacing.y = unit(0.1, "cm"),
+      legend.position = "right", 
+      panel.grid.major = element_blank(), 
+      panel.background = element_blank(),
+      #panel.grid.minor = element_line(color = "lightgray", size = 0.25), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 5, angle = 90, vjust = 0.35, hjust = 1),
+      axis.text.y = element_text(color = "black", size = 5),
+      axis.title.x = element_text(color = "black", size = 6, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_blank(),
+      axis.ticks.x = element_blank()      
+      ) + coord_fixed(ratio = 1)
+gg_heat.comp.KEGG
+
+ggsave("../figures/KEGG_categories.tiff", width = 8, height = 11.5, dpi = 300)
+
+
+```
+
+-################################################################################
+
+
+
+
+
