@@ -44,11 +44,10 @@ Analyses of genome openness.
 genes_diversity_v5-3.Rmd
 Alpha and beta diversity analyses on gene clusters.
 
-DAGCs analyses.Rmd
+DAGCs_analyses.Rmd
 Differentially abundant gene clusters analyses.
-
-Followup of the DAGCs analyses, of the 757 annotated DAGCs. Table : To include all COG categories and pathways, as well as all KEGG brite, 
-classes, modules, etc. No missing info on DAGCs functions. Figures : creation of the article figure for COG categories and KEGG categories 
+Creation of DAGCs tables and figure....(?)
+...Figures : creation of the article figure for COG categories and KEGG categories 
 (manually curated based on the BRITE functional hierarchy).
 
 
