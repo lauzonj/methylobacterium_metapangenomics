@@ -799,13 +799,11 @@ DAGCs.curated <- DAGCs.curated[,c(1:25,52:56)]
 DAGCs.curated <- droplevels(DAGCs.curated)
 ```
 
-
 -################################################################################
 
+# Pre-Suppl File B
 
-# Suppl File B
-
-## DAGCs Table creation (Suppl File B)
+## DAGCs Table creation
 
 ```{r}
 # Create function
@@ -867,69 +865,55 @@ identical(DAGCs_host_types$gene_cluster_id, DAGCs.curated_all_functions$gene_clu
 
 # Combine both tables
 DAGCs_fully_annotated <- cbind(DAGCs.curated_all_functions, DAGCs_host_types[2:3])
-
-
-
-RENDUÀ LA!!!
-  
-  
-
 DAGCs_fully_annotated <- DAGCs_fully_annotated[,c(1,26:27,2:25)]
 str(DAGCs_fully_annotated)
 ```
 
 Save DAGCs table as csv
 ```{r}
-#write_csv(DAGCs_fully_annotated, file = "../DAGCs_fully_annotated.csv")
+#write_csv(DAGCs_fully_annotated, file = "../data/DAGCs_fully_annotated.csv")
 ```
 
+-################################################################################
 
 # Suppl File C  
 
 ## Importing and exporting functions and coverage of individual genes
 
-Import data.fct.cov (data on functional annotation and coverage of gene callers) and export data concerning DAGCs only to csv
+Import data.fct.cov (data on functional annotation and coverage of gene callers) and export to csv only data concerning DAGCs
 ```{r}
 data.fct.cov <- readRDS("../rds/data.fct.cov.rds")
 data.fct.cov.DAGCs <- data.fct.cov[data.fct.cov$gene_cluster_id %in% DAGCs_fully_annotated$gene_cluster_id,]
-data.fct.cov.DAGCs <- data.fct.cov.DAGCs[,c(1:21,42:66)]
+data.fct.cov.DAGCs <- data.fct.cov.DAGCs[,c(1:21,25:49)]
 data.fct.cov.DAGCs <- droplevels(data.fct.cov.DAGCs)
 str(data.fct.cov.DAGCs)
 
 #Create Suppl_File_C
-#write_csv(data.fct.cov.DAGCs, file = "../data.fct.cov.DAGCs.csv")
+write_csv(data.fct.cov.DAGCs, file = "../supplementary_files/Suppl_file_C-DAGCs-gene_cov.csv")
 ```
 
+-################################################################################
 
-I imported these two csv tables (DAGCs_fully_annotated and data.fct.cov.DAGCs) in excel and manually edited the 'DAGCs_fully_annotated' table to remove doubles (e.g. T|T -> T) and to select most covered functions (at the level of individual genes, non normalized abundances) when multiple different functions were assigned.
-The result is : "Supplementary File B - This table presents all DAGCs functional annotation and differential abundance analyses’ statistics (DESeq2 results). ‘|’ indicates alternative annotations originally proposed by COG or KEGG databases based on a same amino acid sequence from an individual gene; while ‘_or_’ indicates alternatives annotations when the differential abundance could arise from differentially annotated amino acid sequences from multiple individual genes."
+# Suppl File B
 
+I imported the csv table named "DAGCs_fully_annotated.csv" in excel, then I manually edited the table to remove within cells duplicates in function names or ACC (e.g., T|T -> T) and to select only well covered functions (at the level of individual genes, non normalized abundances) when multiple different functions were assigned (based on the Suppl File C). The end result is "Supplementary File B".
 
--###############################################################################
-
-
-# Import hand-edited DAGCs table
-
+Import Supplementary File B for subsequent analyses and plotting.
 ```{r}
-Suppl_B_DAGCs <- read_delim("../data_imported/Suppl_file_B-DAGCs.csv")
+Suppl_B_DAGCs <- read_delim("../supplementary_files/Suppl_file_B-DAGCs.csv")
 ```
-
 
 -###############################################################################
 
+# Plotting COG categories
 
-# COG categories
+Plot relative abundances of COG categories by comparison types.
 
-
-## Plot COGs
-
-Relative abundances of COG categories by comparison.
-
-### Prepare data
+## Prepare data
 ```{r}
 DAGCs <- Suppl_B_DAGCs # This table have all 757 functionally annotated DAGCs (annotation from COG, KEGG and Pfam)
 
-# Preparation comparison types: by combining focal and reference columns into a new vector 'comp'
+# Preparation of comparison types: by combining focal and reference columns into a new vector 'comp'
 DAGCs$comp <- apply(DAGCs[,c(2:3)], 1, function(x) {
   paste(x, collapse = "_vs_")
 })
@@ -952,7 +936,7 @@ df_split1$COG20_CATEGORY <- str_replace_all(df_split1$COG20_CATEGORY, "_or_", "|
 df_split2 <- df_split1 %>%
   mutate(COG20_CATEGORY = strsplit(COG20_CATEGORY, "\\|")) %>%
   unnest(cols = COG20_CATEGORY)
-# Remove duplicates within rows (sanity check, there should not be any duplicat)
+# Remove duplicates within rows (sanity check, there should not be any duplicate)
 df_split3 <- df_split2 %>%
   distinct(gene_cluster_id, COG20_CATEGORY, .keep_all = TRUE) 
 # Remove rowid column
@@ -974,18 +958,22 @@ DAGCs.counts = DAGCs.multi %>%
 comp.counts.ORIG <- DAGCs.counts %>%
   group_by(comp) %>%
   summarise(total.COG.counts.per.comp = sum(COG.counts.per.cat.per.comp))
-# I CAN USE 'comp.counts.ORIG' TO KNOW HOW MANY HITS FOR EACH COMPARISONS BEFORE REMOVING "No annotation" and "Function unknown", across categories (NOTE: remember it is not how many DAGCs for each comparison, because some DAGCs have multiple categories assigned to).
+# Note : 'comp.counts.ORIG' informs on the number of hits per comparison types, across COG categories, BUT before removing categories "No COG annotation" and "Function unknown".
 
 # Calculate total hits for each COG category across comparisons type
 COG.c.ORIG <- DAGCs.counts %>%
   group_by(COG20_CATEGORY) %>%
   summarise(total.COG.counts.per.cat = sum(COG.counts.per.cat.per.comp)) %>% 
   ungroup()
-#### RESULT ####
-# I CAN USE 'COG.c.ORIG' TO KNOW HOW MANY HITS FOR EACH COG CATEGORIES INCLUDING "No annotation" 
-#and "Function unknown" across comparison types
-# THERE IS 85 COUNTS OF "NO ANNOTATION" (i.e. these are DAGCs only annotated by KEGG or, mostly, Pfam) 
-#AND 47 COUNTS OF "FUNCTION UNKNOWN"
+# Note : 'COG.c.ORIG' informs on the number of hits per COG category, across comparison types, including "No COG annotation" and "Function unknown".
+# There is 85 counts of "No COG Annotation" (i.e., these are DAGCs only annotated by KEGG or Pfam)
+# There is 47 counts of "Function unknown"
+
+
+
+
+RENDU LA!!! 260720 14h41
+
 
 # Remove "No annotation" and "Function unknown"
 DAGCs.counts <- subset(DAGCs.counts, !(COG20_CATEGORY %in% c("No COG annotation", "Function unknown")))
@@ -1651,8 +1639,3 @@ ggsave("../figures/KEGG_categories.tiff", width = 8, height = 11.5, dpi = 300)
 ```
 
 -################################################################################
-
-
-
-
-
