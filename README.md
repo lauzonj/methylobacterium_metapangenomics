@@ -7,9 +7,9 @@ These Bash and R markdown scripts cover all meta/pangenomic and statistical anal
 
 Scripts should be run in the order listed below.
 
-## Bash script
+## Bash script description
 
-anvio_script.txt
+anvio.txt
 This script contains all commands related to the analyses performed with anvio v.8
 
 ## R markdown scripts descriptions
