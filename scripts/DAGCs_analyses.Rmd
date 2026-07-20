@@ -1237,7 +1237,6 @@ max_levels <- max(lengths(strsplit(DAGCs.KEGG.multi$KEGG_BRITE, ">>>")))
 DAGCs.KEGG.multi.sep <- DAGCs.KEGG.multi %>%
   mutate(
     split = strsplit(KEGG_BRITE, ">>>"),
-    # right-align: pad with NA at the start
     split = map(split, ~{
       c(rep(NA, max_levels - length(.x)), trimws(.x))
     })
@@ -1247,13 +1246,6 @@ DAGCs.KEGG.multi.sep <- DAGCs.KEGG.multi %>%
 DAGCs.KEGG.multi.sep <- DAGCs.KEGG.multi.sep[,c(1:3,28,4:11,18:19,29:34,25,20:25,12:17,26:27)]
 names(DAGCs.KEGG.multi.sep)[21] <- "KOfam_function" # Table has 1440 rows
 
-# Observations/reflections
-
-# 373 DAGCs have Brite annotation to KEGG Orthology (ko00001)
-# 111 DAGCs have Brite annotations that are not KEGG Orthology (ko00001)
-# 19 DAGCs have no ko00001, but have Enzymes annotation (ko01000) + other annotations ko#
-# I should not analyze "Enzymes annotations" since they are too general, and they are always annotated as something else too.
-
 # Remove all rows with "No KEGG annotation"
 DAGCs.KEGG.multi.sep <- subset(DAGCs.KEGG.multi.sep, !(KEGG_BRITE %in% c("No KEGG annotation"))) # Table has now 1169 rows
 
@@ -1262,19 +1254,21 @@ length(unique(DAGCs.KEGG.multi.sep$split_level_6)) # 496
 length(unique(DAGCs.KEGG.multi.sep$gene_cluster_id)) # 486
 ```
 
-# All above code related to KEGG is common for below alternatives
+## Manual curation
 
-## keep only non KO annotations for DAGCs without KO annotation
+Note See also Table S1 for details on manual curation.
+
+### Keep only non KO annotations for DAGCs without KO annotation
 ```{r}
-# Remove annotations from DAGCs that are already annotated with KEGG Orthology (KO), because there will be redundancy in functions. I really want all non-KO rows to be DAGCs not annotated with KO that would otherwise be lost functions if we only considered KO annotated GC in our analyses.
-# In other words, if there is no 'KEGG Orthology (KO)' in 'split_level_3', but there is 'ko00001' in 'KEGG_BRITE_ACC', then remove row
+# Remove annotations from DAGCs that are already annotated with KEGG Orthology (KO), to avoid redundancy in functions.
+# If there is no 'KEGG Orthology (KO)' in 'split_level_3', but there is 'ko00001' in 'KEGG_BRITE_ACC', then remove row
 
 DAGCs.KEGG.multi.sep.1.2 <- DAGCs.KEGG.multi.sep %>%
   filter(
     !( !str_detect(split_level_3, "KEGG Orthology \\(KO\\)") &
        str_detect(KEGG_BRITE_ACC, "ko00001")
      )
-  ) # should now have 742 rows
+  ) # 742 rows
 
 length(unique(DAGCs.KEGG.multi.sep.1.2$split_level_5)) # 95
 length(unique(DAGCs.KEGG.multi.sep.1.2$split_level_6)) # 230
@@ -1282,46 +1276,43 @@ length(unique(DAGCs.KEGG.multi.sep$gene_cluster_id)) # 486
 length(unique(DAGCs.KEGG.multi.sep.1.2$gene_cluster_id)) # 486
 ```
 
-
-
-## Remove all rows related to "Enzymes" annotation
+### Remove all rows related to "Enzymes" annotation
 ```{r}
-DAGCs.KEGG.multi.sep.noenz <- subset(DAGCs.KEGG.multi.sep.1.2, !(split_level_2 %in% c("Enzymes"))) # Table has now 723 rows
+DAGCs.KEGG.multi.sep.noenz <- subset(DAGCs.KEGG.multi.sep.1.2, !(split_level_2 %in% c("Enzymes"))) # 723 rows
 
 length(unique(DAGCs.KEGG.multi.sep.noenz$split_level_5)) # 78
 length(unique(DAGCs.KEGG.multi.sep.noenz$split_level_6)) # 212
 length(unique(DAGCs.KEGG.multi.sep.noenz$gene_cluster_id)) # 486
 ```
 
-## Remove other rows
+### Remove other rows
 ```{r}
 # Other uncategorized enzymes annotation
-DAGCs.KEGG.multi.sep.noenz.2 <- subset(DAGCs.KEGG.multi.sep.noenz, !(split_level_6 %in% c("99980 Enzymes with EC numbers"))) # Table has now 905 rows
+DAGCs.KEGG.multi.sep.noenz.2 <- subset(DAGCs.KEGG.multi.sep.noenz, !(split_level_6 %in% c("99980 Enzymes with EC numbers"))) # 696 rows
 length(unique(DAGCs.KEGG.multi.sep.noenz.2$split_level_5)) # 78
 length(unique(DAGCs.KEGG.multi.sep.noenz.2$split_level_6)) # 211
 length(unique(DAGCs.KEGG.multi.sep.noenz.2$gene_cluster_id)) # 459
 
 # Remove "09194 Poorly characterized"
-DAGCs.KEGG.multi.sep.noenz.3 <- subset(DAGCs.KEGG.multi.sep.noenz.2, !(split_level_5 %in% c("09194 Poorly characterized"))) # Table has now 881 rows
+DAGCs.KEGG.multi.sep.noenz.3 <- subset(DAGCs.KEGG.multi.sep.noenz.2, !(split_level_5 %in% c("09194 Poorly characterized"))) # 672 rows
 length(unique(DAGCs.KEGG.multi.sep.noenz.3$split_level_5)) # 77
 length(unique(DAGCs.KEGG.multi.sep.noenz.3$split_level_6)) # 209
 length(unique(DAGCs.KEGG.multi.sep.noenz.3$gene_cluster_id)) # 435
 
 # Remove "09191 Unclassified: metabolism > 99999 Others"
-DAGCs.KEGG.multi.sep.noenz.4 <- subset(DAGCs.KEGG.multi.sep.noenz.3, !(split_level_6 %in% c("99999 Others"))) # Table has now 879 rows
+DAGCs.KEGG.multi.sep.noenz.4 <- subset(DAGCs.KEGG.multi.sep.noenz.3, !(split_level_6 %in% c("99999 Others"))) # 670 rows
 length(unique(DAGCs.KEGG.multi.sep.noenz.4$split_level_5)) # 77
 length(unique(DAGCs.KEGG.multi.sep.noenz.4$split_level_6)) # 208
 length(unique(DAGCs.KEGG.multi.sep.noenz.4$gene_cluster_id)) # 433
 
 # Remove "09191 Unclassified: signaling and cellular processes > 99994 Others"
-DAGCs.KEGG.multi.sep.noenz.5 <- subset(DAGCs.KEGG.multi.sep.noenz.4, !(split_level_6 %in% c("99994 Others"))) # Table has now 876 rows
+DAGCs.KEGG.multi.sep.noenz.5 <- subset(DAGCs.KEGG.multi.sep.noenz.4, !(split_level_6 %in% c("99994 Others"))) # 667 rows
 length(unique(DAGCs.KEGG.multi.sep.noenz.5$split_level_5)) # 77
 length(unique(DAGCs.KEGG.multi.sep.noenz.5$split_level_6)) # 207
 length(unique(DAGCs.KEGG.multi.sep.noenz.5$gene_cluster_id)) # 430
 ```
 
-
-## Edit characters strings
+### Edit characters strings
 ```{r}
 # If annotation of split_level_3 is 'KEGG Orthology (KO)', then remove first 5 numbers + space 'XXXXX ' from split_levels 4, 5 and 6
 DAGCs.KEGG.multi.sep.3 <- DAGCs.KEGG.multi.sep.noenz.5 %>%
@@ -1366,7 +1357,7 @@ length(unique(DAGCs.KEGG.multi.sep.5$gene_cluster_id)) # 430
 
 ```
 
-## Order table and export to hand-curate
+### Order table and export to hand-curate
 ```{r}
 # If annotation of split_level_3 is 'KEGG Orthology (KO)', then merge strings in split_level_4, 5, and 6, then output values to new column "KEGG_category"
 
@@ -1385,33 +1376,23 @@ DAGCs.KEGG.multi.sep.6 <- DAGCs.KEGG.multi.sep.6[,c(1:20,36,21:35)]
 DAGCs.KEGG.multi.sep.6 <- DAGCs.KEGG.multi.sep.6 %>%
   arrange(split_level_4, split_level_5, split_level_6)
 
+DAGCs.KEGG.multi.sep.6$gene_cluster_id <- as.factor(DAGCs.KEGG.multi.sep.6$gene_cluster_id)
+str(DAGCs.KEGG.multi.sep.6)
+
 # Export table to csv
-#write_csv(DAGCs.KEGG.multi.sep.6, file = "../DAGCs.KEGG.multi.sep.6.csv")
+#write_csv(DAGCs.KEGG.multi.sep.6, file = "../data/DAGCs.KEGG.multi.sep.6.csv")
 ```
 
-## Excel : hand curated "KEGG_category"
+## Excel
 
-Exosome annotations have been removed since exosomes are associated with eukaryotic cells & the DAGCs was also annotated as other functions. (3 rows removed, no DAGCs lost)
-I removed 'Peptidases and inhibitors' since they were general enzymes (6 rows removed, 4 DAGCs removed)
-I removed 'Protein kinases>>>Histidine kinases>>>Other' and 'Serine/threonine kinases: Other' since they were annotated another function too (4 rows removed, no DAGCS lost)
-I removed 4 annotations related to mitochondrial function (only one DAGC lost)
-I removed 'Not Included in Pathway or Brite > Unclassified: metabolism > Cofactor metabolism' because this DAGCs had another annotation (1 row removed, no DAGCs lost)
-I removed - Amino acid related enzymes - Aminotransferase (transaminase) - Class III - since it was too vague (1 row removed, 1 DAGCs lost)
-...same for Not Included in Pathway or Brite - Unclassified: metabolism - Energy metabolism (1 row removed, 1 DAGC lost)
-I removed 'Prokaryotic cytoskeleton proteins' because the GC was annotated as something else too. (1 row removed, no DAGC lost)
-I removed 'GC_00005324', 'GC_00010413', GC_00004746 and GC_00003022 rows which level 6 was 'Drug metabolism - other enzymes [PATH:ko00983]' because these DAGCs were also annotated as 'Metabolism of xenobiotics by cytochrome P450 [PATH:ko00980]' (4 rows removed, no DAGCs lost)
-I removed 'Mitophagy - yeast [PATH:ko04139]' because associated with yeast (1 row removed, 1 DAGC removed)
-I changed 'Cellular community - prokaryotes' to 'Cellular community'
-
-Summary: 26 rows (annotations) have been removed, 9 DAGCs removed.
-
+Manually curate KEGG categories in excel. See Table S1 for all details.
 
 ## Import hand-curated table
 ```{r}
-DAGCs.KEGG.curated <- read_delim("../DAGCs.KEGG.multi.sep.6-05.csv")
+DAGCs.KEGG.curated <- read_delim("../data/DAGCs.KEGG.multi.sep.6-excelised.csv")
 ```
 
-## Edit table
+### Edit table
 ```{r}
 DAGCs.KEGG.curated.2 <- DAGCs.KEGG.curated
 
@@ -1420,9 +1401,6 @@ DAGCs.KEGG.curated.2$KEGG_category <- gsub("Replication and repair", "DNA replic
 
 # Replace 'Cellular processes' to 'Cellular Processes'
 DAGCs.KEGG.curated.2$KEGG_category <- gsub("Cellular processes", "Cellular Processes", DAGCs.KEGG.curated.2$KEGG_category)
-
-# Replace 'Folding, sorting and degradation' by 'Protein folding, sorting and degradation'
-#DAGCs.KEGG.curated.2$KEGG_category <- gsub("Folding, sorting and degradation", "Protein folding, sorting and degradation", DAGCs.KEGG.curated.2$KEGG_category)
 
 DAGCs.KEGG.curated.3 <- DAGCs.KEGG.curated.2[order(DAGCs.KEGG.curated.2$KEGG_category), ]
 
@@ -1448,12 +1426,11 @@ length(unique(DAGCs.KEGG.curated.4$gene_cluster_id)) # 422
 length(unique(DAGCs.KEGG.curated.5$KEGG_category)) # 135
 length(unique(DAGCs.KEGG.curated.5$gene_cluster_id)) # 422
 
-#Remove first hierarchy from 'KEGG_category'
+# Remove first hierarchy from 'KEGG_category'
 DAGCs.KEGG.curated.6 <- DAGCs.KEGG.curated.5 %>%
   mutate(
     KEGG_category = sub("^\\s*[^>]+>\\s*", "", KEGG_category)
   )
-#DAGCs.KEGG.curated.6 <- DAGCs.KEGG.curated.5
 
 # Remove ' [PATH:ko#####]' when present
 DAGCs.KEGG.curated.7 <- DAGCs.KEGG.curated.6 %>%
@@ -1461,7 +1438,7 @@ DAGCs.KEGG.curated.7 <- DAGCs.KEGG.curated.6 %>%
     KEGG_category = sub("\\s*\\[PATH:ko[0-9]{5}\\]$", "", KEGG_category)
   )
 
-# Sanity check : Remove duplicates (no duplicates)
+# Sanity check : Remove duplicates (there should be no duplicates)
 DAGCs.KEGG.curated.8 <- DAGCs.KEGG.curated.7 %>%
   distinct(gene_cluster_id, KEGG_category, .keep_all = TRUE) 
 
@@ -1472,7 +1449,7 @@ DAGCs.KEGG.curated.8$KEGG_category <- factor(DAGCs.KEGG.curated.8$KEGG_category,
 levels(DAGCs.KEGG.curated.8$KEGG_category)
 ```
 
-## Rearrange and rename KEGG_category levels
+Rearrange and rename some KEGG_category levels
 ```{r}
 ## Rename some categories
 DAGCs.KEGG.curated.9 <- DAGCs.KEGG.curated.8 %>%
@@ -1525,7 +1502,6 @@ DAGCs.KEGG.curated.11 <- DAGCs.KEGG.curated.10 %>%
 levels(DAGCs.KEGG.curated.11$KEGG_category)
 ```
 
-
 ## Counting KEGG categories hits
 ```{r}
 # Count each KEGG category 'hits' for each comparison type
@@ -1550,7 +1526,6 @@ KEGG.cat.counts <- KEGG.counts %>%
   ungroup()
 str(KEGG.cat.counts)
 
-
 # sanity check (both should = 631)
 sum(KEGG.comp.counts$total.KEGG.counts.per.comp)
 sum(KEGG.cat.counts$total.KEGG.counts.per.cat)
@@ -1562,43 +1537,33 @@ sum(KEGG.cat.counts$total.KEGG.counts.per.cat)
 ```{r}
 KEGG.counts.sep <- KEGG.counts[order(KEGG.counts$KEGG_category),]
 
-#KEGG.counts.sep$row_id <- seq_len(nrow(KEGG.counts.sep))
-
 KEGG.counts.sep <- KEGG.counts.sep %>%
   separate(
     col = KEGG_category,
     into = c("cat_2", "cat_3"),
     sep = " > "
   )
-#KEGG.counts.sep$cat_1 <- gsub(" ", "_", KEGG.counts.sep$cat_1)
-#KEGG.counts.sep$cat_2 <- gsub(" ", "_", KEGG.counts.sep$cat_2)
-#KEGG.counts.sep$cat_3 <- gsub(" ", "_", KEGG.counts.sep$cat_3)
-#KEGG.counts.sep$cat_1 <- factor(KEGG.counts.sep$cat_1, levels = unique(KEGG.counts.sep$cat_1))
+
 KEGG.counts.sep$cat_2 <- factor(KEGG.counts.sep$cat_2, levels = unique(KEGG.counts.sep$cat_2))
 KEGG.counts.sep$cat_3 <- factor(KEGG.counts.sep$cat_3, levels = unique(KEGG.counts.sep$cat_3))
 str(KEGG.counts.sep)
 ```
 
-
 ### Center panel
 ```{r}
-# Plot hits of each COG category in each comparison type
+# Plot hits of each KEGG category in each comparison type
 gg_heat.comp.KEGG <- ggplot(KEGG.counts.sep, aes(x = comp, y = cat_3)) + 
   geom_tile(aes(fill=KEGG.counts.per.cat.per.comp)) + 
   scale_fill_viridis(name = "Number of\nKEGG annotations", 
                      option="mako", 
-                     direction = -1, 
-#                     trans = "log",
-#                     breaks = c(0, 1, 3, 6, 12),
-#                     labels = c("0", "1", "3", "6", "12"),
+                     direction = -1,
                      limits = c(1, 12)) +
-  #scale_fill_gradient(high= "navyblue", low = "skyblue", name = "Numbers of DAGCs") + 
   theme(legend.position="none") +
   scale_y_discrete(limits=rev) +
   labs(x = "Comparisons") +
     theme_bw() +
       theme(
-      text = element_text(family = "Arial"),
+      text = element_text(),
       legend.justification = c(0.5, 0),
       legend.title = element_text(size = 6, margin = margin(b = 15), face = "bold"),
       legend.text = element_text(size = 6),
@@ -1617,9 +1582,7 @@ gg_heat.comp.KEGG <- ggplot(KEGG.counts.sep, aes(x = comp, y = cat_3)) +
       ) + coord_fixed(ratio = 1)
 gg_heat.comp.KEGG
 
-ggsave("../figures/KEGG_categories.tiff", width = 8, height = 11.5, dpi = 300)
-
-
+ggsave("../figures/figure_6_KEGG_categories.pdf", width = 8, height = 11.5, dpi = 300)
 ```
 
 -################################################################################
