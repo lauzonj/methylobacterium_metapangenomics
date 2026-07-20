@@ -46,24 +46,12 @@ Alpha and beta diversity analyses on gene clusters.
 
 DAGCs_analyses.Rmd
 Differentially abundant gene clusters analyses.
-Creation of DAGCs tables and figure....(?)
-...Figures : creation of the article figure for COG categories and KEGG categories 
-(manually curated based on the BRITE functional hierarchy).
+Creation of DAGCs tables and figures.
 
 
-DAGCs_figure.Rmd
-Creation of figures showing enriched genes for specific functional categories.
+
 
 
 
 selection_v2_251214.Rmd
 Analyses of pN/pS ratio and positively selected genes by host species.
-
-
-
-
-NOT USED
-
-genes_cov_and_detect.Rmd
-Analyses of genes mean coverage and detection distributions.
-
