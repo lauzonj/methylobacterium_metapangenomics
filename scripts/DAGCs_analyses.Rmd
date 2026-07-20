@@ -10,13 +10,10 @@ date: "2025-11-17"
 ```{r}
 library(tidyverse)
 library(patchwork)
-#library(purrr)
 library(viridis)
 library(DESeq2)
 library(scales)
 library(picante)
-#library(ggh4x)
-#library(legendry)
 ```
 
 -################################################################################
