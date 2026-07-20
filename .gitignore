@@ -55,9 +55,6 @@ rsconnect/
 #*.csv
 !DAGs.functions.all.info-comparisons.csv
 !all_pos_sel_genes.csv
-!DAGCs_fully_annotated.csv
-!DAGCs_host_types.csv
-!Suppl_file_B-DAGCs.csv
 !DAGCs.KEGG.multi.sep.2.csv
 !DAGCs.KEGG.multi.sep.6-05.csv
 
