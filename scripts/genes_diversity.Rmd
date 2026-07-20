@@ -12,12 +12,7 @@ library(tidyverse)
 library(vegan)
 library(picante)
 library(ggordiplots)
-#library(gridExtra)
-#library(cowplot)
 library(viridis)
-#library(DESeq2)
-#library(patchwork)
-#library(EnhancedVolcano)
 ```
 
 # Import data
