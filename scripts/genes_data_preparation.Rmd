@@ -37,7 +37,7 @@ THOC_summary <- read.delim("../data/anvio_outputs/Methylobacterium-THOC-PAN/Meth
 THOC_summary <- THOC_summary[,-1]
 ```
 
-Since these 5 metagenomes files are similar, we will work with only one from nom on, but merge gene type (core vs. accessory), gene coverage depth, and gene horizontal coverage data for all samples.
+Since these 5 metapangenomes files are similar, we will work with only one from nom on, but merge gene type (core vs. accessory), gene coverage depth, and gene horizontal coverage data for all samples.
 
 Remove unnecessary metagenomes files
 ```{r}
