@@ -926,157 +926,76 @@ anvi-summarize \
                  -C core_accessory_singleton_gc \
                  -o Methylobacterium-THOC-METAPAN-SUMMARY
 
-
-
-
-
-
-
-
-
-
 ################################################################################
 # pN/pS ratio analyses
 ################################################################################
 
+# M. sp. 018
 
--- Selection analyses on M. sp. 018
+## Generate variability profiles ('variability-profile-txt') for each host_species samples
 
+cd anvio_analysis/
 
----- Generate variability profiles ('variability-profile-txt') for each host_species samples
+### ABBA
 
-# Get exact collection ID and bin name of interest (genomes names)  
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-show-collections-and-bins -p ABBA/ABBA-MERGED/PROFILE.db
+cd ABBA/
 
-# Collection ID : Methylobacterium_Species_for_ABBA (or TREE) 
-# Bin name : M_sp_018
+anvi-gen-variability-profile \
+                 -p ABBA-MERGED/PROFILE.db \
+                 -c ../../anvio_artifacts/all_genomes-CONTIGS.db \ 
+                 -C Methylobacterium_Species_for_ABBA \
+                 -b M_sp_018 \
+                 --engine CDN \
+                 -o var_cdn_sp_018_ABBA
+                 
+### ACSA
 
+cd ../ACSA/
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ABBA$ anvi-gen-variability-profile -p ABBA-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_ABBA -b M_sp_018 --engine CDN -o var_cdn_sp_018_ABBA
+anvi-gen-variability-profile \
+               -p ACSA-MERGED/PROFILE.db \
+               -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+               -C Methylobacterium_Species_for_ACSA \
+               -b M_sp_018 \
+               --engine CDN \
+               -o var_cdn_sp_018_ACSA
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ACSA$ anvi-gen-variability-profile -p ACSA-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_ACSA -b M_sp_018 --engine CDN -o var_cdn_sp_018_ACSA
+### COCO
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/COCO$ anvi-gen-variability-profile -p COCO-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_COCO -b M_sp_018 --engine CDN -o var_cdn_sp_018_COCO
+cd ../COCO/
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/FAGR$ anvi-gen-variability-profile -p FAGR-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_FAGR -b M_sp_018 --engine CDN -o var_cdn_sp_018_FAGR
+anvi-gen-variability-profile \
+                 -p COCO-MERGED/PROFILE.db \
+                 -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+                 -C Methylobacterium_Species_for_COCO \
+                 -b M_sp_018 \
+                 --engine CDN \
+                 -o var_cdn_sp_018_COCO
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/THOC$ anvi-gen-variability-profile -p THOC-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_THOC -b M_sp_018 --engine CDN -o var_cdn_sp_018_THOC
+### FAGR
 
+cd ../FAGR/
 
+anvi-gen-variability-profile \
+                 -p FAGR-MERGED/PROFILE.db \
+                 -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+                 -C Methylobacterium_Species_for_FAGR \
+                 -b M_sp_018 \
+                 --engine CDN \
+                 -o var_cdn_sp_018_FAGR
 
-# OUTPUT VERBOSE BELOW
+### THOC
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ABBA$ anvi-gen-variability-profile -p ABBA-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_ABBA -b M_sp_018 --engine CDN -o var_cdn_sp_018_ABBA
-Contigs DB ....................................................: Initialized: ../../anvio_artifacts/all_genomes-CONTIGS.db (v. 21)
-Samples available .............................................: ABBA_M11, ABBA_M12, ABBA_M13, ABBA_M14, ABBA_M15
-Variability data ..............................................: 1,181,550 entries in 36,204 splits across 5 samples
-Number of Split name(s) of interest ...........................: 317
-Entries after split name(s) of interest filter ................: 105,840 (1,075,710 were removed) [4353 genes remaining]
-Total number of variable positions in samples .................: ABBA_M11: 3934; ABBA_M12: 47756; ABBA_M13: 15892; ABBA_M14: 33503; ABBA_M15:
-                                                                 4755
+cd ../THOC/
 
-WARNING
-================================================================
-Only some comprehensive variability metrics can be computed without `--quince-
-mode`
+anvi-gen-variability-profile \
+                 -p THOC-MERGED/PROFILE.db \
+                 -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+                 -C Methylobacterium_Species_for_THOC \
+                 -b M_sp_018 \
+                 --engine CDN \
+                 -o var_cdn_sp_018_THOC
 
-Num entries reported ..........................................: 105,840
-Output File ...................................................: var_cdn_sp_018_ABBA
-Num CDN positions reported ....................................: 79,169
-
-✓ anvi-gen-variability-profile took 0:00:32.648323
-
-
-
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ACSA$ anvi-gen-variability-profile -p ACSA-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_ACSA -b M_sp_018 --engine CDN -o var_cdn_sp_018_ACSA
-Contigs DB ....................................................: Initialized: ../../anvio_artifacts/all_genomes-CONTIGS.db (v. 21)
-Samples available .............................................: ACSA_M21, ACSA_M22, ACSA_M23, ACSA_M24, ACSA_M25
-Variability data ..............................................: 458,663 entries in 36,204 splits across 5 samples
-Number of Split name(s) of interest ...........................: 317
-Entries after split name(s) of interest filter ................: 109,055 (349,608 were removed) [4767 genes remaining]
-Total number of variable positions in samples .................: ACSA_M21: 33163; ACSA_M22: 6797; ACSA_M23: 1440; ACSA_M24: 27434; ACSA_M25:
-                                                                 40221
-
-WARNING
-================================================================
-Only some comprehensive variability metrics can be computed without `--quince-
-mode`
-
-Num entries reported ..........................................: 109,055
-Output File ...................................................: var_cdn_sp_018_ACSA
-Num CDN positions reported ....................................: 81,948
-
-✓ anvi-gen-variability-profile took 0:00:17.681687
-
-
-
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/COCO$ anvi-gen-variability-profile -p COCO-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_COCO -b M_sp_018 --engine CDN -o var_cdn_sp_018_COCO
-Contigs DB ....................................................: Initialized: ../../anvio_artifacts/all_genomes-CONTIGS.db (v. 21)
-Samples available .............................................: COCO_M01, COCO_M02, COCO_M03, COCO_M04, COCO_M05
-Variability data ..............................................: 4,290,440 entries in 36,204 splits across 5 samples                             
-Number of Split name(s) of interest ...........................: 317
-Entries after split name(s) of interest filter ................: 1,087,268 (3,203,172 were removed) [5367 genes remaining]                       
-Total number of variable positions in samples .................: COCO_M01: 222273; COCO_M02: 251466; COCO_M03: 284308; COCO_M04: 77348; COCO_M05:
-                                                                 251873
-                                                                                                                                                 
-WARNING
-================================================================
-Only some comprehensive variability metrics can be computed without `--quince-
-mode`
-
-Num entries reported ..........................................: 1,087,268                                                                       
-Output File ...................................................: var_cdn_sp_018_COCO
-Num CDN positions reported ....................................: 452,758
-
-✓ anvi-gen-variability-profile took 0:02:04.254729
-
-
-
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/FAGR$ anvi-gen-variability-profile -p FAGR-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_FAGR -b M_sp_018 --engine CDN -o var_cdn_sp_018_FAGR
-Contigs DB ....................................................: Initialized: ../../anvio_artifacts/all_genomes-CONTIGS.db (v. 21)
-Samples available .............................................: FAGR_M16, FAGR_M17, FAGR_M18, FAGR_M19, FAGR_M20
-Variability data ..............................................: 922,537 entries in 36,204 splits across 5 samples
-Number of Split name(s) of interest ...........................: 317
-Entries after split name(s) of interest filter ................: 217,560 (704,977 were removed) [5006 genes remaining]
-Total number of variable positions in samples .................: FAGR_M16: 79923; FAGR_M17: 75581; FAGR_M18: 3271; FAGR_M19: 46668; FAGR_M20:
-                                                                 12117
-
-WARNING
-================================================================
-Only some comprehensive variability metrics can be computed without `--quince-
-mode`
-
-Num entries reported ..........................................: 217,560
-Output File ...................................................: var_cdn_sp_018_FAGR
-Num CDN positions reported ....................................: 137,569
-
-✓ anvi-gen-variability-profile took 0:00:29.964055
-
-
-
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/THOC$ anvi-gen-variability-profile -p THOC-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_THOC -b M_sp_018 --engine CDN -o var_cdn_sp_018_THOC
-Contigs DB ....................................................: Initialized: ../../anvio_artifacts/all_genomes-CONTIGS.db (v. 21)               
-Samples available .............................................: THOC_M06, THOC_M07, THOC_M08, THOC_M09, THOC_M10                                
-Variability data ..............................................: 1,410,128 entries in 36,204 splits across 5 samples                             
-Number of Split name(s) of interest ...........................: 317
-Entries after split name(s) of interest filter ................: 240,639 (1,169,489 were removed) [4840 genes remaining]                         
-Total number of variable positions in samples .................: THOC_M06: 4967; THOC_M07: 45553; THOC_M08: 11342; THOC_M09: 102736; THOC_M10:
-                                                                 76041
-                                                                                                                                                 
-WARNING
-================================================================
-Only some comprehensive variability metrics can be computed without `--quince-
-mode`
-
-Num entries reported ..........................................: 240,639                                                                         
-Output File ...................................................: var_cdn_sp_018_THOC
-Num CDN positions reported ....................................: 159,325
-
-✓ anvi-gen-variability-profile took 0:00:41.168501
 
 
 
