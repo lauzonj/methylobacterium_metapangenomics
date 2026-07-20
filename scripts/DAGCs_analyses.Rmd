@@ -803,11 +803,6 @@ DAGCs.curated <- droplevels(DAGCs.curated)
 -################################################################################
 
 
-RENDU LÀ 260720 9H50
-
-
-
-
 # Suppl File B
 
 ## DAGCs Table creation (Suppl File B)
@@ -845,7 +840,7 @@ DAGCs.curated_all_functions <- DAGCs.curated %>%
     KEGG_Class_ACC = clean_collapse(KEGG_Class_ACC),
     KEGG_Class = clean_collapse(KEGG_Class),
     KEGG_Module_ACC = clean_collapse(KEGG_Module_ACC),
-    KEGG_Module = clean_collapse(KEGG_Module.x),
+    KEGG_Module = clean_collapse(KEGG_Module),
     KOfam_ACC = clean_collapse(KOfam_ACC),
     KOfam = clean_collapse(KOfam),
     Pfam_ACC = clean_collapse(Pfam_ACC),
@@ -862,18 +857,23 @@ DAGCs.curated_all_functions$type <- factor(DAGCs.curated_all_functions$type, lev
 DAGCs.curated_all_functions <- DAGCs.curated_all_functions %>% mutate(across(c(genome_occurences,baseMean,log2FoldChange,lfcSE,stat,pvalue,padj), as.numeric))
 str(DAGCs.curated_all_functions)
 
-
 # Import focal and reference host types (hand-made table)
-DAGCs_host_types <- read_delim("../data_imported/DAGCs_host_types.csv")
+DAGCs_host_types <- read_delim("../data/DAGCs_host_types.csv")
 DAGCs_host_types <- DAGCs_host_types %>% mutate(across(c(gene_cluster_id,focal,reference), as.factor))
 DAGCs_host_types$gene_cluster_id <- factor(DAGCs_host_types$gene_cluster_id, levels = levels(DAGCs.curated_all_functions$gene_cluster_id))
 str(DAGCs_host_types)
 all(DAGCs_host_types$gene_cluster_id == DAGCs.curated_all_functions$gene_cluster_id)
 identical(DAGCs_host_types$gene_cluster_id, DAGCs.curated_all_functions$gene_cluster_id)
 
-
 # Combine both tables
 DAGCs_fully_annotated <- cbind(DAGCs.curated_all_functions, DAGCs_host_types[2:3])
+
+
+
+RENDUÀ LA!!!
+  
+  
+
 DAGCs_fully_annotated <- DAGCs_fully_annotated[,c(1,26:27,2:25)]
 str(DAGCs_fully_annotated)
 ```
