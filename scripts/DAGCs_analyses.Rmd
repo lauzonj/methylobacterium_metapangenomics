@@ -9,7 +9,7 @@ date: "2025-11-17"
 # Libraries
 ```{r}
 library(tidyverse)
-#library(patchwork)
+library(patchwork)
 #library(purrr)
 library(viridis)
 library(DESeq2)
@@ -898,14 +898,14 @@ write_csv(data.fct.cov.DAGCs, file = "../supplementary_files/Suppl_file_C-DAGCs-
 
 I imported the csv table named "DAGCs_fully_annotated.csv" in excel, then I manually edited the table to remove within cells duplicates in function names or ACC (e.g., T|T -> T) and to select only well covered functions (at the level of individual genes, non normalized abundances) when multiple different functions were assigned (based on the Suppl File C). The end result is "Supplementary File B".
 
+-###############################################################################
+
+# Plotting COG categories
+
 Import Supplementary File B for subsequent analyses and plotting.
 ```{r}
 Suppl_B_DAGCs <- read_delim("../supplementary_files/Suppl_file_B-DAGCs.csv")
 ```
-
--###############################################################################
-
-# Plotting COG categories
 
 Plot relative abundances of COG categories by comparison types.
 
@@ -969,23 +969,17 @@ COG.c.ORIG <- DAGCs.counts %>%
 # There is 85 counts of "No COG Annotation" (i.e., these are DAGCs only annotated by KEGG or Pfam)
 # There is 47 counts of "Function unknown"
 
-
-
-
-RENDU LA!!! 260720 14h41
-
-
-# Remove "No annotation" and "Function unknown"
+# Remove "No COG annotation" and "Function unknown"
 DAGCs.counts <- subset(DAGCs.counts, !(COG20_CATEGORY %in% c("No COG annotation", "Function unknown")))
 
 # Re-calculate total hits per comparison type, across COG categories, without "function unknown" nor "no COG annotation" 
-# (Figure top panel, light color)
+# (Data for Figure 5 top panel, teal color)
 comp.counts <- DAGCs.counts %>%
   group_by(comp) %>%
   summarise(total.COG.counts.per.comp = sum(COG.counts.per.cat.per.comp))
 
 # Re-calculate total hits for each COG category across comparisons type, without "function unknown" nor "no COG annotation" 
-# (Figure right panel)
+# (Data for Figure 5 right panel)
 COG.c <- DAGCs.counts %>%
   group_by(COG20_CATEGORY) %>%
   summarise(total.COG.counts.per.cat = sum(COG.counts.per.cat.per.comp)) %>% 
@@ -1002,12 +996,12 @@ DAGCs.counts$COG20_CATEGORY <- factor(DAGCs.counts$COG20_CATEGORY, levels = leve
 all(levels(DAGCs.counts$COG20_CATEGORY)==levels(COG.c$COG20_CATEGORY))
 ```
 
-
-### DAGCS amount per comparison (Figure top panel, dark color)
+Total number of DAGCs counts per comparison, including unnannotated DAGCs 
+(Data for Figure 5 top panel, black color)
 ```{r}
-# Preparation comparison types ('comp' vector)
+# Preparation of comparison types ('comp' vector)
 DAGs.bind <- readRDS("../rds/DAGs.bind.rds")
-DAGCs.comp <- DAGs.bind[,c(1,69:73)]
+DAGCs.comp <- DAGs.bind[,c(1,52:56)]
 DAGCs.comp[,c(2:6)] <- DAGCs.comp[,c(2:6)] + 2  # Transform '-1' to '1'; '0' to '2'; and '1' to '3'
 DAGCs.comp$comp <- apply(DAGCs.comp[,c(2:6)], 1, function(x) {
   paste(x, collapse = "")  # Combine values into a single string
@@ -1028,22 +1022,20 @@ levels(DAGCs.c$comp)
 sum(DAGCs.c$DAGCs.c)
 ```
 
+## Plot
 
-### Plot
-
-#### Center & right panels
+### Center & right panels
 ```{r}
 # Plot hits of each COG category in each comparison type
 gg_heat.comp <- ggplot(DAGCs.counts, aes(x = comp, y = COG20_CATEGORY)) + 
   geom_tile(aes(fill=COG.counts.per.cat.per.comp)) + 
-  scale_fill_viridis(name = "Numbers of\nCOG annotations", option="mako", direction = -1, limits = c(1, 27)) +
-  #scale_fill_gradient(high= "navyblue", low = "skyblue", name = "Numbers of DAGCs") + 
+  scale_fill_viridis(name = "Number of\nCOG annotations", option="mako", direction = -1, limits = c(1, 27)) +
   theme(legend.position="none") +
   scale_y_discrete(limits=rev) +
   labs(x = "Comparisons") +
     theme_bw() +
       theme(
-      text = element_text(family = "Arial"),
+      text = element_text(),
       legend.justification = c(0.5, 0),
       legend.title = element_text(size = 11, margin = margin(b = 15), face = "bold"),
       legend.text = element_text(size = 11),
@@ -1062,7 +1054,7 @@ gg_heat.comp <- ggplot(DAGCs.counts, aes(x = comp, y = COG20_CATEGORY)) +
       ) + coord_fixed(ratio = 1)
 gg_heat.comp
 
-# Plot the number of DAGCs per category across comparison types
+# Plot the number of DAGCs per COG category across comparison types
 gg_COG.c <-  ggplot(COG.c, aes(x = total.COG.counts.per.cat, y = COG20_CATEGORY)) + 
   geom_col(fill = "black", width = 0.75) + 
   theme(legend.position="none") +
@@ -1072,7 +1064,7 @@ gg_COG.c <-  ggplot(COG.c, aes(x = total.COG.counts.per.cat, y = COG20_CATEGORY)
   scale_x_continuous(breaks = seq(0, 70, by = 10))+
     theme_bw() +
       theme(
-      text = element_text(family = "Arial"),
+      text = element_text(),
       legend.justification = c(0.5, 0),
       legend.title = element_text(size = 11, margin = margin(b = 15)),
       legend.text = element_text(size = 11),
@@ -1096,12 +1088,12 @@ gg_COG.c
 
 (gg_heat.comp + gg_COG.c)
 
-ggsave("../figures/COG_categories_center_right_panels.tiff", width = 11, height = 7)
+ggsave("../figures/figure_5_COG_categories_center_right_panels.pdf", width = 11, height = 7)
 ```
 
-#### Bottom panel
+### Bottom panel
 
-Prepare data
+Prepare data for bottom pannel
 ```{r}
 comparisons <- unique(DAGCs.comp[,c(2:7)])
 rownames(comparisons) <- comparisons$comp
@@ -1113,7 +1105,7 @@ comparisons$host <- factor(x = comparisons$host, levels = c("ABBA","THOC","ACSA"
 comparisons$compare <- factor(x = comparisons$compare, levels = c("3","2","1"))
 ```
 
-Plot (Comparison types red-blue heatmap)
+Plot comparison types as red & blue heatmap
 ```{r}
 gg_comp.small <- ggplot(comparisons, aes(x = comp_id, y = host)) + 
   geom_tile(aes(fill=factor(compare))) + 
@@ -1127,13 +1119,7 @@ gg_comp.small <- ggplot(comparisons, aes(x = comp_id, y = host)) +
   labs(x = "Comparisons") +
     theme_bw() +
       theme(
-      text = element_text(family = "Arial"),
-#      legend.justification = c(0.5, 0),
-#      legend.title = element_text(size = 12, margin = margin(b = 1)),
-#      legend.text = element_text(size = 12),
-#      legend.key.size = unit(0.6, "cm"),
-#      legend.spacing.y = unit(0.5, "cm"),
-#      legend.position = "right", 
+      text = element_text(),
       panel.grid.major = element_blank(), 
       panel.background = element_blank(),
       #panel.grid.minor = element_line(color = "lightgray", size = 0.25), 
@@ -1146,17 +1132,14 @@ gg_comp.small <- ggplot(comparisons, aes(x = comp_id, y = host)) +
       ) + coord_fixed(ratio = 1)  
 gg_comp.small  
 
-ggsave("../figures/COG_categories_bottom_panel.tiff", width = 3.756, height = 1.31)
+ggsave("../figures/figure_5_COG_categories_bottom_panel.pdf", width = 3.756, height = 1.31)
 ```
 
+### Top panel
 
-#### Top panel
-
-Plot
 ```{r}
-
-# Number of COG annotations per comparison type (without "Function unknown" nor "No COG annotation"), as well as number 
-#of DAGCs per comparison types (notwithstanding functional annotations, so total number of 1159 DAGCs)
+# Teal color : Plot number of COG annotations per comparison type (without "Function unknown" nor "No COG annotation"
+# Black color : Plot total number of DAGCs per comparison types (including unnannotated DAGCs, for a total number of 1159 DAGCs)
 
 # Prepare data
 comp.dagcs.counts <- merge(comp.counts, DAGCs.c, by = "comp")
@@ -1168,10 +1151,10 @@ gg_comp.dagcs.counts <- ggplot(comp.dagcs.counts, aes(x = comp)) +
   geom_col(aes(y = DAGCs.c), fill = "black", width = 0.75) +
   geom_col(aes(y = total.COG.counts.per.comp), fill = "#008A70", width = 0.55) +
   theme(legend.position="none") +
-  labs(y = "Number of DAGCs (black)\n & COG annotations (teal)\n per comparison") +
+  labs(y = "Number of DAGCs (black)\n & COG annotations (teal)\n per comparison type") +
     theme_bw() +
       theme(
-      text = element_text(family = "Arial"),
+      text = element_text(),
       legend.justification = c(0.5, 0),
       legend.title = element_text(size = 11, margin = margin(b = 15)),
       legend.text = element_text(size = 11),
@@ -1194,20 +1177,21 @@ gg_comp.dagcs.counts <- ggplot(comp.dagcs.counts, aes(x = comp)) +
       )
 gg_comp.dagcs.counts
 
-ggsave("../figures/COG_categories_top_panel.tiff", width = 4.3125, height = 3)
+ggsave("../figures/figure_5_COG_categories_top_panel.pdf", width = 4.3125, height = 3)
 ```
 
 
+-###############################################################################
 
 # KEGG Brite
 
-Here, I will do the same kind of analyses than for COG categories, based on Brite hierarchy. I will need to separate hierarchy levels within a same Brite annotation.
+We will do the same kind of DAGCs analyses than for COG categories, but based on the Brite hierarchy. 
+We will need to separate hierarchy levels within a same Brite annotation.
 
-Import Supplementary File B on DAGCs fully annotated
+Import Supplementary File B for subsequent analyses and plotting.
 ```{r}
-Suppl_B_DAGCs <- read_delim("../data_imported/Suppl_file_B-DAGCs.csv") # This table have all 757 functionally annotated DAGCs (annotation from COG, KEGG and Pfam)
+Suppl_B_DAGCs <- read_delim("../supplementary_files/Suppl_file_B-DAGCs.csv")
 ```
-
 
 ## Prepare data
 ```{r}
