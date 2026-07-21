@@ -3,7 +3,7 @@
 R scripts for "Metapangenomics reveals host-driven adaptation of Methylobacterium to the phyllosphere"
 Scripts author: Jocelyn Lauzon, Département des sciences biologiques, Université du Québec à Montréal
 
-These Bash and R markdown scripts cover all meta/pangenomic and statistical analyses, as well as figures related to the article.
+These Bash and R markdown scripts cover all metapangenomic and statistical analyses, as well as figures related to the article.
 
 Scripts should be run in the order listed below.
 
@@ -15,15 +15,13 @@ This script contains all commands related to the analyses performed with anvio v
 ## R markdown scripts descriptions
 
 mapped_reads.Rmd
-Tests for:
-paired-end reads ~ host species (Figure S4)
-% mapped reads ~ host species (Figure S5)
+Relation between host species and paired-end reads and mapped reads.
 
 genomes_horizontal_cov_hist.Rmd
-Distribution histograms of horizontal coverage values (Figure S1A-B).
+Distribution histograms of horizontal coverage values.
 
-bracken_analyses.Rmd
-Analyses on total bacterial communities (genus level).
+bacteria_genus_analyses.Rmd
+Analyses on total bacterial communities at the genus level.
 
 methylo_species_analyses.Rmd
 Analyses of Methylobacterium species' community diversity, composition and phylogenetic relatedness.
@@ -41,11 +39,11 @@ pangenome_char.Rmd
 Descriptive statistics on the number of core, accessory and single genes, as well as hypothetical proteins.
 Analyses of genome openness.
 
-genes_diversity_v5-3.Rmd
+genes_diversity.Rmd
 Alpha and beta diversity analyses on gene clusters.
 
 DAGCs_analyses.Rmd
-Differentially abundant gene clusters analyses.
+Differentially abundant gene clusters analyses with DESeq2.
 Creation of DAGCs tables and figures.
 
 combine_var_prof.Rmd
