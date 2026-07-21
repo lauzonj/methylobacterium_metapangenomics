@@ -1,0 +1,2034 @@
+---
+title: "Combine variability profiles"
+output: html_document
+date: "2024-11-14"
+---
+
+-################################################################################
+
+# Libraries
+```{r}
+library(tidyverse)
+```
+
+-################################################################################
+
+# M_sp_018
+
+### Import data from anvio
+```{r}
+var.prof.ABBA <- read.table("../data/anvio_outputs/variability_profiles_per_meth_and_tree_sp/ABBA/var_cdn_sp_018_ABBA", header = T)
+var.prof.ACSA <- read.table("../data/anvio_outputs/variability_profiles_per_meth_and_tree_sp/ACSA/var_cdn_sp_018_ACSA", header = T)
+var.prof.COCO <- read.table("../data/anvio_outputs/variability_profiles_per_meth_and_tree_sp/COCO/var_cdn_sp_018_COCO", header = T)
+var.prof.FAGR <- read.table("../data/anvio_outputs/variability_profiles_per_meth_and_tree_sp/FAGR/var_cdn_sp_018_FAGR", header = T)
+var.prof.THOC <- read.table("../data/anvio_outputs/variability_profiles_per_meth_and_tree_sp/THOC/var_cdn_sp_018_THOC", header = T)
+var.prof.all <- rbind(var.prof.ABBA,var.prof.ACSA,var.prof.COCO,var.prof.FAGR,var.prof.THOC)
+var.prof.all$sample_id <- as.factor(var.prof.all$sample_id)
+var.prof.all <- var.prof.all %>% arrange(corresponding_gene_call, sample_id)
+var.prof.all$corresponding_gene_call <- as.factor(var.prof.all$corresponding_gene_call)
+str(var.prof.all)
+```
+### Export data to anvio to input to 'anvi-get-pn-ps-ratio' function
+RUN ONCE. DO NOT RE-RUN
+```{r}
+#write_delim(var.prof.all, file = "../data_imported/variability_profile_all_samples_M_sp_018.txt", delim = "\t")
+```
+
+## pN/pS
+
+### Import data (the output of anvio 'anvi-get-pn-ps-ratio' function)
+
+```{r}
+pNpS_sp_018 <- read.table("../data_imported/pNpS_sp_018-03/pNpS.txt", header = T, sep = "\t", colClasses = c("NULL", "factor", "factor", "numeric"))
+pN_sp_018 <- read.table("../data_imported/pNpS_sp_018-03/pN.txt", header = T, sep = "\t", colClasses = c("NULL", "factor", "factor", "numeric"))
+pS_sp_018 <- read.table("../data_imported/pNpS_sp_018-03/pS.txt", header = T, sep = "\t", colClasses = c("NULL", "factor", "factor", "numeric"))
+pNpS_sp_018$pN <- pN_sp_018$pN_gene_consensus
+pNpS_sp_018$pS <- pS_sp_018$pS_gene_consensus
+length(which(pNpS_sp_018$pNpS_gene_consensus == 0)) #180
+
+length(unique(pNpS_sp_018$corresponding_gene_call[pNpS_sp_018$pNpS_gene_consensus == 0])) # 161 genes with pN/pS = 0
+length(unique(pNpS_sp_018$corresponding_gene_call)) # 5357 genes in total
+length(unique(pNpS_sp_018$corresponding_gene_call[pNpS_sp_018$pNpS_gene_consensus == 0]))/length(unique(pNpS_sp_018$corresponding_gene_call)) # 3% of genes have pN/pS ratio of 0
+str(pNpS_sp_018)
+```
+
+### Edit dataframe
+```{r}
+# Remove rows where there was missing values to calculate pN/pS ratio (NA, Inf)
+pNpS_sp_018 <- pNpS_sp_018[!is.na(pNpS_sp_018$pNpS_gene_consensus) & pNpS_sp_018$pNpS_gene_consensus != "Inf" & pNpS_sp_018$pNpS_gene_consensus != 0,]
+# Get rid of NAs (not enough data to compute pS/pN) as well as extreme values (0 and Inf), since these values mostly arise because of higher importance of stochasticity when number of variants is low.
+
+length(unique(pNpS_sp_018$corresponding_gene_call)) # 4802 genes left after removal
+str(pNpS_sp_018)
+
+# Remove samples in which the species was not present
+samples_presence <- c("ABBA_M12","ABBA_M13","ABBA_M14","THOC_M06","THOC_M07","THOC_M08","THOC_M09","THOC_M10","ACSA_M21","ACSA_M22","ACSA_M24","ACSA_M25","FAGR_M16","FAGR_M17","FAGR_M18","FAGR_M19","FAGR_M20","COCO_M01","COCO_M02","COCO_M03","COCO_M04","COCO_M05")
+pNpS_sp_018 <- pNpS_sp_018[pNpS_sp_018$sample_id %in% samples_presence,]
+pNpS_sp_018 <- droplevels(pNpS_sp_018)
+
+# Add host species factor
+pNpS_sp_018$host_species <- as.factor(substr(pNpS_sp_018$sample_id, 1, 4))
+pNpS_sp_018$host_species <- factor(pNpS_sp_018$host_species, levels = c("ABBA","THOC","ACSA","FAGR","COCO"))
+str(pNpS_sp_018)
+
+# Add clade factor
+pNpS_sp_018$plant_clade <- factor(
+  ifelse(grepl("^(ACSA|FAGR|COCO)", pNpS_sp_018$sample_id),
+         "angiosperm",
+         ifelse(grepl("^(ABBA|THOC)", pNpS_sp_018$sample_id),
+                "gymnosperm",
+                NA))
+)
+str(pNpS_sp_018)
+
+# Add plant type factor
+pNpS_sp_018$plant_type <- factor(
+  ifelse(grepl("^(ACSA|FAGR|ABBA|THOC)", pNpS_sp_018$sample_id),
+         "tree",
+         ifelse(grepl("^(COCO)", pNpS_sp_018$sample_id),
+                "shrub",
+                NA))
+)
+str(pNpS_sp_018)
+```
+
+### Distribution of pN/pS measurements across all genes and all samples
+```{r}
+hist(pNpS_sp_018$pNpS_gene_consensus, breaks = 1000000)
+hist(log(pNpS_sp_018$pNpS_gene_consensus), breaks = 10000)
+```
+
+### Violon plot
+```{r}
+gg_pNpS_018 <- ggplot(pNpS_sp_018, aes(x = host_species, y = pNpS_gene_consensus)) +
+  geom_jitter(width = 0.4, size = 0.5, alpha = 0.1, color = "black") +
+  geom_violin(aes(fill = host_species), show.legend = FALSE, alpha = 0.75) +  
+  scale_fill_manual(values=c("#63AFF9","#1EA670","#CA0E78","#F39635","#6104BB"))+
+  stat_summary(fun = mean, geom = "crossbar", width = 0.8, color = "black", size = 0.4) +
+  scale_y_log10(
+     breaks = c(0.0001, 0.001, 0.01, 0.1, 1, 10),
+     labels = c("0.0001", "0.001", "0.01", "0.1", "1", "10")
+  ) +
+  xlab("Host Species") +
+  ylab(expression(bolditalic("M. sp. 018 - pN/pS")^bold("(gene)"))) +
+  scale_x_discrete(labels = c("ABBA" = "A. balsamea", "THOC" = "T. occidentalis","ACSA" = "A. saccharum", "FAGR" = "F. grandifolia", "COCO" = "C. cornuta")) +
+theme_bw()+
+theme(text = element_text(family = "Arial"),
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 11, angle = 0, hjust = 0.5, vjust = 0, face = "italic"),
+      axis.text.y = element_text(color = "black", size = 11, angle = 0, hjust = 0, vjust = 0.5),  
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
+      )
+gg_pNpS_018
+ggsave("../figures/pNpS_M_sp_018.tiff", width = 6, height = 4)
+```
+
+### models
+```{r}
+lm.018 <- lm(log(pNpS_gene_consensus) ~ host_species, data = pNpS_sp_018)
+summary(lm.018)
+
+lm.018.clade <- lm(log(pNpS_gene_consensus) ~ plant_clade, data = pNpS_sp_018[pNpS_sp_018$host_species != "COCO",])
+summary(lm.018.clade)
+
+lm.018.type <- lm(log(pNpS_gene_consensus) ~ plant_type, data = pNpS_sp_018)
+summary(lm.018.type)
+```
+
+### Correlation between pN/pS and coverage?
+```{r}
+# pN/pS correlate with genome coverage?
+genomes.cov.comm <- readRDS("../rds/genomes.cov.comm.rds")
+M.sp.018 <- data.frame(
+  sample_id = factor(rownames(genomes.cov.comm)),
+  cov.018 = genomes.cov.comm[,"M_sp_018"]
+)
+M.sp.018 <- M.sp.018[M.sp.018$cov.018 != 0,]
+pNpS_sp_018.genome.cov <- pNpS_sp_018 %>%
+  left_join(
+    M.sp.018 %>% select(sample_id, cov.018),
+    by = "sample_id"
+  )
+
+lm.018.cov <- lm(log(pNpS_gene_consensus) ~ cov.018, data = pNpS_sp_018.genome.cov)
+summary(lm.018.cov)
+
+plot(log(pNpS_gene_consensus) ~ cov.018, data = pNpS_sp_018.genome.cov)
+
+# alternative with pNpS mean
+
+M.sp.018$mean_log_pNpS <- tapply(
+  log(pNpS_sp_018$pNpS_gene_consensus),
+  pNpS_sp_018$sample_id,
+  mean)
+
+lm.018.cov.2 <- lm(mean_log_pNpS ~ cov.018, data = M.sp.018)
+summary(lm.018.cov.2)
+
+plot(mean_log_pNpS ~ cov.018, data = M.sp.018)
+
+
+# pN/pS correlate with gene coverage?
+data.fct.cov <- readRDS("../rds/data.fct.cov.rds")
+data.fct.cov.M.sp.018 <- data.fct.cov[data.fct.cov$genome_name == "M_sp_018",c(2,3,42:66)]
+data.fct.cov.M.sp.018 <- droplevels(data.fct.cov.M.sp.018)
+rownames(data.fct.cov.M.sp.018) <- data.fct.cov.M.sp.018$gene_callers_id
+data.fct.cov.M.sp.018 <- data.fct.cov.M.sp.018[,-c(1,2)]
+M.sp.018.gene.cov <- matrix2sample(data.fct.cov.M.sp.018)
+colnames(M.sp.018.gene.cov) <- c("corresponding_gene_call", "gene_cov", "sample_id")
+
+pNpS_sp_018.gene.cov <- pNpS_sp_018 %>%
+  left_join(
+    M.sp.018.gene.cov %>% select(corresponding_gene_call, sample_id,  gene_cov),
+    by = c("corresponding_gene_call", "sample_id")
+  )
+
+lm.018.gene.cov <- lm(log(pNpS_gene_consensus) ~ gene_cov, data = pNpS_sp_018.gene.cov)
+summary(lm.018.gene.cov)
+
+plot(log(pNpS_gene_consensus) ~ gene_cov, data = pNpS_sp_018.gene.cov)
+
+
+lm.018.gene.cov.2 <- lm(log(pNpS_gene_consensus) ~ gene_cov, data = pNpS_sp_018.gene.cov[pNpS_sp_018.gene.cov$gene_cov > 30,])
+summary(lm.018.gene.cov.2)
+
+plot(log(pNpS_gene_consensus) ~ gene_cov, data = pNpS_sp_018.gene.cov[pNpS_sp_018.gene.cov$gene_cov > 30,])
+
+
+## CONCLUSION
+# so there is a correlation between the pN/pS and genome coverage, as well as gene coverage. However, the effect size is so small (especially) with gene coverage, that we will not take that into account in the analyses.
+```
+
+
+### Add core/accessory
+```{r}
+colnames(pNpS_sp_018)[1] <- "gene_callers_id"
+data.pangenome <- readRDS("../rds/data.pangenome.rds")
+pNpS_sp_018 <- merge(pNpS_sp_018, data.pangenome[,c(3:4)], by = "gene_callers_id")
+pNpS_sp_018$type <- factor(x = pNpS_sp_018$type, levels = c("core","accessory"))
+pNpS_sp_018 <- pNpS_sp_018[order(pNpS_sp_018$type, -pNpS_sp_018$pNpS_gene_consensus), ]
+pNpS_sp_018$gene_callers_id <- factor(x = pNpS_sp_018$gene_callers_id, levels = unique(pNpS_sp_018$gene_callers_id))
+pNpS_sp_018$sample_id <- factor(x = pNpS_sp_018$sample, levels =c ("ABBA_M12","ABBA_M13","ABBA_M14","THOC_M06","THOC_M07","THOC_M08","THOC_M09","THOC_M10","ACSA_M21","ACSA_M22","ACSA_M24","ACSA_M25","FAGR_M16","FAGR_M17","FAGR_M18","FAGR_M19","FAGR_M20","COCO_M01","COCO_M02","COCO_M03","COCO_M04","COCO_M05"))
+str(pNpS_sp_018)
+```
+
+### Save pN/pS table
+```{r}
+#saveRDS(pNpS_sp_018, "../rds/pNpS_sp_018.rds")
+```
+
+#### Plot
+```{r}
+ggplot(pNpS_sp_018, aes(x = gene_callers_id, y = sample_id)) + 
+  geom_tile(aes(fill=pNpS_gene_consensus)) + 
+  scale_fill_gradientn(
+    name = expression(bolditalic("pN/pS")^bold("(gene)")),
+    colors = c("firebrick","mistyrose1","white","white","palegreen1","forestgreen"),
+    values = scales::rescale(c(0,0.99,1,1.01,max(pNpS_sp_018$pNpS_gene_consensus))),
+    breaks = c(0,0.99,1,1.01,max(pNpS_sp_018$pNpS_gene_consensus))) +
+  theme(legend.position="none") +
+  scale_y_discrete(limits=rev) +
+  labs(x = "Methylobacterium sp. 018 genes", y = "Samples") +
+    theme_bw() +
+      theme(
+      text = element_text(family = "Arial"),
+      #legend.justification = c(0.25, 0),
+      #legend.title = element_text(size = 6, margin = margin(b = 7.5)),
+      #legend.text = element_text(size = 6),
+      #legend.key.size = unit(0.45, "cm"),
+      #legend.spacing.y = unit(0.25, "cm"),
+      legend.position = "none", 
+      panel.grid.major = element_blank(), 
+      panel.background = element_rect(fill = "black"),
+      #panel.grid.minor = element_line(color = "lightgray", size = 0.25), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_blank(),
+      axis.text.y = element_text(color = "black", size = 11),
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
+      )
+ggsave("../figures/pNpS_ratio_gene-sample_M_sp_018.tiff", width = 8, height = 4)
+
+dummy.legend.df <- data.frame(
+  x = as.factor(c(1,2,3,4,5)),
+  y = as.factor(c(1,2,3,4,5)),
+  fill = as.numeric(c(0.0,0.99,1,1.01,2))
+)
+ggplot(dummy.legend.df, aes(x = x, y = y)) + 
+  geom_tile(aes(fill=fill)) + 
+  scale_fill_gradientn(
+    name = expression(bolditalic("pN/pS")^bold("(gene)")),
+    colors = c("firebrick","mistyrose1","white","white","palegreen1","forestgreen"),
+    values = scales::rescale(c(0.0,0.99,1,1.01,2)),
+    breaks = c(0.0,0.99,1,1.01,2),
+    labels = c("0","", "1","","32")) +
+  theme(legend.position="none") +
+  scale_y_discrete(limits=rev) +
+  labs(x = "", y ="") +
+    theme_bw() +
+      theme(
+      text = element_text(family = "Arial"),
+      #legend.justification = c(0, 0),
+      legend.title = element_text(vjust = 0.75, size = 12),
+      legend.text = element_text(size = 10),
+      legend.key.size = unit(0.6, "cm"),
+      legend.spacing.y = unit(1, "cm"),
+      legend.position = "top",
+      legend.direction = "horizontal",
+      legend.key.width = unit(2, "cm"), 
+      )
+ggsave("../figures/pNpS_ratio_gene-sample_M_sp_018-LEGEND.tiff", width = 8, height = 4)
+```
+
+### Genes under positive selection
+
+#### Data prep
+```{r}
+# Number of unique gene calls for which at least in one sample the pN/pS ratio > 1 (across all samples and host species)
+length(unique(pNpS_sp_018[pNpS_sp_018$pNpS_gene_consensus > 1,]$gene_callers_id))
+
+# Make a vector of all genes that have at least one positive pN/pS value in a sample (any host)
+pos.sel.genes <- unique(pNpS_sp_018[pNpS_sp_018$pNpS_gene_consensus > 1,]$gene_callers_id)
+pos.sel.genes <- droplevels(pos.sel.genes)
+```
+
+```{r}
+# Create pNpS dataframe with only genes that have at least one positive value
+pNpS_sp_018.pos <- pNpS_sp_018[pNpS_sp_018$gene_callers_id %in% pos.sel.genes,]
+pNpS_sp_018.pos <- droplevels(pNpS_sp_018.pos)
+
+# Create a table to know in how many samples of each host_species there is variability info on a given gene
+freq.table <- as.data.frame(table(pNpS_sp_018.pos$gene_callers_id, pNpS_sp_018.pos$host_species))
+colnames(freq.table) <- c("gene_callers_id","host_species","num_samples")
+
+# Keep only gene-host info for hosts that have at least 3 samples for the given gene
+freq.table <- freq.table[freq.table$num_samples >= 3,]
+freq.table <- droplevels(freq.table)
+
+# Separate freq.table per host species
+freq.table.ABBA <- freq.table[freq.table$host_species == "ABBA",]
+freq.table.ABBA <- droplevels(freq.table.ABBA)
+freq.table.ACSA <- freq.table[freq.table$host_species == "ACSA",]
+freq.table.ACSA <- droplevels(freq.table.ACSA)
+freq.table.COCO <- freq.table[freq.table$host_species == "COCO",]
+freq.table.COCO <- droplevels(freq.table.COCO)
+freq.table.FAGR <- freq.table[freq.table$host_species == "FAGR",]
+freq.table.FAGR <- droplevels(freq.table.FAGR)
+freq.table.THOC <- freq.table[freq.table$host_species == "THOC",]
+freq.table.THOC <- droplevels(freq.table.THOC)
+```
+
+
+#### Confidence interval tests
+
+Multiple tests, per species, per genes, in loop, for every gene that is present in at least one host species at least 3 samples.
+```{r}
+sig.pos.sel.genes_sp_018 <- data.frame(
+  gene_callers_id = character(0),
+  mean = numeric(0),
+  conf_int_lower = numeric(0),
+  conf_int_upper = numeric(0),
+  t_statistic = numeric(0),
+  p_value = numeric(0),
+  adj.p = numeric(0),
+  host_species = character(0),
+  stringsAsFactors = FALSE
+)
+
+host_species <- c("ABBA","THOC","ACSA","FAGR","COCO")
+
+for (host in host_species) {
+
+genes.to.t.test <- unique(freq.table[freq.table$host_species == host,]$gene_callers_id)
+genes.to.t.test <- droplevels(genes.to.t.test)  
+
+means.of.genes <- data.frame(
+  gene_callers_id = character(0),
+  mean_pNpS = numeric(0),
+  sd_pNpS = numeric(0)
+)
+
+for (gene in genes.to.t.test) {
+  mean <- mean(log(pNpS_sp_018[pNpS_sp_018$gene_callers_id == gene & pNpS_sp_018$host_species == host,]$pNpS_gene_consensus))
+  sd <- sd(pNpS_sp_018[pNpS_sp_018$gene_callers_id == gene & pNpS_sp_018$host_species == host,]$pNpS_gene_consensus)
+  means.of.genes <- rbind(means.of.genes, data.frame(
+    gene_callers_id = gene,
+    mean_pNpS = mean,
+    sd_pNpS = sd))
+}
+
+means.of.genes$mean_minus_sd <- means.of.genes$mean - means.of.genes$sd
+
+#genes.to.t.test <- as.factor(unique(means.of.genes[means.of.genes$z >= 1.96,]$gene_callers_id))
+#genes.to.t.test <- as.factor(unique(means.of.genes[means.of.genes$mean_pNpS > 1 & means.of.genes$mean_minus_sd > 1,]$gene_callers_id))
+#genes.to.t.test <- as.factor(unique(means.of.genes[means.of.genes$mean_minus_sd > 1,]$gene_callers_id))
+genes.to.t.test <- as.factor(unique(means.of.genes[means.of.genes$mean_pNpS > 0,]$gene_callers_id))
+genes.to.t.test <- droplevels(genes.to.t.test)
+
+t_test_results <- data.frame(
+  gene_callers_id = character(0),
+  mean_pNpS = numeric(0),
+  log_mean_pNpS = numeric(0),
+  conf_int_lower = numeric(0),
+  conf_int_upper = numeric(0),
+  t_statistic = numeric(0),
+  p_value = numeric(0),
+  stringsAsFactors = FALSE
+)
+
+for (gene in genes.to.t.test) {
+  # Perform the t-test for the current level
+  t_test_result <- t.test(log(pNpS_sp_018[pNpS_sp_018$gene_callers_id == gene 
+                                      & pNpS_sp_018$host_species == host,]$pNpS_gene_consensus), mu = 0, alternative = "greater")
+  # Store the result in the data frame
+  t_test_results <- rbind(t_test_results, data.frame(
+    gene_callers_id = gene,
+    mean_pNpS = exp(t_test_result[["estimate"]][["mean of x"]]),
+    log_mean_pNpS = t_test_result[["estimate"]][["mean of x"]],
+    conf_int_lower = t_test_result$conf.int[1],
+    conf_int_upper = t_test_result$conf.int[2],
+    t_statistic = t_test_result$statistic,
+    p_value = t_test_result$p.value
+  ))
+}
+
+
+t_test_results$adj.p <- p.adjust(t_test_results$p_value, method = "BH") # Benjamini-Hochberg adjustment
+#t_test_results.sig <- t_test_results[t_test_results$adj.p <= 0.05,]
+#t_test_results.sig <- t_test_results[t_test_results$p_value <= 0.05,]
+t_test_results.sig <- t_test_results[t_test_results$conf_int_lower > 0,]
+#t_test_results.sig <- t_test_results
+
+
+# Add host species column
+t_test_results.sig$host_species <- rep(host, nrow(t_test_results.sig))
+
+# Add to final dataframe
+sig.pos.sel.genes_sp_018 <- rbind(sig.pos.sel.genes_sp_018,t_test_results.sig)
+
+}
+
+#colnames(sig.pos.sel.genes_sp_018)[1] <- "gene_callers_id"
+rownames(sig.pos.sel.genes_sp_018) <- NULL
+```
+
+#### Functions
+```{r}
+data.fct.cov <- readRDS("../rds/data.fct.cov.rds")
+sig.pos.sel.genes_sp_018.fct <- merge(sig.pos.sel.genes_sp_018, data.fct.cov, by = "gene_callers_id")
+length(unique(sig.pos.sel.genes_sp_018.fct$gene_callers_id))
+# 41 unique positively selected genes. 42 "gene-host" combinations, including 2 FAGR, and 40 COCO
+# All accessory genes
+# 13 unique ANNOTATED genes
+```
+
+#### DAGCs?
+```{r}
+DAGs.functions.all.info <- read_delim("../DAGCs_fully_annotated.csv", delim = ",")
+pos.sel.DAGCs_sp_018 <- DAGs.functions.all.info[DAGs.functions.all.info$gene_cluster_id %in% sig.pos.sel.genes_sp_018.fct$gene_cluster_id,]
+# includes 5 DAGCs
+
+sig.pos.sel.genes_sp_018.fct$DAGCs <- ifelse(
+  sig.pos.sel.genes_sp_018.fct$gene_cluster_id %in% pos.sel.DAGCs_sp_018$gene_cluster_id,
+  paste(pos.sel.DAGCs_sp_018$focal, pos.sel.DAGCs_sp_018$reference, sep = "_vs_"),
+  "non-DAGC"
+)
+
+sig.pos.sel.genes_sp_018.fct <- sig.pos.sel.genes_sp_018.fct[,c(1:13,75,14:74)]
+```
+
+### Save data
+```{r}
+#saveRDS(sig.pos.sel.genes_sp_018.fct, "../rds/sig.pos.sel.genes_sp_018.fct_251216.rds")
+sig.pos.sel.genes_sp_018.fct <- readRDS("../rds/sig.pos.sel.genes_sp_018.fct_251216.rds")
+```
+
+
+################################################################################
+
+
+# M_sp_021
+
+## SCV - DO NOT RE-RUN
+
+### Import data from anvio, the output of 'anvi-gen-variability-profile' function
+RUN ONCE. DO NOT RE-RUN
+```{r}
+var.prof.ABBA <- read.table("../data_imported/ABBA/var_cdn_sp_021_ABBA", header = T)
+var.prof.ACSA <- read.table("../data_imported/ACSA/var_cdn_sp_021_ACSA", header = T)
+var.prof.COCO <- read.table("../data_imported/COCO/var_cdn_sp_021_COCO", header = T)
+var.prof.FAGR <- read.table("../data_imported/FAGR/var_cdn_sp_021_FAGR", header = T)
+var.prof.THOC <- read.table("../data_imported/THOC/var_cdn_sp_021_THOC", header = T)
+var.prof.all <- rbind(var.prof.ABBA,var.prof.ACSA,var.prof.COCO,var.prof.FAGR,var.prof.THOC)
+var.prof.all$sample_id <- as.factor(var.prof.all$sample_id)
+var.prof.all <- var.prof.all %>% arrange(corresponding_gene_call, sample_id)
+var.prof.all$corresponding_gene_call <- as.factor(var.prof.all$corresponding_gene_call)
+str(var.prof.all)
+```
+### Export data to anvio to input to 'anvi-get-pn-ps-ratio' function
+RUN ONCE. DO NOT RE-RUN
+```{r}
+#write_delim(var.prof.all, file = "../data_imported/variability_profile_all_samples_M_sp_021.txt", delim = "\t")
+```
+
+## pN/pS
+
+### Import data (the output of anvio 'anvi-get-pn-ps-ratio' function)
+
+```{r}
+pNpS_sp_021 <- read.table("../data_imported/pNpS_sp_021-03/pNpS.txt", header = T, sep = "\t", colClasses = c("NULL", "factor", "factor", "numeric"))
+pN_sp_021 <- read.table("../data_imported/pNpS_sp_021-03/pN.txt", header = T, sep = "\t", colClasses = c("NULL", "factor", "factor", "numeric"))
+pS_sp_021 <- read.table("../data_imported/pNpS_sp_021-03/pS.txt", header = T, sep = "\t", colClasses = c("NULL", "factor", "factor", "numeric"))
+pNpS_sp_021$pN <- pN_sp_021$pN_gene_consensus
+pNpS_sp_021$pS <- pS_sp_021$pS_gene_consensus
+length(which(pNpS_sp_021$pNpS_gene_consensus == 0)) #139
+
+length(unique(pNpS_sp_021$corresponding_gene_call[pNpS_sp_021$pNpS_gene_consensus == 0])) # 124 genes with pN/pS = 0
+length(unique(pNpS_sp_021$corresponding_gene_call)) # 6427 genes in total
+length(unique(pNpS_sp_021$corresponding_gene_call[pNpS_sp_021$pNpS_gene_consensus == 0]))/length(unique(pNpS_sp_021$corresponding_gene_call)) # 1.9% of genes have pN/pS ratio of 0
+str(pNpS_sp_021)
+```
+
+### Edit dataframe
+```{r}
+# Remove rows where there was missing values to calculate pN/pS ratio (NA, Inf)
+pNpS_sp_021 <- pNpS_sp_021[!is.na(pNpS_sp_021$pNpS_gene_consensus) & pNpS_sp_021$pNpS_gene_consensus != "Inf" & pNpS_sp_021$pNpS_gene_consensus != 0,]
+# Get rid of NAs (not enough data to compute pS/pN) as well as extreme values (0 and Inf), since these values mostly arise because of higher importance of stochasticity when number of variants is low.
+
+length(unique(pNpS_sp_021$corresponding_gene_call)) # 3829 genes left after removal
+str(pNpS_sp_021)
+
+# Remove samples in which the species was not present
+samples_presence <- c("ABBA_M12","ABBA_M13","ABBA_M14","THOC_M06","THOC_M07","THOC_M08","THOC_M09","THOC_M10","ACSA_M21","ACSA_M24","ACSA_M25","FAGR_M16","FAGR_M17","FAGR_M19","FAGR_M20","COCO_M01","COCO_M02","COCO_M03","COCO_M04","COCO_M05")
+pNpS_sp_021 <- pNpS_sp_021[pNpS_sp_021$sample_id %in% samples_presence,]
+pNpS_sp_021 <- droplevels(pNpS_sp_021)
+
+# Add host species factor
+pNpS_sp_021$host_species <- as.factor(substr(pNpS_sp_021$sample_id, 1, 4))
+pNpS_sp_021$host_species <- factor(pNpS_sp_021$host_species, levels = c("ABBA","THOC","ACSA","FAGR","COCO"))
+str(pNpS_sp_021)
+
+# Add clade factor
+pNpS_sp_021$plant_clade <- factor(
+  ifelse(grepl("^(ACSA|FAGR|COCO)", pNpS_sp_021$sample_id),
+         "angiosperm",
+         ifelse(grepl("^(ABBA|THOC)", pNpS_sp_021$sample_id),
+                "gymnosperm",
+                NA))
+)
+str(pNpS_sp_021)
+
+# Add plant type factor
+pNpS_sp_021$plant_type <- factor(
+  ifelse(grepl("^(ACSA|FAGR|ABBA|THOC)", pNpS_sp_021$sample_id),
+         "tree",
+         ifelse(grepl("^(COCO)", pNpS_sp_021$sample_id),
+                "shrub",
+                NA))
+)
+str(pNpS_sp_021)
+```
+
+### Distribution of pN/pS measurements across all genes and all samples
+```{r}
+hist(pNpS_sp_021$pNpS_gene_consensus, breaks = 1000000)
+hist(log(pNpS_sp_021$pNpS_gene_consensus), breaks = 10000)
+```
+
+### Violon plot
+```{r}
+gg_pNpS_021 <- ggplot(pNpS_sp_021, aes(x = host_species, y = pNpS_gene_consensus)) +
+  geom_jitter(width = 0.4, size = 0.5, alpha = 0.1, color = "black") +
+  geom_violin(aes(fill = host_species), show.legend = FALSE, alpha = 0.75) +  
+  scale_fill_manual(values=c("#63AFF9","#1EA670","#CA0E78","#F39635","#6104BB"))+
+  stat_summary(fun = mean, geom = "crossbar", width = 0.8, color = "black", size = 0.4) +
+  scale_y_log10(
+     breaks = c(0.0001, 0.001, 0.01, 0.1, 1, 10),
+     labels = c("0.0001", "0.001", "0.01", "0.1", "1", "10")
+  ) +
+  xlab("Host Species") +
+  ylab(expression(bolditalic("M. sp. 021 - pN/pS")^bold("(gene)"))) +
+  scale_x_discrete(labels = c("ABBA" = "A. balsamea", "THOC" = "T. occidentalis","ACSA" = "A. saccharum", "FAGR" = "F. grandifolia", "COCO" = "C. cornuta")) +
+theme_bw()+
+theme(text = element_text(family = "Arial"),
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 11, angle = 0, hjust = 0.5, vjust = 0, face = "italic"),
+      axis.text.y = element_text(color = "black", size = 11, angle = 0, hjust = 0, vjust = 0.5),  
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
+      )
+gg_pNpS_021
+ggsave("../figures/pNpS_M_sp_021.tiff", width = 6, height = 4)
+```
+
+### models
+```{r}
+lm.021 <- lm(log(pNpS_gene_consensus) ~ host_species, data = pNpS_sp_021)
+summary(lm.021)
+
+lm.021.clade <- lm(log(pNpS_gene_consensus) ~ plant_clade, data = pNpS_sp_021[pNpS_sp_021$host_species != "COCO",])
+summary(lm.021.clade)
+
+lm.021.type <- lm(log(pNpS_gene_consensus) ~ plant_type, data = pNpS_sp_021)
+summary(lm.021.type)
+```
+
+### Add core/accessory
+```{r}
+colnames(pNpS_sp_021)[1] <- "gene_callers_id"
+data.pangenome <- readRDS("../rds/data.pangenome.rds")
+pNpS_sp_021 <- merge(pNpS_sp_021, data.pangenome[,c(3:4)], by = "gene_callers_id")
+pNpS_sp_021$type <- factor(x = pNpS_sp_021$type, levels = c("core","accessory"))
+pNpS_sp_021 <- pNpS_sp_021[order(pNpS_sp_021$type, -pNpS_sp_021$pNpS_gene_consensus), ]
+pNpS_sp_021$gene_callers_id <- factor(x = pNpS_sp_021$gene_callers_id, levels = unique(pNpS_sp_021$gene_callers_id))
+pNpS_sp_021$sample_id <- factor(x = pNpS_sp_021$sample, levels = c("ABBA_M12","ABBA_M13","ABBA_M14","THOC_M06","THOC_M07","THOC_M08","THOC_M09","THOC_M10","ACSA_M21","ACSA_M24","ACSA_M25","FAGR_M16","FAGR_M17","FAGR_M19","FAGR_M20","COCO_M01","COCO_M02","COCO_M03","COCO_M04","COCO_M05"))
+str(pNpS_sp_021)
+```
+
+### Save pN/pS table
+```{r}
+#saveRDS(pNpS_sp_021, "../rds/pNpS_sp_021.rds")
+```
+
+#### Plot
+```{r}
+ggplot(pNpS_sp_021, aes(x = gene_callers_id, y = sample_id)) + 
+  geom_tile(aes(fill=pNpS_gene_consensus)) + 
+  scale_fill_gradientn(
+    name = expression(bolditalic("pN/pS")^bold("(gene)")),
+    colors = c("firebrick","mistyrose1","white","white","palegreen1","forestgreen"),
+    values = scales::rescale(c(0,0.99,1,1.01,max(pNpS_sp_021$pNpS_gene_consensus))),
+    breaks = c(0,0.99,1,1.01,max(pNpS_sp_021$pNpS_gene_consensus))) +
+  theme(legend.position="none") +
+  scale_y_discrete(limits=rev) +
+  labs(x = "Methylobacterium sp. 021 genes", y = "Samples") +
+    theme_bw() +
+      theme(
+      text = element_text(family = "Arial"),
+      #legend.justification = c(0.25, 0),
+      #legend.title = element_text(size = 6, margin = margin(b = 7.5)),
+      #legend.text = element_text(size = 6),
+      #legend.key.size = unit(0.45, "cm"),
+      #legend.spacing.y = unit(0.25, "cm"),
+      legend.position = "none", 
+      panel.grid.major = element_blank(), 
+      panel.background = element_rect(fill = "black"),
+      #panel.grid.minor = element_line(color = "lightgray", size = 0.25), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_blank(),
+      axis.text.y = element_text(color = "black", size = 11),
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
+      )
+ggsave("../figures/pNpS_ratio_gene-sample_M_sp_021.tiff", width = 8, height = 4)
+
+dummy.legend.df <- data.frame(
+  x = as.factor(c(1,2,3,4,5)),
+  y = as.factor(c(1,2,3,4,5)),
+  fill = as.numeric(c(0.0,0.99,1,1.01,2))
+)
+ggplot(dummy.legend.df, aes(x = x, y = y)) + 
+  geom_tile(aes(fill=fill)) + 
+  scale_fill_gradientn(
+    name = expression(bolditalic("pN/pS")^bold("(gene)")),
+    colors = c("firebrick","mistyrose1","white","white","palegreen1","forestgreen"),
+    values = scales::rescale(c(0.0,0.99,1,1.01,2)),
+    breaks = c(0.0,0.99,1,1.01,2),
+    labels = c("0","", "1","","27")) +
+  theme(legend.position="none") +
+  scale_y_discrete(limits=rev) +
+  labs(x = "", y ="") +
+    theme_bw() +
+      theme(
+      text = element_text(family = "Arial"),
+      #legend.justification = c(0, 0),
+      legend.title = element_text(vjust = 0.75, size = 12),
+      legend.text = element_text(size = 10),
+      legend.key.size = unit(0.6, "cm"),
+      legend.spacing.y = unit(1, "cm"),
+      legend.position = "top",
+      legend.direction = "horizontal",
+      legend.key.width = unit(2, "cm"), 
+      )
+ggsave("../figures/pNpS_ratio_gene-sample_M_sp_021-LEGEND.tiff", width = 8, height = 4)
+```
+
+### Genes under positive selection
+
+#### Data prep
+```{r}
+# Number of unique gene calls for which at least in one sample the pN/pS ratio > 1 (across all samples and host species)
+length(unique(pNpS_sp_021[pNpS_sp_021$pNpS_gene_consensus > 1,]$gene_callers_id))
+
+# Make a vector of all genes that have at least one positive pN/pS value in a sample (any host)
+pos.sel.genes <- unique(pNpS_sp_021[pNpS_sp_021$pNpS_gene_consensus > 1,]$gene_callers_id)
+pos.sel.genes <- droplevels(pos.sel.genes)
+```
+
+```{r}
+# Create pNpS dataframe with only genes that have at least one positive value
+pNpS_sp_021.pos <- pNpS_sp_021[pNpS_sp_021$gene_callers_id %in% pos.sel.genes,]
+pNpS_sp_021.pos <- droplevels(pNpS_sp_021.pos)
+
+# Create a table to know in how many samples of each host_species there is variability info on a given gene
+freq.table <- as.data.frame(table(pNpS_sp_021.pos$gene_callers_id, pNpS_sp_021.pos$host_species))
+colnames(freq.table) <- c("gene_callers_id","host_species","num_samples")
+
+# Keep only gene-host info for hosts that have at least 3 samples for the given gene
+freq.table <- freq.table[freq.table$num_samples >= 3,]
+freq.table <- droplevels(freq.table)
+
+# Separate freq.table per host species
+freq.table.ABBA <- freq.table[freq.table$host_species == "ABBA",]
+freq.table.ABBA <- droplevels(freq.table.ABBA)
+freq.table.ACSA <- freq.table[freq.table$host_species == "ACSA",]
+freq.table.ACSA <- droplevels(freq.table.ACSA)
+freq.table.COCO <- freq.table[freq.table$host_species == "COCO",]
+freq.table.COCO <- droplevels(freq.table.COCO)
+freq.table.FAGR <- freq.table[freq.table$host_species == "FAGR",]
+freq.table.FAGR <- droplevels(freq.table.FAGR)
+freq.table.THOC <- freq.table[freq.table$host_species == "THOC",]
+freq.table.THOC <- droplevels(freq.table.THOC)
+```
+
+
+#### Confidence interval tests
+
+Multiple tests, per species, per genes, in loop, for every gene that is present in at least one host species at least 3 samples.
+```{r}
+sig.pos.sel.genes_sp_021 <- data.frame(
+  gene_callers_id = character(0),
+  mean = numeric(0),
+  conf_int_lower = numeric(0),
+  conf_int_upper = numeric(0),
+  t_statistic = numeric(0),
+  p_value = numeric(0),
+  adj.p = numeric(0),
+  host_species = character(0),
+  stringsAsFactors = FALSE
+)
+
+host_species <- c("ABBA","THOC","ACSA","FAGR","COCO")
+
+for (host in host_species) {
+
+genes.to.t.test <- unique(freq.table[freq.table$host_species == host,]$gene_callers_id)
+genes.to.t.test <- droplevels(genes.to.t.test)  
+
+means.of.genes <- data.frame(
+  gene_callers_id = character(0),
+  mean_pNpS = numeric(0),
+  sd_pNpS = numeric(0)
+)
+
+for (gene in genes.to.t.test) {
+  mean <- mean(log(pNpS_sp_021[pNpS_sp_021$gene_callers_id == gene & pNpS_sp_021$host_species == host,]$pNpS_gene_consensus))
+  sd <- sd(pNpS_sp_021[pNpS_sp_021$gene_callers_id == gene & pNpS_sp_021$host_species == host,]$pNpS_gene_consensus)
+  means.of.genes <- rbind(means.of.genes, data.frame(
+    gene_callers_id = gene,
+    mean_pNpS = mean,
+    sd_pNpS = sd))
+}
+
+means.of.genes$mean_minus_sd <- means.of.genes$mean - means.of.genes$sd
+
+#genes.to.t.test <- as.factor(unique(means.of.genes[means.of.genes$z >= 1.96,]$gene_callers_id))
+#genes.to.t.test <- as.factor(unique(means.of.genes[means.of.genes$mean_pNpS > 1 & means.of.genes$mean_minus_sd > 1,]$gene_callers_id))
+#genes.to.t.test <- as.factor(unique(means.of.genes[means.of.genes$mean_minus_sd > 1,]$gene_callers_id))
+genes.to.t.test <- as.factor(unique(means.of.genes[means.of.genes$mean_pNpS > 0,]$gene_callers_id))
+genes.to.t.test <- droplevels(genes.to.t.test)
+
+t_test_results <- data.frame(
+  gene_callers_id = character(0),
+  mean_pNpS = numeric(0),
+  log_mean_pNpS = numeric(0),
+  conf_int_lower = numeric(0),
+  conf_int_upper = numeric(0),
+  t_statistic = numeric(0),
+  p_value = numeric(0),
+  stringsAsFactors = FALSE
+)
+
+for (gene in genes.to.t.test) {
+  # Perform the t-test for the current level
+  t_test_result <- t.test(log(pNpS_sp_021[pNpS_sp_021$gene_callers_id == gene 
+                                      & pNpS_sp_021$host_species == host,]$pNpS_gene_consensus), mu = 0, alternative = "greater")
+  # Store the result in the data frame
+  t_test_results <- rbind(t_test_results, data.frame(
+    gene_callers_id = gene,
+    mean_pNpS = exp(t_test_result[["estimate"]][["mean of x"]]),
+    log_mean_pNpS = t_test_result[["estimate"]][["mean of x"]],
+    conf_int_lower = t_test_result$conf.int[1],
+    conf_int_upper = t_test_result$conf.int[2],
+    t_statistic = t_test_result$statistic,
+    p_value = t_test_result$p.value
+  ))
+}
+
+
+t_test_results$adj.p <- p.adjust(t_test_results$p_value, method = "BH") # Benjamini-Hochberg adjustment
+#t_test_results.sig <- t_test_results[t_test_results$adj.p <= 0.05,]
+#t_test_results.sig <- t_test_results[t_test_results$p_value <= 0.05,]
+t_test_results.sig <- t_test_results[t_test_results$conf_int_lower > 0,]
+#t_test_results.sig <- t_test_results
+
+
+# Add host species column
+t_test_results.sig$host_species <- rep(host, nrow(t_test_results.sig))
+
+# Add to final dataframe
+sig.pos.sel.genes_sp_021 <- rbind(sig.pos.sel.genes_sp_021,t_test_results.sig)
+
+}
+
+#colnames(sig.pos.sel.genes_sp_021)[1] <- "gene_callers_id"
+rownames(sig.pos.sel.genes_sp_021) <- NULL
+```
+
+#### Functions
+```{r}
+data.fct.cov <- readRDS("../rds/data.fct.cov.rds")
+sig.pos.sel.genes_sp_021.fct <- merge(sig.pos.sel.genes_sp_021, data.fct.cov, by = "gene_callers_id")
+length(unique(sig.pos.sel.genes_sp_021.fct$gene_callers_id))
+# 6 unique positively selected genes. 6 "gene-host" combinations, including 6 THOC
+# All accessory genes
+# 1 unique ANNOTATED gene
+```
+
+#### DAGCs?
+```{r}
+DAGs.functions.all.info <- read_delim("../DAGCs_fully_annotated.csv", delim = ",")
+pos.sel.DAGCs_sp_021 <- DAGs.functions.all.info[DAGs.functions.all.info$gene_cluster_id %in% sig.pos.sel.genes_sp_021.fct$gene_cluster_id,]
+# includes 5 DAGCs
+
+sig.pos.sel.genes_sp_021.fct$DAGCs <- ifelse(
+  sig.pos.sel.genes_sp_021.fct$gene_cluster_id %in% pos.sel.DAGCs_sp_021$gene_cluster_id,
+  paste(pos.sel.DAGCs_sp_021$focal, pos.sel.DAGCs_sp_021$reference, sep = "_vs_"),
+  "non-DAGC"
+)
+
+sig.pos.sel.genes_sp_021.fct <- sig.pos.sel.genes_sp_021.fct[,c(1:13,75,14:74)]
+```
+
+### Save data
+```{r}
+#saveRDS(sig.pos.sel.genes_sp_021.fct, "../rds/sig.pos.sel.genes_sp_021.fct_251217.rds")
+sig.pos.sel.genes_sp_021.fct <- readRDS("../rds/sig.pos.sel.genes_sp_021.fct_251217.rds")
+```
+
+
+################################################################################
+
+
+# M_sp_022
+
+## SCV - DO NOT RE-RUN
+
+### Import data from anvio, the output of 'anvi-gen-variability-profile' function
+RUN ONCE. DO NOT RE-RUN
+```{r}
+var.prof.ABBA <- read.table("../data_imported/ABBA/var_cdn_sp_022_ABBA", header = T)
+var.prof.ACSA <- read.table("../data_imported/ACSA/var_cdn_sp_022_ACSA", header = T)
+var.prof.COCO <- read.table("../data_imported/COCO/var_cdn_sp_022_COCO", header = T)
+var.prof.FAGR <- read.table("../data_imported/FAGR/var_cdn_sp_022_FAGR", header = T)
+var.prof.THOC <- read.table("../data_imported/THOC/var_cdn_sp_022_THOC", header = T)
+var.prof.all <- rbind(var.prof.ABBA,var.prof.ACSA,var.prof.COCO,var.prof.FAGR,var.prof.THOC)
+var.prof.all$sample_id <- as.factor(var.prof.all$sample_id)
+var.prof.all <- var.prof.all %>% arrange(corresponding_gene_call, sample_id)
+var.prof.all$corresponding_gene_call <- as.factor(var.prof.all$corresponding_gene_call)
+str(var.prof.all)
+```
+### Export data to anvio to input to 'anvi-get-pn-ps-ratio' function
+RUN ONCE. DO NOT RE-RUN
+```{r}
+#write_delim(var.prof.all, file = "../data_imported/variability_profile_all_samples_M_sp_022.txt", delim = "\t")
+```
+
+## pN/pS
+
+### Import data (the output of anvio 'anvi-get-pn-ps-ratio' function)
+
+```{r}
+pNpS_sp_022 <- read.table("../data_imported/pNpS_sp_022-03/pNpS.txt", header = T, sep = "\t", colClasses = c("NULL", "factor", "factor", "numeric"))
+pN_sp_022 <- read.table("../data_imported/pNpS_sp_022-03/pN.txt", header = T, sep = "\t", colClasses = c("NULL", "factor", "factor", "numeric"))
+pS_sp_022 <- read.table("../data_imported/pNpS_sp_022-03/pS.txt", header = T, sep = "\t", colClasses = c("NULL", "factor", "factor", "numeric"))
+pNpS_sp_022$pN <- pN_sp_022$pN_gene_consensus
+pNpS_sp_022$pS <- pS_sp_022$pS_gene_consensus
+length(which(pNpS_sp_022$pNpS_gene_consensus == 0)) #60
+
+length(unique(pNpS_sp_022$corresponding_gene_call[pNpS_sp_022$pNpS_gene_consensus == 0])) # 58 genes with pN/pS = 0
+length(unique(pNpS_sp_022$corresponding_gene_call)) # 5195 genes in total
+length(unique(pNpS_sp_022$corresponding_gene_call[pNpS_sp_022$pNpS_gene_consensus == 0]))/length(unique(pNpS_sp_022$corresponding_gene_call)) # 1.1% of genes have pN/pS ratio of 0
+str(pNpS_sp_022)
+```
+### Edit dataframe
+```{r}
+# Remove rows where there was missing values to calculate pN/pS ratio (NA, Inf)
+pNpS_sp_022 <- pNpS_sp_022[!is.na(pNpS_sp_022$pNpS_gene_consensus) & pNpS_sp_022$pNpS_gene_consensus != "Inf" & pNpS_sp_022$pNpS_gene_consensus != 0,]
+# Get rid of NAs (not enough data to compute pS/pN) as well as extreme values (0 and Inf), since these values mostly arise because of higher importance of stochasticity when number of variants is low.
+
+length(unique(pNpS_sp_022$corresponding_gene_call)) # 1308 genes left after removal
+str(pNpS_sp_022)
+
+# Remove samples in which the species was not present
+samples_presence <- c("ABBA_M11","ABBA_M12","ABBA_M13","ABBA_M14","ABBA_M15","THOC_M06","THOC_M07","THOC_M08","THOC_M09","THOC_M10","ACSA_M22","ACSA_M24","ACSA_M25","FAGR_M16","FAGR_M17","FAGR_M19","FAGR_M20","COCO_M01","COCO_M02","COCO_M03","COCO_M04","COCO_M05")
+pNpS_sp_022 <- pNpS_sp_022[pNpS_sp_022$sample_id %in% samples_presence,]
+pNpS_sp_022 <- droplevels(pNpS_sp_022)
+
+# Add host species factor
+pNpS_sp_022$host_species <- as.factor(substr(pNpS_sp_022$sample_id, 1, 4))
+pNpS_sp_022$host_species <- factor(pNpS_sp_022$host_species, levels = c("ABBA","THOC","ACSA","FAGR","COCO"))
+str(pNpS_sp_022)
+
+# Add clade factor
+pNpS_sp_022$plant_clade <- factor(
+  ifelse(grepl("^(ACSA|FAGR|COCO)", pNpS_sp_022$sample_id),
+         "angiosperm",
+         ifelse(grepl("^(ABBA|THOC)", pNpS_sp_022$sample_id),
+                "gymnosperm",
+                NA))
+)
+str(pNpS_sp_022)
+
+# Add plant type factor
+pNpS_sp_022$plant_type <- factor(
+  ifelse(grepl("^(ACSA|FAGR|ABBA|THOC)", pNpS_sp_022$sample_id),
+         "tree",
+         ifelse(grepl("^(COCO)", pNpS_sp_022$sample_id),
+                "shrub",
+                NA))
+)
+str(pNpS_sp_022)
+```
+
+### Distribution of pN/pS measurements across all genes and all samples
+```{r}
+hist(pNpS_sp_022$pNpS_gene_consensus, breaks = 1000000)
+hist(log(pNpS_sp_022$pNpS_gene_consensus), breaks = 10000)
+```
+
+### Violon plot
+```{r}
+gg_pNpS_022 <- ggplot(pNpS_sp_022, aes(x = host_species, y = pNpS_gene_consensus)) +
+  geom_jitter(width = 0.4, size = 0.5, alpha = 0.1, color = "black") +
+  geom_violin(aes(fill = host_species), show.legend = FALSE, alpha = 0.75) +  
+  scale_fill_manual(values=c("#63AFF9","#1EA670","#CA0E78","#F39635","#6104BB"))+
+  stat_summary(fun = mean, geom = "crossbar", width = 0.8, color = "black", size = 0.4) +
+  scale_y_log10(
+     breaks = c(0.0001, 0.001, 0.01, 0.1, 1, 10),
+     labels = c("0.0001", "0.001", "0.01", "0.1", "1", "10")
+  ) +
+  xlab("Host Species") +
+  ylab(expression(bolditalic("M. sp. 022 - pN/pS")^bold("(gene)"))) +
+  scale_x_discrete(labels = c("ABBA" = "A. balsamea", "THOC" = "T. occidentalis","ACSA" = "A. saccharum", "FAGR" = "F. grandifolia", "COCO" = "C. cornuta")) +
+theme_bw()+
+theme(text = element_text(family = "Arial"),
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 11, angle = 0, hjust = 0.5, vjust = 0, face = "italic"),
+      axis.text.y = element_text(color = "black", size = 11, angle = 0, hjust = 0, vjust = 0.5),  
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
+      )
+gg_pNpS_022
+ggsave("../figures/pNpS_M_sp_022.tiff", width = 6, height = 4)
+```
+
+### models
+```{r}
+lm.022 <- lm(log(pNpS_gene_consensus) ~ host_species, data = pNpS_sp_022)
+summary(lm.022)
+
+lm.022.clade <- lm(log(pNpS_gene_consensus) ~ plant_clade, data = pNpS_sp_022[pNpS_sp_022$host_species != "COCO",])
+summary(lm.022.clade)
+
+lm.022.type <- lm(log(pNpS_gene_consensus) ~ plant_type, data = pNpS_sp_022)
+summary(lm.022.type)
+```
+
+### Add core/accessory
+```{r}
+colnames(pNpS_sp_022)[1] <- "gene_callers_id"
+data.pangenome <- readRDS("../rds/data.pangenome.rds")
+pNpS_sp_022 <- merge(pNpS_sp_022, data.pangenome[,c(3:4)], by = "gene_callers_id")
+pNpS_sp_022$type <- factor(x = pNpS_sp_022$type, levels = c("core","accessory"))
+pNpS_sp_022 <- pNpS_sp_022[order(pNpS_sp_022$type, -pNpS_sp_022$pNpS_gene_consensus), ]
+pNpS_sp_022$gene_callers_id <- factor(x = pNpS_sp_022$gene_callers_id, levels = unique(pNpS_sp_022$gene_callers_id))
+pNpS_sp_022$sample_id <- factor(x = pNpS_sp_022$sample, levels = c("ABBA_M11","ABBA_M12","ABBA_M13","ABBA_M14","ABBA_M15","THOC_M06","THOC_M07","THOC_M08","THOC_M09","THOC_M10","ACSA_M22","ACSA_M24","ACSA_M25","FAGR_M16","FAGR_M17","FAGR_M19","FAGR_M20","COCO_M01","COCO_M02","COCO_M03","COCO_M04","COCO_M05"))
+str(pNpS_sp_022)
+```
+
+### Save pN/pS table
+```{r}
+#saveRDS(pNpS_sp_022, "../rds/pNpS_sp_022.rds")
+```
+
+#### Plot
+```{r}
+ggplot(pNpS_sp_022, aes(x = gene_callers_id, y = sample_id)) + 
+  geom_tile(aes(fill=pNpS_gene_consensus)) + 
+  scale_fill_gradientn(
+    name = expression(bolditalic("pN/pS")^bold("(gene)")),
+    colors = c("firebrick","mistyrose1","white","white","palegreen1","forestgreen"),
+    values = scales::rescale(c(0,0.99,1,1.01,max(pNpS_sp_022$pNpS_gene_consensus))),
+    breaks = c(0,0.99,1,1.01,max(pNpS_sp_022$pNpS_gene_consensus))) +
+  theme(legend.position="none") +
+  scale_y_discrete(limits=rev) +
+  labs(x = "Methylobacterium sp. 022 genes", y = "Samples") +
+    theme_bw() +
+      theme(
+      text = element_text(family = "Arial"),
+      #legend.justification = c(0.25, 0),
+      #legend.title = element_text(size = 6, margin = margin(b = 7.5)),
+      #legend.text = element_text(size = 6),
+      #legend.key.size = unit(0.45, "cm"),
+      #legend.spacing.y = unit(0.25, "cm"),
+      legend.position = "none", 
+      panel.grid.major = element_blank(), 
+      panel.background = element_rect(fill = "black"),
+      #panel.grid.minor = element_line(color = "lightgray", size = 0.25), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_blank(),
+      axis.text.y = element_text(color = "black", size = 11),
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
+      )
+ggsave("../figures/pNpS_ratio_gene-sample_M_sp_022.tiff", width = 8, height = 4)
+
+dummy.legend.df <- data.frame(
+  x = as.factor(c(1,2,3,4,5)),
+  y = as.factor(c(1,2,3,4,5)),
+  fill = as.numeric(c(0.0,0.99,1,1.01,2))
+)
+ggplot(dummy.legend.df, aes(x = x, y = y)) + 
+  geom_tile(aes(fill=fill)) + 
+  scale_fill_gradientn(
+    name = expression(bolditalic("pN/pS")^bold("(gene)")),
+    colors = c("firebrick","mistyrose1","white","white","palegreen1","forestgreen"),
+    values = scales::rescale(c(0.0,0.99,1,1.01,2)),
+    breaks = c(0.0,0.99,1,1.01,2),
+    labels = c("0","", "1","","11")) +
+  theme(legend.position="none") +
+  scale_y_discrete(limits=rev) +
+  labs(x = "", y ="") +
+    theme_bw() +
+      theme(
+      text = element_text(family = "Arial"),
+      #legend.justification = c(0, 0),
+      legend.title = element_text(vjust = 0.75, size = 12),
+      legend.text = element_text(size = 10),
+      legend.key.size = unit(0.6, "cm"),
+      legend.spacing.y = unit(1, "cm"),
+      legend.position = "top",
+      legend.direction = "horizontal",
+      legend.key.width = unit(2, "cm"), 
+      )
+ggsave("../figures/pNpS_ratio_gene-sample_M_sp_022-LEGEND.tiff", width = 8, height = 4)
+```
+
+### Genes under positive selection
+
+#### Data prep
+```{r}
+# Number of unique gene calls for which at least in one sample the pN/pS ratio > 1 (across all samples and host species)
+length(unique(pNpS_sp_022[pNpS_sp_022$pNpS_gene_consensus > 1,]$gene_callers_id))
+
+# Make a vector of all genes that have at least one positive pN/pS value in a sample (any host)
+pos.sel.genes <- unique(pNpS_sp_022[pNpS_sp_022$pNpS_gene_consensus > 1,]$gene_callers_id)
+pos.sel.genes <- droplevels(pos.sel.genes)
+```
+
+```{r}
+# Create pNpS dataframe with only genes that have at least one positive value
+pNpS_sp_022.pos <- pNpS_sp_022[pNpS_sp_022$gene_callers_id %in% pos.sel.genes,]
+pNpS_sp_022.pos <- droplevels(pNpS_sp_022.pos)
+
+# Create a table to know in how many samples of each host_species there is variability info on a given gene
+freq.table <- as.data.frame(table(pNpS_sp_022.pos$gene_callers_id, pNpS_sp_022.pos$host_species))
+colnames(freq.table) <- c("gene_callers_id","host_species","num_samples")
+
+# Keep only gene-host info for hosts that have at least 3 samples for the given gene
+freq.table <- freq.table[freq.table$num_samples >= 3,]
+freq.table <- droplevels(freq.table)
+
+# Separate freq.table per host species
+freq.table.ABBA <- freq.table[freq.table$host_species == "ABBA",]
+freq.table.ABBA <- droplevels(freq.table.ABBA)
+freq.table.ACSA <- freq.table[freq.table$host_species == "ACSA",]
+freq.table.ACSA <- droplevels(freq.table.ACSA)
+freq.table.COCO <- freq.table[freq.table$host_species == "COCO",]
+freq.table.COCO <- droplevels(freq.table.COCO)
+freq.table.FAGR <- freq.table[freq.table$host_species == "FAGR",]
+freq.table.FAGR <- droplevels(freq.table.FAGR)
+freq.table.THOC <- freq.table[freq.table$host_species == "THOC",]
+freq.table.THOC <- droplevels(freq.table.THOC)
+```
+
+
+#### Confidence interval tests
+
+Multiple tests, per species, per genes, in loop, for every gene that is present in at least one host species at least 3 samples.
+```{r}
+sig.pos.sel.genes_sp_022 <- data.frame(
+  gene_callers_id = character(0),
+  mean = numeric(0),
+  conf_int_lower = numeric(0),
+  conf_int_upper = numeric(0),
+  t_statistic = numeric(0),
+  p_value = numeric(0),
+  adj.p = numeric(0),
+  host_species = character(0),
+  stringsAsFactors = FALSE
+)
+
+host_species <- c("ABBA","THOC","ACSA","FAGR","COCO")
+
+for (host in host_species) {
+
+genes.to.t.test <- unique(freq.table[freq.table$host_species == host,]$gene_callers_id)
+genes.to.t.test <- droplevels(genes.to.t.test)  
+
+means.of.genes <- data.frame(
+  gene_callers_id = character(0),
+  mean_pNpS = numeric(0),
+  sd_pNpS = numeric(0)
+)
+
+for (gene in genes.to.t.test) {
+  mean <- mean(log(pNpS_sp_022[pNpS_sp_022$gene_callers_id == gene & pNpS_sp_022$host_species == host,]$pNpS_gene_consensus))
+  sd <- sd(pNpS_sp_022[pNpS_sp_022$gene_callers_id == gene & pNpS_sp_022$host_species == host,]$pNpS_gene_consensus)
+  means.of.genes <- rbind(means.of.genes, data.frame(
+    gene_callers_id = gene,
+    mean_pNpS = mean,
+    sd_pNpS = sd))
+}
+
+means.of.genes$mean_minus_sd <- means.of.genes$mean - means.of.genes$sd
+
+#genes.to.t.test <- as.factor(unique(means.of.genes[means.of.genes$z >= 1.96,]$gene_callers_id))
+#genes.to.t.test <- as.factor(unique(means.of.genes[means.of.genes$mean_pNpS > 1 & means.of.genes$mean_minus_sd > 1,]$gene_callers_id))
+#genes.to.t.test <- as.factor(unique(means.of.genes[means.of.genes$mean_minus_sd > 1,]$gene_callers_id))
+genes.to.t.test <- as.factor(unique(means.of.genes[means.of.genes$mean_pNpS > 0,]$gene_callers_id))
+genes.to.t.test <- droplevels(genes.to.t.test)
+
+t_test_results <- data.frame(
+  gene_callers_id = character(0),
+  mean_pNpS = numeric(0),
+  log_mean_pNpS = numeric(0),
+  conf_int_lower = numeric(0),
+  conf_int_upper = numeric(0),
+  t_statistic = numeric(0),
+  p_value = numeric(0),
+  stringsAsFactors = FALSE
+)
+
+for (gene in genes.to.t.test) {
+  # Perform the t-test for the current level
+  t_test_result <- t.test(log(pNpS_sp_022[pNpS_sp_022$gene_callers_id == gene 
+                                      & pNpS_sp_022$host_species == host,]$pNpS_gene_consensus), mu = 0, alternative = "greater")
+  # Store the result in the data frame
+  t_test_results <- rbind(t_test_results, data.frame(
+    gene_callers_id = gene,
+    mean_pNpS = exp(t_test_result[["estimate"]][["mean of x"]]),
+    log_mean_pNpS = t_test_result[["estimate"]][["mean of x"]],
+    conf_int_lower = t_test_result$conf.int[1],
+    conf_int_upper = t_test_result$conf.int[2],
+    t_statistic = t_test_result$statistic,
+    p_value = t_test_result$p.value
+  ))
+}
+
+
+t_test_results$adj.p <- p.adjust(t_test_results$p_value, method = "BH") # Benjamini-Hochberg adjustment
+#t_test_results.sig <- t_test_results[t_test_results$adj.p <= 0.05,]
+#t_test_results.sig <- t_test_results[t_test_results$p_value <= 0.05,]
+t_test_results.sig <- t_test_results[t_test_results$conf_int_lower > 0,]
+#t_test_results.sig <- t_test_results
+
+
+# Add host species column
+t_test_results.sig$host_species <- rep(host, nrow(t_test_results.sig))
+
+# Add to final dataframe
+sig.pos.sel.genes_sp_022 <- rbind(sig.pos.sel.genes_sp_022,t_test_results.sig)
+
+}
+
+#colnames(sig.pos.sel.genes_sp_022)[1] <- "gene_callers_id"
+rownames(sig.pos.sel.genes_sp_022) <- NULL
+```
+
+
+NO positively selected genes detected within M. sp. 022 population.
+
+
+################################################################################
+
+# M_sp_024
+
+## SCV - DO NOT RE-RUN
+
+### Import data from anvio, the output of 'anvi-gen-variability-profile' function
+RUN ONCE. DO NOT RE-RUN
+```{r}
+var.prof.ABBA <- read.table("../data_imported/ABBA/var_cdn_sp_024_ABBA", header = T)
+var.prof.ACSA <- read.table("../data_imported/ACSA/var_cdn_sp_024_ACSA", header = T)
+var.prof.COCO <- read.table("../data_imported/COCO/var_cdn_sp_024_COCO", header = T)
+var.prof.FAGR <- read.table("../data_imported/FAGR/var_cdn_sp_024_FAGR", header = T)
+var.prof.THOC <- read.table("../data_imported/THOC/var_cdn_sp_024_THOC", header = T)
+var.prof.all <- rbind(var.prof.ABBA,var.prof.ACSA,var.prof.COCO,var.prof.FAGR,var.prof.THOC)
+var.prof.all$sample_id <- as.factor(var.prof.all$sample_id)
+var.prof.all <- var.prof.all %>% arrange(corresponding_gene_call, sample_id)
+var.prof.all$corresponding_gene_call <- as.factor(var.prof.all$corresponding_gene_call)
+str(var.prof.all)
+```
+### Export data to anvio to input to 'anvi-get-pn-ps-ratio' function
+RUN ONCE. DO NOT RE-RUN
+```{r}
+#write_delim(var.prof.all, file = "../data_imported/variability_profile_all_samples_M_sp_024.txt", delim = "\t")
+```
+
+## pN/pS
+
+### Import data (the output of anvio 'anvi-get-pn-ps-ratio' function)
+
+```{r}
+pNpS_sp_024 <- read.table("../data_imported/pNpS_sp_024-03/pNpS.txt", header = T, sep = "\t", colClasses = c("NULL", "factor", "factor", "numeric"))
+pN_sp_024 <- read.table("../data_imported/pNpS_sp_024-03/pN.txt", header = T, sep = "\t", colClasses = c("NULL", "factor", "factor", "numeric"))
+pS_sp_024 <- read.table("../data_imported/pNpS_sp_024-03/pS.txt", header = T, sep = "\t", colClasses = c("NULL", "factor", "factor", "numeric"))
+pNpS_sp_024$pN <- pN_sp_024$pN_gene_consensus
+pNpS_sp_024$pS <- pS_sp_024$pS_gene_consensus
+length(which(pNpS_sp_024$pNpS_gene_consensus == 0)) #263
+
+length(unique(pNpS_sp_024$corresponding_gene_call[pNpS_sp_024$pNpS_gene_consensus == 0])) # 240 genes with pN/pS = 0
+length(unique(pNpS_sp_024$corresponding_gene_call)) # 5846 genes in total
+length(unique(pNpS_sp_024$corresponding_gene_call[pNpS_sp_024$pNpS_gene_consensus == 0]))/length(unique(pNpS_sp_024$corresponding_gene_call)) # 4.1% of genes have pN/pS ratio of 0
+str(pNpS_sp_024)
+```
+
+### Edit dataframe
+```{r}
+# Remove rows where there was missing values to calculate pN/pS ratio (NA, Inf)
+pNpS_sp_024 <- pNpS_sp_024[!is.na(pNpS_sp_024$pNpS_gene_consensus) & pNpS_sp_024$pNpS_gene_consensus != "Inf" & pNpS_sp_024$pNpS_gene_consensus != 0,]
+# Get rid of NAs (not enough data to compute pS/pN) as well as extreme values (0 and Inf), since these values mostly arise because of higher importance of stochasticity when number of variants is low.
+
+length(unique(pNpS_sp_024$corresponding_gene_call)) # 4802 genes left after removal
+str(pNpS_sp_024)
+
+# Remove samples in which the species was not present
+samples_presence <- c("ABBA_M12","ABBA_M13","ABBA_M14","ABBA_M15","THOC_M08","THOC_M09","THOC_M10","ACSA_M24","ACSA_M25","FAGR_M16","FAGR_M17","FAGR_M20","COCO_M01","COCO_M02","COCO_M03","COCO_M04","COCO_M05")
+pNpS_sp_024 <- pNpS_sp_024[pNpS_sp_024$sample_id %in% samples_presence,]
+pNpS_sp_024 <- droplevels(pNpS_sp_024)
+
+# Add host species factor
+pNpS_sp_024$host_species <- as.factor(substr(pNpS_sp_024$sample_id, 1, 4))
+pNpS_sp_024$host_species <- factor(pNpS_sp_024$host_species, levels = c("ABBA","THOC","ACSA","FAGR","COCO"))
+str(pNpS_sp_024)
+
+# Add clade factor
+pNpS_sp_024$plant_clade <- factor(
+  ifelse(grepl("^(ACSA|FAGR|COCO)", pNpS_sp_024$sample_id),
+         "angiosperm",
+         ifelse(grepl("^(ABBA|THOC)", pNpS_sp_024$sample_id),
+                "gymnosperm",
+                NA))
+)
+str(pNpS_sp_024)
+
+# Add plant type factor
+pNpS_sp_024$plant_type <- factor(
+  ifelse(grepl("^(ACSA|FAGR|ABBA|THOC)", pNpS_sp_024$sample_id),
+         "tree",
+         ifelse(grepl("^(COCO)", pNpS_sp_024$sample_id),
+                "shrub",
+                NA))
+)
+str(pNpS_sp_024)
+```
+
+### Distribution of pN/pS measurements across all genes and all samples
+```{r}
+hist(pNpS_sp_024$pNpS_gene_consensus, breaks = 1000000)
+hist(log(pNpS_sp_024$pNpS_gene_consensus), breaks = 10000)
+```
+
+### Violon plot
+```{r}
+gg_pNpS_024 <- ggplot(pNpS_sp_024, aes(x = host_species, y = pNpS_gene_consensus)) +
+  geom_jitter(width = 0.4, size = 0.5, alpha = 0.1, color = "black") +
+  geom_violin(aes(fill = host_species), show.legend = FALSE, alpha = 0.75) +  
+  scale_fill_manual(values=c("#63AFF9","#1EA670","#CA0E78","#F39635","#6104BB"))+
+  stat_summary(fun = mean, geom = "crossbar", width = 0.8, color = "black", size = 0.4) +
+  scale_y_log10(
+     breaks = c(0.0001, 0.001, 0.01, 0.1, 1, 10),
+     labels = c("0.0001", "0.001", "0.01", "0.1", "1", "10")
+  ) +
+  xlab("Host Species") +
+  ylab(expression(bolditalic("M. sp. 024 - pN/pS")^bold("(gene)"))) +
+  scale_x_discrete(labels = c("ABBA" = "A. balsamea", "THOC" = "T. occidentalis","ACSA" = "A. saccharum", "FAGR" = "F. grandifolia", "COCO" = "C. cornuta")) +
+theme_bw()+
+theme(text = element_text(family = "Arial"),
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 11, angle = 0, hjust = 0.5, vjust = 0, face = "italic"),
+      axis.text.y = element_text(color = "black", size = 11, angle = 0, hjust = 0, vjust = 0.5),  
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
+      )
+gg_pNpS_024
+ggsave("../figures/pNpS_M_sp_024.tiff", width = 6, height = 4)
+```
+
+### models
+```{r}
+lm.024 <- lm(log(pNpS_gene_consensus) ~ host_species, data = pNpS_sp_024)
+summary(lm.024)
+
+lm.024.clade <- lm(log(pNpS_gene_consensus) ~ plant_clade, data = pNpS_sp_024[pNpS_sp_024$host_species != "COCO",])
+summary(lm.024.clade)
+
+lm.024.type <- lm(log(pNpS_gene_consensus) ~ plant_type, data = pNpS_sp_024)
+summary(lm.024.type)
+```
+
+### Add core/accessory
+```{r}
+colnames(pNpS_sp_024)[1] <- "gene_callers_id"
+data.pangenome <- readRDS("../rds/data.pangenome.rds")
+pNpS_sp_024 <- merge(pNpS_sp_024, data.pangenome[,c(3:4)], by = "gene_callers_id")
+pNpS_sp_024$type <- factor(x = pNpS_sp_024$type, levels = c("core","accessory"))
+pNpS_sp_024 <- pNpS_sp_024[order(pNpS_sp_024$type, -pNpS_sp_024$pNpS_gene_consensus), ]
+pNpS_sp_024$gene_callers_id <- factor(x = pNpS_sp_024$gene_callers_id, levels = unique(pNpS_sp_024$gene_callers_id))
+pNpS_sp_024$sample_id <- factor(x = pNpS_sp_024$sample, levels = c("ABBA_M12","ABBA_M13","ABBA_M14","ABBA_M15","THOC_M08","THOC_M09","THOC_M10","ACSA_M24","ACSA_M25","FAGR_M16","FAGR_M17","FAGR_M20","COCO_M01","COCO_M02","COCO_M03","COCO_M04","COCO_M05"))
+str(pNpS_sp_024)
+```
+
+### Save pN/pS table
+```{r}
+#saveRDS(pNpS_sp_024, "../rds/pNpS_sp_024.rds")
+```
+
+#### Plot
+```{r}
+ggplot(pNpS_sp_024, aes(x = gene_callers_id, y = sample_id)) + 
+  geom_tile(aes(fill=pNpS_gene_consensus)) + 
+  scale_fill_gradientn(
+    name = expression(bolditalic("pN/pS")^bold("(gene)")),
+    colors = c("firebrick","mistyrose1","white","white","palegreen1","forestgreen"),
+    values = scales::rescale(c(0,0.99,1,1.01,max(pNpS_sp_024$pNpS_gene_consensus))),
+    breaks = c(0,0.99,1,1.01,max(pNpS_sp_024$pNpS_gene_consensus))) +
+  theme(legend.position="none") +
+  scale_y_discrete(limits=rev) +
+  labs(x = "Methylobacterium sp. 024 genes", y = "Samples") +
+    theme_bw() +
+      theme(
+      text = element_text(family = "Arial"),
+      #legend.justification = c(0.25, 0),
+      #legend.title = element_text(size = 6, margin = margin(b = 7.5)),
+      #legend.text = element_text(size = 6),
+      #legend.key.size = unit(0.45, "cm"),
+      #legend.spacing.y = unit(0.25, "cm"),
+      legend.position = "none", 
+      panel.grid.major = element_blank(), 
+      panel.background = element_rect(fill = "black"),
+      #panel.grid.minor = element_line(color = "lightgray", size = 0.25), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_blank(),
+      axis.text.y = element_text(color = "black", size = 11),
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold")
+      )
+ggsave("../figures/pNpS_ratio_gene-sample_M_sp_024.tiff", width = 8, height = 4)
+
+dummy.legend.df <- data.frame(
+  x = as.factor(c(1,2,3,4,5)),
+  y = as.factor(c(1,2,3,4,5)),
+  fill = as.numeric(c(0.0,0.99,1,1.01,2))
+)
+ggplot(dummy.legend.df, aes(x = x, y = y)) + 
+  geom_tile(aes(fill=fill)) + 
+  scale_fill_gradientn(
+    name = expression(bolditalic("pN/pS")^bold("(gene)")),
+    colors = c("firebrick","mistyrose1","white","white","palegreen1","forestgreen"),
+    values = scales::rescale(c(0.0,0.99,1,1.01,2)),
+    breaks = c(0.0,0.99,1,1.01,2),
+    labels = c("0","", "1","","27")) +
+  theme(legend.position="none") +
+  scale_y_discrete(limits=rev) +
+  labs(x = "", y ="") +
+    theme_bw() +
+      theme(
+      text = element_text(family = "Arial"),
+      #legend.justification = c(0, 0),
+      legend.title = element_text(vjust = 0.75, size = 12),
+      legend.text = element_text(size = 10),
+      legend.key.size = unit(0.6, "cm"),
+      legend.spacing.y = unit(1, "cm"),
+      legend.position = "top",
+      legend.direction = "horizontal",
+      legend.key.width = unit(2, "cm"), 
+      )
+ggsave("../figures/pNpS_ratio_gene-sample_M_sp_024-LEGEND.tiff", width = 8, height = 4)
+```
+
+### Genes under positive selection
+
+#### Data prep
+```{r}
+# Number of unique gene calls for which at least in one sample the pN/pS ratio > 1 (across all samples and host species)
+length(unique(pNpS_sp_024[pNpS_sp_024$pNpS_gene_consensus > 1,]$gene_callers_id))
+
+# Make a vector of all genes that have at least one positive pN/pS value in a sample (any host)
+pos.sel.genes <- unique(pNpS_sp_024[pNpS_sp_024$pNpS_gene_consensus > 1,]$gene_callers_id)
+pos.sel.genes <- droplevels(pos.sel.genes)
+```
+
+```{r}
+# Create pNpS dataframe with only genes that have at least one positive value
+pNpS_sp_024.pos <- pNpS_sp_024[pNpS_sp_024$gene_callers_id %in% pos.sel.genes,]
+pNpS_sp_024.pos <- droplevels(pNpS_sp_024.pos)
+
+# Create a table to know in how many samples of each host_species there is variability info on a given gene
+freq.table <- as.data.frame(table(pNpS_sp_024.pos$gene_callers_id, pNpS_sp_024.pos$host_species))
+colnames(freq.table) <- c("gene_callers_id","host_species","num_samples")
+
+# Keep only gene-host info for hosts that have at least 3 samples for the given gene
+freq.table <- freq.table[freq.table$num_samples >= 3,]
+freq.table <- droplevels(freq.table)
+
+# Separate freq.table per host species
+freq.table.ABBA <- freq.table[freq.table$host_species == "ABBA",]
+freq.table.ABBA <- droplevels(freq.table.ABBA)
+freq.table.ACSA <- freq.table[freq.table$host_species == "ACSA",]
+freq.table.ACSA <- droplevels(freq.table.ACSA)
+freq.table.COCO <- freq.table[freq.table$host_species == "COCO",]
+freq.table.COCO <- droplevels(freq.table.COCO)
+freq.table.FAGR <- freq.table[freq.table$host_species == "FAGR",]
+freq.table.FAGR <- droplevels(freq.table.FAGR)
+freq.table.THOC <- freq.table[freq.table$host_species == "THOC",]
+freq.table.THOC <- droplevels(freq.table.THOC)
+```
+
+
+#### Confidence interval tests
+
+Multiple tests, per species, per genes, in loop, for every gene that is present in at least one host species at least 3 samples.
+```{r}
+sig.pos.sel.genes_sp_024 <- data.frame(
+  gene_callers_id = character(0),
+  mean = numeric(0),
+  conf_int_lower = numeric(0),
+  conf_int_upper = numeric(0),
+  t_statistic = numeric(0),
+  p_value = numeric(0),
+  adj.p = numeric(0),
+  host_species = character(0),
+  stringsAsFactors = FALSE
+)
+
+host_species <- c("ABBA","THOC","ACSA","FAGR","COCO")
+
+for (host in host_species) {
+
+genes.to.t.test <- unique(freq.table[freq.table$host_species == host,]$gene_callers_id)
+genes.to.t.test <- droplevels(genes.to.t.test)  
+
+means.of.genes <- data.frame(
+  gene_callers_id = character(0),
+  mean_pNpS = numeric(0),
+  sd_pNpS = numeric(0)
+)
+
+for (gene in genes.to.t.test) {
+  mean <- mean(log(pNpS_sp_024[pNpS_sp_024$gene_callers_id == gene & pNpS_sp_024$host_species == host,]$pNpS_gene_consensus))
+  sd <- sd(pNpS_sp_024[pNpS_sp_024$gene_callers_id == gene & pNpS_sp_024$host_species == host,]$pNpS_gene_consensus)
+  means.of.genes <- rbind(means.of.genes, data.frame(
+    gene_callers_id = gene,
+    mean_pNpS = mean,
+    sd_pNpS = sd))
+}
+
+means.of.genes$mean_minus_sd <- means.of.genes$mean - means.of.genes$sd
+
+#genes.to.t.test <- as.factor(unique(means.of.genes[means.of.genes$z >= 1.96,]$gene_callers_id))
+#genes.to.t.test <- as.factor(unique(means.of.genes[means.of.genes$mean_pNpS > 1 & means.of.genes$mean_minus_sd > 1,]$gene_callers_id))
+#genes.to.t.test <- as.factor(unique(means.of.genes[means.of.genes$mean_minus_sd > 1,]$gene_callers_id))
+genes.to.t.test <- as.factor(unique(means.of.genes[means.of.genes$mean_pNpS > 0,]$gene_callers_id))
+genes.to.t.test <- droplevels(genes.to.t.test)
+
+t_test_results <- data.frame(
+  gene_callers_id = character(0),
+  mean_pNpS = numeric(0),
+  log_mean_pNpS = numeric(0),
+  conf_int_lower = numeric(0),
+  conf_int_upper = numeric(0),
+  t_statistic = numeric(0),
+  p_value = numeric(0),
+  stringsAsFactors = FALSE
+)
+
+for (gene in genes.to.t.test) {
+  # Perform the t-test for the current level
+  t_test_result <- t.test(log(pNpS_sp_024[pNpS_sp_024$gene_callers_id == gene 
+                                      & pNpS_sp_024$host_species == host,]$pNpS_gene_consensus), mu = 0, alternative = "greater")
+  # Store the result in the data frame
+  t_test_results <- rbind(t_test_results, data.frame(
+    gene_callers_id = gene,
+    mean_pNpS = exp(t_test_result[["estimate"]][["mean of x"]]),
+    log_mean_pNpS = t_test_result[["estimate"]][["mean of x"]],
+    conf_int_lower = t_test_result$conf.int[1],
+    conf_int_upper = t_test_result$conf.int[2],
+    t_statistic = t_test_result$statistic,
+    p_value = t_test_result$p.value
+  ))
+}
+
+
+t_test_results$adj.p <- p.adjust(t_test_results$p_value, method = "BH") # Benjamini-Hochberg adjustment
+#t_test_results.sig <- t_test_results[t_test_results$adj.p <= 0.05,]
+#t_test_results.sig <- t_test_results[t_test_results$p_value <= 0.05,]
+t_test_results.sig <- t_test_results[t_test_results$conf_int_lower > 0,]
+#t_test_results.sig <- t_test_results
+
+
+# Add host species column
+t_test_results.sig$host_species <- rep(host, nrow(t_test_results.sig))
+
+# Add to final dataframe
+sig.pos.sel.genes_sp_024 <- rbind(sig.pos.sel.genes_sp_024,t_test_results.sig)
+
+}
+
+#colnames(sig.pos.sel.genes_sp_024)[1] <- "gene_callers_id"
+rownames(sig.pos.sel.genes_sp_024) <- NULL
+```
+
+#### Functions
+```{r}
+data.fct.cov <- readRDS("../rds/data.fct.cov.rds")
+sig.pos.sel.genes_sp_024.fct <- merge(sig.pos.sel.genes_sp_024, data.fct.cov, by = "gene_callers_id")
+length(unique(sig.pos.sel.genes_sp_024.fct$gene_callers_id))
+# 1 unique positively selected genes. 1 "gene-host" combinations, including 1 COCO
+# accessory gene
+# 0 unique ANNOTATED genes
+```
+
+#### DAGCs?
+```{r}
+DAGs.functions.all.info <- read_delim("../DAGCs_fully_annotated.csv", delim = ",")
+pos.sel.DAGCs_sp_024 <- DAGs.functions.all.info[DAGs.functions.all.info$gene_cluster_id %in% sig.pos.sel.genes_sp_024.fct$gene_cluster_id,]
+# includes 0 DAGC
+
+sig.pos.sel.genes_sp_024.fct$DAGCs <- ifelse(
+  sig.pos.sel.genes_sp_024.fct$gene_cluster_id %in% pos.sel.DAGCs_sp_024$gene_cluster_id,
+  paste(pos.sel.DAGCs_sp_024$focal, pos.sel.DAGCs_sp_024$reference, sep = "_vs_"),
+  "non-DAGC"
+)
+
+sig.pos.sel.genes_sp_024.fct <- sig.pos.sel.genes_sp_024.fct[,c(1:13,75,14:74)]
+```
+
+### Save data
+```{r}
+#saveRDS(sig.pos.sel.genes_sp_024.fct, "../rds/sig.pos.sel.genes_sp_024.fct_251217.rds")
+sig.pos.sel.genes_sp_024.fct <- readRDS("../rds/sig.pos.sel.genes_sp_024.fct_251217.rds")
+```
+
+
+################################################################################
+
+# Combine pN/pS data for the 4 methylo species
+
+## Import data
+```{r}
+pNpS_sp_018 <- readRDS("../rds/pNpS_sp_018.rds")
+pNpS_sp_021 <- readRDS("../rds/pNpS_sp_021.rds")
+pNpS_sp_022 <- readRDS("../rds/pNpS_sp_022.rds")
+pNpS_sp_024 <- readRDS("../rds/pNpS_sp_024.rds")
+```
+
+
+## Edit tables
+```{r}
+pNpS_sp_018$methylo_sp <- "M. sp. 018"
+pNpS_sp_021$methylo_sp <- "M. sp. 021"
+pNpS_sp_022$methylo_sp <- "M. sp. 022"
+pNpS_sp_024$methylo_sp <- "M. sp. 024"
+pNpS_all_sp <- rbind(pNpS_sp_018,pNpS_sp_021,pNpS_sp_022,pNpS_sp_024)
+pNpS_all_sp$methylo_sp <- as.factor(pNpS_all_sp$methylo_sp)
+levels(pNpS_all_sp$type)[levels(pNpS_all_sp$type) == "core"] <- "Core genes"
+levels(pNpS_all_sp$type)[levels(pNpS_all_sp$type) == "accessory"] <- "Accessory genes"
+pNpS_all_sp$log_pNpS <- log(pNpS_all_sp$pNpS_gene_consensus)
+contrasts(pNpS_all_sp$type) <- contr.sum
+contrasts(pNpS_all_sp$methylo_sp) <- contr.sum
+contrasts(pNpS_all_sp$host_species) <- contr.sum
+str(pNpS_all_sp) # 14,566 genes
+```
+
+# Make second table with COG category
+```{r}
+data.fct.cov <- readRDS("../rds/data.fct.cov.rds")
+pNpS_all_sp <- merge(pNpS_all_sp, data.fct.cov[c(2,7)], by = "gene_callers_id")
+
+# Change NA values (COG20 Categories) for "No COG annotation"
+#DAGCs$COG20_CATEGORY <- factor(ifelse(is.na(DAGCs$COG20_CATEGORY == TRUE), "No COG annotation", as.character(DAGCs$COG20_CATEGORY)))
+
+# For every gene call that have multiple (n) COG categories, make n rows, one row per category.
+pNpS_all_sp.temp <- pNpS_all_sp
+pNpS_all_sp.temp$COG20_CATEGORY <- as.character(pNpS_all_sp.temp$COG20_CATEGORY)
+# Add row number column
+df_split1 <- pNpS_all_sp.temp %>%
+  rowid_to_column()  # Add a column representing the original row number
+# Split rows based on "|" and unnest
+df_split2 <- df_split1 %>%
+  mutate(COG20_CATEGORY = strsplit(COG20_CATEGORY, "\\|")) %>%
+  unnest(cols = COG20_CATEGORY)
+# Remove duplicates within rows
+df_split3 <- df_split2 %>%
+  distinct(gene_callers_id, sample_id, COG20_CATEGORY, .keep_all = TRUE) 
+# Remove rowid column
+df_split4 <- df_split3 %>%
+  select(-rowid)
+pNpS_all_sp.multi <- as.data.frame(df_split4)
+rm(pNpS_all_sp.temp, df_split1, df_split2, df_split3, df_split4)
+# arrange vectors
+pNpS_all_sp.multi$COG20_CATEGORY <- as.factor(pNpS_all_sp.multi$COG20_CATEGORY)
+contrasts(pNpS_all_sp.multi$COG20_CATEGORY) <- contr.sum
+pNpS_all_sp.multi <- droplevels(pNpS_all_sp.multi)
+str(pNpS_all_sp.multi) ## 11,711 genes
+```
+
+## Linear Model without COG category
+```{r}
+lm <- lm(log(pNpS_gene_consensus) ~ type * methylo_sp * host_species, data = pNpS_all_sp) # report
+summary(lm) # report p and adj.R2
+#sigma(lm)
+#anova(lm)
+#Anova(lm, type = 2)
+Anova(lm, type = 3) # report supp mat
+joint_tests(lm) # corresponds to type III ANOVA
+
+plot(lm)
+hist(residuals(lm))
+
+# Estimated marginal means and contrasts
+emm.type <-emmeans(lm, specs = pairwise ~ type, type = "response")
+emm.type # report supp mat
+
+emm.meth_sp <- emmeans(lm, specs = pairwise ~ methylo_sp, adjust = "bonferroni", type = "response")
+emm.meth_sp # report supp mat
+
+emm.host_sp <- emmeans(lm, specs = pairwise ~ host_species, adjust = "bonferroni", type = "response")
+emm.host_sp # report supp mat
+
+pred.type <- ggemmeans(lm, terms = c("type"))
+plot(pred.type)
+#pred.type
+
+pred.meth_sp <- ggemmeans(lm, terms = c("methylo_sp"))
+plot(pred.meth_sp)
+#pred.meth_sp
+
+pred.host_sp <- ggemmeans(lm, terms = c("host_species"))
+plot(pred.host_sp)
+#pred.host_sp 
+
+pred <- ggemmeans(lm, terms = c("methylo_sp", "host_species", "type"), back.transform = TRUE, interval = "confidence")
+#pred
+plot(pred)
+```
+
+### Plot
+```{r}
+pred <- ggemmeans(lm, terms = c("methylo_sp", "host_species", "type"), back.transform = TRUE, interval = "confidence")
+plot(pred)
+
+mod.plot <- plot(pred, 
+                 #show_data = T, limit_range = F, dot_alpha = 0.01, jitter = 0.2,
+                 dodge = 0.5)
+
+mod.plot +
+  xlab(expression(bolditalic("Methylobacterium") ~ bold("species"))) +
+  ylab(expression(bold("Model-predicted") ~ bolditalic("pN/pS")^bold("(gene)"))) +
+#  ylim(0, 0.25) +
+  scale_color_manual(values=c("#63AFF9","#1EA670","#CA0E78","#F39635","#6104BB"), name = expression(bold("Host species")), labels = c("ABBA" = expression(italic("A. balsamea")), "THOC" = expression(italic("T. occidentalis")),"ACSA" = expression(italic("A. saccharum")), "FAGR" = expression(italic("F. grandifolia")), "COCO" = expression(italic("C. cornuta")))) +
+  theme_bw() +
+  theme(text = element_text(family = "Arial"),
+      strip.background = element_rect(fill = "gray25", color = "black"),  # black fill with white border
+      strip.text = element_text(face = "bold", color = "white", size = 11), # bold white text
+      legend.justification = c(0.5, 0),  
+      legend.text = element_text(size = 9),
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      panel.grid.major.y = element_line(),
+      panel.grid.minor.y = element_line(),
+      plot.title = element_blank(),
+      axis.text.x = element_text(color = "black", size = 11, angle = 0, hjust = 0.5, vjust = 0, face = "italic"),
+      axis.text.y = element_text(color = "black", size = 11, angle = 0, hjust = 0, vjust = 0.5),  
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2)
+      )
+ggsave("../figures/predicted_pNpS.tiff", width = 9.5, height = 4)
+```
+
+## relation between pN/pS and gene/genome coverage
+
+### Data prep
+```{r}
+genome.mean.cov <- readRDS("../rds/genome.mean.cov.rds")
+#genome.std.cov <- readRDS("../rds/genome.std.cov.rds")
+genome.mean.cov.sub <- genome.mean.cov[rownames(genome.mean.cov) %in% c("M_sp_018", "M_sp_021", "M_sp_022", "M_sp_024"),]
+genome.cov <- matrix2sample(genome.mean.cov.sub)
+colnames(genome.cov) <- c("methylo_sp","genome_cov","sample_id")
+levels(genome.cov$methylo_sp) <- gsub("_", ". ", levels(genome.cov$methylo_sp))
+
+data.fct.cov <- readRDS("../rds/data.fct.cov.rds")
+data.fct.cov.sub <- data.fct.cov[,c(2,42:66)]
+rownames(data.fct.cov.sub) <- data.fct.cov.sub$gene_callers_id
+data.fct.cov.sub <- data.fct.cov.sub[,-1]
+gene.cov <- matrix2sample(data.fct.cov.sub)
+colnames(gene.cov) <- c("gene_callers_id","gene_cov","sample_id")
+
+pNpS_all_sp_cov <- merge(pNpS_all_sp, gene.cov, by = c("gene_callers_id","sample_id"))
+pNpS_all_sp_cov <- merge(pNpS_all_sp_cov, genome.cov, by = c("methylo_sp","sample_id"))
+```
+
+### Model and plot - genome coverage
+```{r}
+lm.cov <- lm(log(pNpS_gene_consensus) ~ type * methylo_sp * genome_cov, data = pNpS_all_sp_cov) # report
+summary(lm.cov) # report p and adj.R2
+Anova(lm.cov, type = 3) # report supp mat
+
+plot(lm.cov)
+hist(residuals(lm.cov))
+
+lm.cov.2 <- lm(log(pNpS_gene_consensus) ~ genome_cov, data = pNpS_all_sp_cov) # report
+summary(lm.cov.2)
+plot(log(pNpS_gene_consensus) ~ genome_cov, data = pNpS_all_sp_cov)
+
+trends <- emtrends(lm.cov, specs = pairwise ~ type * methylo_sp, var = "genome_cov", adjust = "bonferroni", type = "response")
+trends # report supp mat
+
+pred.cov <- ggemmeans(lm.cov, terms = c("genome_cov [0.87:81.75]", "methylo_sp", "type"), back.transform = TRUE, interval = "confidence")
+plot(pred.cov)
+
+mod.cov.plot <- plot(pred.cov
+                 #, show_data = T, limit_range = F, dot_alpha = 0.01, jitter = 0.2,
+                 #, dodge = 0.5
+                 , limit_range = TRUE 
+                   )
+
+mod.cov.plot <- mod.cov.plot +
+  xlab(expression(bold("Genome coverage"))) +
+  ylab(expression(bold("Model-predicted") ~ bolditalic("pN/pS")^bold("(gene)"))) +
+  scale_color_manual(values=c("#E15F4C","#0095C8","#A77B3D","#1A8A00"), name = expression(bold("Methylo.\nspecies")), labels = c("M. sp. 018" = expression(italic("M. sp. 018")), "M. sp. 021" = expression(italic("M. sp. 021")),"M. sp. 022" = expression(italic("M. sp. 022")), "M. sp. 024" = expression(italic("M. sp. 024")))) +
+  scale_fill_manual(values=c("#E15F4C","#0095C8","#A77B3D","#1A8A00"))+
+  theme_bw() +
+  theme(text = element_text(family = "Arial"),
+      strip.background = element_rect(fill = "gray25", color = "black"),  # black fill with white border
+      strip.text = element_text(face = "bold", color = "white", size = 11), # bold white text
+      legend.justification = c(0.5, 0),  
+      legend.text = element_text(size = 9),
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      panel.grid.major.y = element_line(),
+      panel.grid.minor.y = element_line(),
+      plot.title = element_blank(),
+      axis.text.x = element_text(color = "black", size = 11, angle = 0, hjust = 0.5, vjust = 0),
+      axis.text.y = element_text(color = "black", size = 11, angle = 0, hjust = 0, vjust = 0.5),  
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2)
+      )
+
+mod.cov.plot
+
+ggsave("../figures/predicted_pNpS_genome_cov.tiff", width = 9.5, height = 4)
+```
+
+### Model and plot - gene coverage
+```{r}
+lm.cov.gene <- lm(log(pNpS_gene_consensus) ~ type * methylo_sp * gene_cov, data = pNpS_all_sp_cov) # report
+summary(lm.cov.gene) # report p and adj.R2
+Anova(lm.cov.gene, type = 3) # report supp mat
+
+plot(lm.cov.gene)
+hist(residuals(lm.cov.gene))
+
+lm.cov.gene.2 <- lm(log(pNpS_gene_consensus) ~ log(gene_cov), data = pNpS_all_sp_cov) 
+cor(log(pNpS_all_sp_cov$pNpS_gene_consensus), log(pNpS_all_sp_cov$gene_cov))
+summary(lm.cov.gene.2) # report p and adj.R2
+plot(log(pNpS_gene_consensus) ~ gene_cov, data = pNpS_all_sp_cov)
+
+trends.gene <- emtrends(lm.cov.gene, specs = pairwise ~ type * methylo_sp, var = "gene_cov", adjust = "bonferroni", type = "response")
+trends.gene # report supp mat
+
+pred.cov.gene <- ggemmeans(lm.cov.gene, terms = c("gene_cov [1.25:297.5]", "methylo_sp", "type"), back.transform = TRUE, interval = "confidence")
+plot(pred.cov.gene)
+
+mod.cov.plot.gene <- plot(pred.cov.gene
+                 #, show_data = T, limit_range = F, dot_alpha = 0.01, jitter = 0.2,
+                 #, dodge = 0.5
+                 , limit_range = TRUE 
+                   )
+
+mod.cov.plot.gene <- mod.cov.plot.gene +
+  xlab(expression(bold("Gene coverage"))) +
+  #ylim(0,0.3)+xlim(0,80)+
+  ylab(expression(bold("Model-predicted") ~ bolditalic("pN/pS")^bold("(gene)"))) +
+  scale_color_manual(values=c("#E15F4C","#0095C8","#A77B3D","#1A8A00"), name = expression(bold("Methylo.\nspecies")), labels = c("M. sp. 018" = expression(italic("M. sp. 018")), "M. sp. 021" = expression(italic("M. sp. 021")),"M. sp. 022" = expression(italic("M. sp. 022")), "M. sp. 024" = expression(italic("M. sp. 024")))) +
+  scale_fill_manual(values=c("#E15F4C","#0095C8","#A77B3D","#1A8A00"))+
+  theme_bw() +
+  theme(text = element_text(family = "Arial"),
+      strip.background = element_rect(fill = "gray25", color = "black"),  # black fill with white border
+      strip.text = element_text(face = "bold", color = "white", size = 11), # bold white text
+      legend.justification = c(0.5, 0),  
+      legend.text = element_text(size = 9),
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      panel.grid.major.y = element_line(),
+      panel.grid.minor.y = element_line(),
+      plot.title = element_blank(),
+      axis.text.x = element_text(color = "black", size = 11, angle = 0, hjust = 0.5, vjust = 0),
+      axis.text.y = element_text(color = "black", size = 11, angle = 0, hjust = 0, vjust = 0.5),  
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2)
+      )
+
+mod.cov.plot.gene
+
+ggsave("../figures/predicted_pNpS_gene_cov.tiff", width = 9.5, height = 4)
+```
+
+## Linear Model with COG category - Exploration
+```{r}
+# Exporation only
+lm.COG.1 <- lm(log(pNpS_gene_consensus) ~ COG20_CATEGORY, data = pNpS_all_sp.multi) 
+
+lm.COG.2 <- lm(log(pNpS_gene_consensus) ~ type * COG20_CATEGORY, data = pNpS_all_sp.multi) 
+
+lm.COG.3 <- lm(log(pNpS_gene_consensus) ~ type * host_species * COG20_CATEGORY, data = pNpS_all_sp.multi)
+
+lm.COG.4 <- lm(log(pNpS_gene_consensus) ~ type * host_species * methylo_sp * COG20_CATEGORY, data = pNpS_all_sp.multi) 
+
+lm.COG.5 <- lm(log(pNpS_gene_consensus) ~ host_species * COG20_CATEGORY, data = pNpS_all_sp.multi)
+
+lm.COG.6 <- lm(log(pNpS_gene_consensus) ~ host_species * methylo_sp * COG20_CATEGORY, data = pNpS_all_sp.multi) 
+
+lm.COG.7 <- lm(log(pNpS_gene_consensus) ~ methylo_sp * COG20_CATEGORY, data = pNpS_all_sp.multi) 
+
+lm.COG.8 <- lm(log(pNpS_gene_consensus) ~ type * methylo_sp * COG20_CATEGORY, data = pNpS_all_sp.multi) 
+
+lm.COG.9 <- lm(log(pNpS_gene_consensus) ~ type * host_species * methylo_sp + COG20_CATEGORY, data = pNpS_all_sp.multi) 
+
+lm.COG.10 <- lm(log(pNpS_gene_consensus) ~ type * host_species * methylo_sp + COG20_CATEGORY + type:COG20_CATEGORY, data = pNpS_all_sp.multi) 
+
+lm.COG.11 <- lmer(log(pNpS_gene_consensus) ~ type * COG20_CATEGORY + (1|host_species) + (1|methylo_sp), data = pNpS_all_sp.multi)
+
+lm.COG.12 <- lmer(log(pNpS_gene_consensus) ~ type * COG20_CATEGORY + (1|host_species*methylo_sp), data = pNpS_all_sp.multi)
+
+lm.COG.13 <- lm(log(pNpS_gene_consensus) ~ host_species + methylo_sp + host_species:methylo_sp + type + COG20_CATEGORY + type:COG20_CATEGORY, data = pNpS_all_sp.multi)
+
+lm.COG.14 <- lm(log(pNpS_gene_consensus) ~ type + host_species + methylo_sp + host_species:methylo_sp + type:host_species + type:methylo_sp + type:host_species:methylo_sp + COG20_CATEGORY + type:COG20_CATEGORY, data = pNpS_all_sp.multi)
+
+model.sel(lm,lm.COG.1,lm.COG.2,lm.COG.3,lm.COG.4,lm.COG.5,lm.COG.6,lm.COG.7,lm.COG.8,lm.COG.9,lm.COG.10,lm.COG.11,lm.COG.12,lm.COG.13,lm.COG.14)
+```
+
+### Plot - Exploration
+```{r}
+pred.COG <- ggemmeans(lm.COG.10, terms = c("COG20_CATEGORY", "host_species", "methylo_sp"), back.transform = TRUE, interval = "confidence")
+
+pred.COG <- ggemmeans(lm.COG.10, terms = "COG20_CATEGORY")
+
+pred.COG.2 <- ggemmeans(lm.COG.2, terms = c("COG20_CATEGORY", "type"))
+pred.COG.9 <- ggemmeans(lm.COG.9, terms = c("COG20_CATEGORY"))
+pred.COG.10.1 <- ggemmeans(lm.COG.10, terms = c("COG20_CATEGORY"))
+pred.COG.10.2 <- ggemmeans(lm.COG.10, terms = c("COG20_CATEGORY", "type"))
+pred.COG.11 <- ggemmeans(lm.COG.11, terms = c("COG20_CATEGORY", "type"))
+pred.COG.12 <- ggemmeans(lm.COG.12, terms = c("COG20_CATEGORY", "type"))
+pred.COG.13 <- ggemmeans(lm.COG.13, terms = c("COG20_CATEGORY", "type"))
+pred.COG.14 <- ggemmeans(lm.COG.14, terms = c("COG20_CATEGORY", "type"))
+plot(pred.COG.2)
+plot(pred.COG.9)
+plot(pred.COG.10.1)
+plot(pred.COG.10.2)
+plot(pred.COG.11)
+plot(pred.COG.12)
+plot(pred.COG.13)
+plot(pred.COG.14)
+
+pred.COG <- ggemmeans(lm.COG.10, terms = c("COG20_CATEGORY", "host_species"))
+
+pred.COG <- ggemmeans(lm.COG.10, terms = c("COG20_CATEGORY","host_species", "type", "methylo_sp"))
+
+pred.COG <- ggemmeans(lm.COG.10, terms = c("COG20_CATEGORY", "type","methylo_sp"))
+
+
+pred.COG <- ggemmeans(lm.COG.10, terms = c("COG20_CATEGORY"))
+
+```
+ 
+## Linear Model with COG category (!! important to run all the block!!)
+```{r}
+lm.COG <- lm(log(pNpS_gene_consensus) ~ type * host_species * methylo_sp + COG20_CATEGORY + type:COG20_CATEGORY, data = pNpS_all_sp.multi) 
+
+summary(lm.COG) 
+anova(lm.COG) # type I ... type III does not work
+
+# Get the levels of factor 'COG20_CATEGORY' based on decreasing EMM averaged across type, methylo_sp and host_species
+emm.cat.COG.means <-emmeans(lm.COG, specs = pairwise ~ COG20_CATEGORY, adjust = "bonferroni", type = "response")
+emm.cat.COG.means$emmeans
+emm.cat.COG.means <- as.data.frame(emm.cat.COG.means$emmeans)
+emm.cat.COG.means[6,2] <- 0
+
+emm.cat.COG.means.decr <- emm.cat.COG.means %>%
+  mutate(COG20_CATEGORY = fct_reorder(COG20_CATEGORY, response, .fun = mean, .desc = TRUE))
+levels(emm.cat.COG.means.decr$COG20_CATEGORY)
+
+# !!! IMPORTANT TO RERUN THE MODEL
+
+## re-run model with good factor order
+pNpS_all_sp.multi$COG20_CATEGORY <- factor(pNpS_all_sp.multi$COG20_CATEGORY, levels = levels(emm.cat.COG.means.decr$COG20_CATEGORY))
+
+lm.COG <- lm(log(pNpS_gene_consensus) ~ type * host_species * methylo_sp + COG20_CATEGORY + type:COG20_CATEGORY, data = pNpS_all_sp.multi) 
+summary(lm.COG)
+anova(lm.COG)
+
+emm.cat.COG <-emmeans(lm.COG, specs = pairwise ~ COG20_CATEGORY|type, adjust = "bonferroni", type = "response")
+emm.cat.COG$emmeans
+
+# Table to report in supp mat
+emm.COG.df <- merge(emm.cat.COG$emmeans[1:23],emm.cat.COG$emmeans[24:46], by = "COG20_CATEGORY")
+emm.COG.df <- emm.COG.df[c(1:3,6:9,12:13)]
+emm.COG.df$response.x <- round(emm.COG.df$response.x, 3)
+emm.COG.df$lower.CL.x <- round(emm.COG.df$lower.CL.x, 3)
+emm.COG.df$upper.CL.x <- round(emm.COG.df$upper.CL.x, 3)
+emm.COG.df$response.y <- round(emm.COG.df$response.y, 3)
+emm.COG.df$lower.CL.y <- round(emm.COG.df$lower.CL.y, 3)
+emm.COG.df$upper.CL.y <- round(emm.COG.df$upper.CL.y, 3)
+emm.COG.df <- emm.COG.df[order(emm.COG.df$COG20_CATEGORY), ]
+rownames(emm.COG.df) <- NULL
+```
+
+### Plot
+```{r}
+pred.COG <- ggemmeans(lm.COG, terms = c("COG20_CATEGORY", "type"))
+
+COG.plot <- plot(pred.COG, dodge = 0.25)
+
+COG.plot +
+  xlab(expression(bold("COG Category"))) +
+  ylab(expression(bold("Model-predicted") ~ bolditalic("pN/pS")^bold("(gene)"))) +
+  scale_color_manual(values=c("gray25","red3"), name = expression(bold("Gene type")), labels = c("Core genes" = "Core genes", "Accessory genes" = "Accessory genes")) +
+  theme_bw() +
+  theme(text = element_text(family = "Arial"),
+      legend.justification = c(0.5, 0),  
+      legend.text = element_text(size = 9),
+      panel.grid.major = element_blank(), 
+      panel.grid.minor = element_blank(), 
+      panel.grid.major.y = element_line(),
+      panel.grid.minor.y = element_line(),
+      plot.title = element_blank(),
+      axis.text.x = element_text(color = "black", size = 12, angle = 90, hjust = 1, vjust = 0.4),
+      axis.text.y = element_text(color = "black", size = 11, angle = 0, hjust = 0, vjust = 0.5),  
+      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1),
+      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2)
+      )
+ggsave("../figures/predicted_pNpS_COG.tiff", width = 10, height = 8)
+```
+
+
+## Linear Model for testing plant clade
+```{r}
+lm.clade <- lm(log(pNpS_gene_consensus) ~ type * methylo_sp * plant_clade, data = pNpS_all_sp[pNpS_all_sp$host_species != "COCO",])
+summary(lm.clade)
+anova(lm.clade)
+Anova(lm.clade, type = 2)
+Anova(lm.clade, type = 3)
+
+emm.clade <- emmeans(lm.clade, ~ type * methylo_sp * plant_clade)
+emm.clade
+
+pred.type.cl <- ggpredict(lm.clade, terms = c("type"))
+plot(pred.type.cl)
+
+pred.meth_sp.cl <- ggpredict(lm.clade, terms = c("methylo_sp"))
+plot(pred.meth_sp.cl)
+
+pred.clade.cl <- ggpredict(lm.clade, terms = c("plant_clade"))
+plot(pred.clade.cl)
+
+pred.all.clade <- ggpredict(lm.clade, terms = c("methylo_sp", "plant_clade", "type"), back.transform = TRUE)
+plot(pred.all.clade)
+```
+
+
+## Linear Model for testing plant_type (form)
+```{r}
+lm.form <- lm(log(pNpS_gene_consensus) ~ type * methylo_sp * plant_type, data = pNpS_all_sp)
+summary(lm.form)
+anova(lm.form)
+Anova(lm.form, type = 2)
+Anova(lm.form, type = 3)
+
+emm.form <- emmeans(lm.form, ~ type * methylo_sp * plant_type)
+emm.form
+
+pred.type.frm <- ggpredict(lm.form, terms = c("type"))
+plot(pred.type.frm)
+
+pred.meth_sp.frm <- ggpredict(lm.form, terms = c("methylo_sp"))
+plot(pred.meth_sp.frm)
+
+pred.form.frm <- ggpredict(lm.form, terms = c("plant_type"))
+plot(pred.form.frm)
+
+pred.all.form <- ggpredict(lm.form, terms = c("methylo_sp", "plant_type", "type"), back.transform = TRUE)
+plot(pred.all.form)
+```
+
+################################################################################
+
+# Combine positively selected genes
+
+## Import data
+```{r}
+sig.pos.sel.genes_sp_018.fct <- readRDS("../rds/sig.pos.sel.genes_sp_018.fct_251216.rds")
+sig.pos.sel.genes_sp_021.fct <- readRDS("../rds/sig.pos.sel.genes_sp_021.fct_251217.rds")
+sig.pos.sel.genes_sp_024.fct <- readRDS("../rds/sig.pos.sel.genes_sp_024.fct_251217.rds")
+```
+
+## Edit table
+```{r}
+all(colnames(sig.pos.sel.genes_sp_018.fct)==colnames(sig.pos.sel.genes_sp_021.fct))
+all(colnames(sig.pos.sel.genes_sp_018.fct)==colnames(sig.pos.sel.genes_sp_024.fct))
+
+all.pos.sel.genes <- rbind(sig.pos.sel.genes_sp_018.fct, 
+                           sig.pos.sel.genes_sp_021.fct, 
+                           sig.pos.sel.genes_sp_024.fct)
+colnames(all.pos.sel.genes)[4] <- "CI_lower.log"
+colnames(all.pos.sel.genes)[26] <- "KEGG_Module"
+all.pos.sel.genes <- all.pos.sel.genes[,c(1,10,12,11,9,14,13,2,3,4,16,18,20,22,24,26,28,30)]
+
+all.pos.sel.genes$host_species <- factor(x = all.pos.sel.genes$host_species, levels = c("THOC","FAGR","COCO"))
+all.pos.sel.genes <- all.pos.sel.genes[order(all.pos.sel.genes$genome_name, all.pos.sel.genes$host_species, -all.pos.sel.genes$mean_pNpS),]
+
+
+saveRDS(all.pos.sel.genes,"../rds/all.pos.sel.genes_251217.rds")
+
+```
+
+## Write table
+```{r}
+#write_delim(all.pos.sel.genes, file = "../all.pos.sel.genes.txt", delim = "\t")
+#write_csv(all.pos.sel.genes, file = "../all_pos_sel_genes.csv")
+```
+
+
+
