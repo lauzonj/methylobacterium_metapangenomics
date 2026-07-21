@@ -32,6 +32,7 @@ genome.mean.cov <- merge(genome.mean.cov, read.delim("../data/anvio_outputs/THOC
 colnames(genome.mean.cov)[1] <- "species"
 rownames(genome.mean.cov) <- genome.mean.cov$species
 genome.mean.cov <- genome.mean.cov[,-1]
+#saveRDS(genome.mean.cov, "../rds/genome.mean.cov.rds")
 ```
 
 ## Horizontal coverage
