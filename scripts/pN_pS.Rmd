@@ -14,7 +14,7 @@ library(car)
 #library(lmerTest)
 library(emmeans)
 library(ggeffects)
-library(MuMIn)
+#library(MuMIn)
 #library(tls)
 ```
 
@@ -941,9 +941,11 @@ saveRDS(all.pos.sel.genes,"../rds/all.pos.sel.genes.rds")
 
 -################################################################################
 
-# Combine pN/pS data for the 4 methylo species
+# Linear models
 
-## Edit tables
+## Edit dataframes
+
+### Combine pN/pS data for the 4 methylo species
 ```{r}
 pNpS_sp_018$methylo_sp <- "M. sp. 018"
 pNpS_sp_021$methylo_sp <- "M. sp. 021"
@@ -960,7 +962,7 @@ contrasts(pNpS_all_sp$host_species) <- contr.sum
 str(pNpS_all_sp) # 14,566 genes
 ```
 
-## Make second table with COG category
+### Make second table with COG category
 ```{r}
 data.fct.cov <- readRDS("../rds/data.fct.cov.rds")
 pNpS_all_sp <- merge(pNpS_all_sp, data.fct.cov[c(2,7)], by = "gene_callers_id")
@@ -990,12 +992,11 @@ pNpS_all_sp.multi <- droplevels(pNpS_all_sp.multi)
 str(pNpS_all_sp.multi) ## 11,711 genes
 ```
 
-## Linear Model without COG category
+## First Model (without COG category)
 ```{r}
 lm <- lm(log(pNpS_gene_consensus) ~ type * methylo_sp * host_species, data = pNpS_all_sp) # report
 summary(lm) # report p and adj.R2
 Anova(lm, type = 3) # report supp mat
-joint_tests(lm) # corresponds to type III ANOVA
 
 plot(lm)
 hist(residuals(lm))
@@ -1012,29 +1013,20 @@ emm.host_sp # report supp mat
 
 pred.type <- ggemmeans(lm, terms = c("type"))
 plot(pred.type)
-#pred.type
 
 pred.meth_sp <- ggemmeans(lm, terms = c("methylo_sp"))
 plot(pred.meth_sp)
-#pred.meth_sp
 
 pred.host_sp <- ggemmeans(lm, terms = c("host_species"))
 plot(pred.host_sp)
-#pred.host_sp 
 
+# Full model predictions
 pred <- ggemmeans(lm, terms = c("methylo_sp", "host_species", "type"), back.transform = TRUE, interval = "confidence")
-#pred
-plot(pred)
 ```
 
 ### Plot
 ```{r}
-pred <- ggemmeans(lm, terms = c("methylo_sp", "host_species", "type"), back.transform = TRUE, interval = "confidence")
-plot(pred)
-
-mod.plot <- plot(pred, 
-                 #show_data = T, limit_range = F, dot_alpha = 0.01, jitter = 0.2,
-                 dodge = 0.5)
+mod.plot <- plot(pred, dodge = 0.5)
 
 mod.plot +
   xlab(expression(bolditalic("Methylobacterium") ~ bold("species"))) +
@@ -1042,9 +1034,9 @@ mod.plot +
 #  ylim(0, 0.25) +
   scale_color_manual(values=c("#63AFF9","#1EA670","#CA0E78","#F39635","#6104BB"), name = expression(bold("Host species")), labels = c("ABBA" = expression(italic("A. balsamea")), "THOC" = expression(italic("T. occidentalis")),"ACSA" = expression(italic("A. saccharum")), "FAGR" = expression(italic("F. grandifolia")), "COCO" = expression(italic("C. cornuta")))) +
   theme_bw() +
-  theme(text = element_text(family = "Arial"),
-      strip.background = element_rect(fill = "gray25", color = "black"),  # black fill with white border
-      strip.text = element_text(face = "bold", color = "white", size = 11), # bold white text
+  theme(text = element_text(),
+      strip.background = element_rect(fill = "gray25", color = "black"),
+      strip.text = element_text(face = "bold", color = "white", size = 11),
       legend.justification = c(0.5, 0),  
       legend.text = element_text(size = 9),
       panel.grid.major = element_blank(), 
@@ -1057,22 +1049,23 @@ mod.plot +
       axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1),
       axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2)
       )
-ggsave("../figures/predicted_pNpS.tiff", width = 9.5, height = 4)
+ggsave("../figures/figure_7A_pNpS.pdf", width = 9.5, height = 4)
 ```
 
-## relation between pN/pS and gene/genome coverage
+## Second Model
+
+Relation between pN/pS and genome coverage
 
 ### Data prep
 ```{r}
 genome.mean.cov <- readRDS("../rds/genome.mean.cov.rds")
-#genome.std.cov <- readRDS("../rds/genome.std.cov.rds")
 genome.mean.cov.sub <- genome.mean.cov[rownames(genome.mean.cov) %in% c("M_sp_018", "M_sp_021", "M_sp_022", "M_sp_024"),]
 genome.cov <- matrix2sample(genome.mean.cov.sub)
 colnames(genome.cov) <- c("methylo_sp","genome_cov","sample_id")
 levels(genome.cov$methylo_sp) <- gsub("_", ". ", levels(genome.cov$methylo_sp))
 
 data.fct.cov <- readRDS("../rds/data.fct.cov.rds")
-data.fct.cov.sub <- data.fct.cov[,c(2,42:66)]
+data.fct.cov.sub <- data.fct.cov[,c(2,25:49)]
 rownames(data.fct.cov.sub) <- data.fct.cov.sub$gene_callers_id
 data.fct.cov.sub <- data.fct.cov.sub[,-1]
 gene.cov <- matrix2sample(data.fct.cov.sub)
@@ -1082,7 +1075,7 @@ pNpS_all_sp_cov <- merge(pNpS_all_sp, gene.cov, by = c("gene_callers_id","sample
 pNpS_all_sp_cov <- merge(pNpS_all_sp_cov, genome.cov, by = c("methylo_sp","sample_id"))
 ```
 
-### Model and plot - genome coverage
+### Model and plot
 ```{r}
 lm.cov <- lm(log(pNpS_gene_consensus) ~ type * methylo_sp * genome_cov, data = pNpS_all_sp_cov) # report
 summary(lm.cov) # report p and adj.R2
@@ -1091,21 +1084,14 @@ Anova(lm.cov, type = 3) # report supp mat
 plot(lm.cov)
 hist(residuals(lm.cov))
 
-lm.cov.2 <- lm(log(pNpS_gene_consensus) ~ genome_cov, data = pNpS_all_sp_cov) # report
-summary(lm.cov.2)
-plot(log(pNpS_gene_consensus) ~ genome_cov, data = pNpS_all_sp_cov)
-
 trends <- emtrends(lm.cov, specs = pairwise ~ type * methylo_sp, var = "genome_cov", adjust = "bonferroni", type = "response")
 trends # report supp mat
 
+# Full model predictions
 pred.cov <- ggemmeans(lm.cov, terms = c("genome_cov [0.87:81.75]", "methylo_sp", "type"), back.transform = TRUE, interval = "confidence")
 plot(pred.cov)
 
-mod.cov.plot <- plot(pred.cov
-                 #, show_data = T, limit_range = F, dot_alpha = 0.01, jitter = 0.2,
-                 #, dodge = 0.5
-                 , limit_range = TRUE 
-                   )
+mod.cov.plot <- plot(pred.cov, limit_range = TRUE)
 
 mod.cov.plot <- mod.cov.plot +
   xlab(expression(bold("Genome coverage"))) +
@@ -1113,9 +1099,9 @@ mod.cov.plot <- mod.cov.plot +
   scale_color_manual(values=c("#E15F4C","#0095C8","#A77B3D","#1A8A00"), name = expression(bold("Methylo.\nspecies")), labels = c("M. sp. 018" = expression(italic("M. sp. 018")), "M. sp. 021" = expression(italic("M. sp. 021")),"M. sp. 022" = expression(italic("M. sp. 022")), "M. sp. 024" = expression(italic("M. sp. 024")))) +
   scale_fill_manual(values=c("#E15F4C","#0095C8","#A77B3D","#1A8A00"))+
   theme_bw() +
-  theme(text = element_text(family = "Arial"),
-      strip.background = element_rect(fill = "gray25", color = "black"),  # black fill with white border
-      strip.text = element_text(face = "bold", color = "white", size = 11), # bold white text
+  theme(text = element_text(),
+      strip.background = element_rect(fill = "gray25", color = "black"),
+      strip.text = element_text(face = "bold", color = "white", size = 11),
       legend.justification = c(0.5, 0),  
       legend.text = element_text(size = 9),
       panel.grid.major = element_blank(), 
@@ -1131,151 +1117,34 @@ mod.cov.plot <- mod.cov.plot +
 
 mod.cov.plot
 
-ggsave("../figures/predicted_pNpS_genome_cov.tiff", width = 9.5, height = 4)
+ggsave("../figures/figure_7B_pNpS.pdf", width = 9.5, height = 4)
 ```
 
-### Model and plot - gene coverage
+## Correlation between pN/pS and gene coverage
 ```{r}
-lm.cov.gene <- lm(log(pNpS_gene_consensus) ~ type * methylo_sp * gene_cov, data = pNpS_all_sp_cov) # report
-summary(lm.cov.gene) # report p and adj.R2
-Anova(lm.cov.gene, type = 3) # report supp mat
-
-plot(lm.cov.gene)
-hist(residuals(lm.cov.gene))
-
-lm.cov.gene.2 <- lm(log(pNpS_gene_consensus) ~ log(gene_cov), data = pNpS_all_sp_cov) 
 cor(log(pNpS_all_sp_cov$pNpS_gene_consensus), log(pNpS_all_sp_cov$gene_cov))
-summary(lm.cov.gene.2) # report p and adj.R2
-plot(log(pNpS_gene_consensus) ~ gene_cov, data = pNpS_all_sp_cov)
-
-trends.gene <- emtrends(lm.cov.gene, specs = pairwise ~ type * methylo_sp, var = "gene_cov", adjust = "bonferroni", type = "response")
-trends.gene # report supp mat
-
-pred.cov.gene <- ggemmeans(lm.cov.gene, terms = c("gene_cov [1.25:297.5]", "methylo_sp", "type"), back.transform = TRUE, interval = "confidence")
-plot(pred.cov.gene)
-
-mod.cov.plot.gene <- plot(pred.cov.gene
-                 #, show_data = T, limit_range = F, dot_alpha = 0.01, jitter = 0.2,
-                 #, dodge = 0.5
-                 , limit_range = TRUE 
-                   )
-
-mod.cov.plot.gene <- mod.cov.plot.gene +
-  xlab(expression(bold("Gene coverage"))) +
-  #ylim(0,0.3)+xlim(0,80)+
-  ylab(expression(bold("Model-predicted") ~ bolditalic("pN/pS")^bold("(gene)"))) +
-  scale_color_manual(values=c("#E15F4C","#0095C8","#A77B3D","#1A8A00"), name = expression(bold("Methylo.\nspecies")), labels = c("M. sp. 018" = expression(italic("M. sp. 018")), "M. sp. 021" = expression(italic("M. sp. 021")),"M. sp. 022" = expression(italic("M. sp. 022")), "M. sp. 024" = expression(italic("M. sp. 024")))) +
-  scale_fill_manual(values=c("#E15F4C","#0095C8","#A77B3D","#1A8A00"))+
-  theme_bw() +
-  theme(text = element_text(family = "Arial"),
-      strip.background = element_rect(fill = "gray25", color = "black"),  # black fill with white border
-      strip.text = element_text(face = "bold", color = "white", size = 11), # bold white text
-      legend.justification = c(0.5, 0),  
-      legend.text = element_text(size = 9),
-      panel.grid.major = element_blank(), 
-      panel.grid.minor = element_blank(), 
-      panel.grid.major.y = element_line(),
-      panel.grid.minor.y = element_line(),
-      plot.title = element_blank(),
-      axis.text.x = element_text(color = "black", size = 11, angle = 0, hjust = 0.5, vjust = 0),
-      axis.text.y = element_text(color = "black", size = 11, angle = 0, hjust = 0, vjust = 0.5),  
-      axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1),
-      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2)
-      )
-
-mod.cov.plot.gene
-
-ggsave("../figures/predicted_pNpS_gene_cov.tiff", width = 9.5, height = 4)
 ```
 
-## Linear Model with COG category - Exploration
-```{r}
-# Exporation only
-lm.COG.1 <- lm(log(pNpS_gene_consensus) ~ COG20_CATEGORY, data = pNpS_all_sp.multi) 
+## Third Model (with COG category)
 
-lm.COG.2 <- lm(log(pNpS_gene_consensus) ~ type * COG20_CATEGORY, data = pNpS_all_sp.multi) 
-
-lm.COG.3 <- lm(log(pNpS_gene_consensus) ~ type * host_species * COG20_CATEGORY, data = pNpS_all_sp.multi)
-
-lm.COG.4 <- lm(log(pNpS_gene_consensus) ~ type * host_species * methylo_sp * COG20_CATEGORY, data = pNpS_all_sp.multi) 
-
-lm.COG.5 <- lm(log(pNpS_gene_consensus) ~ host_species * COG20_CATEGORY, data = pNpS_all_sp.multi)
-
-lm.COG.6 <- lm(log(pNpS_gene_consensus) ~ host_species * methylo_sp * COG20_CATEGORY, data = pNpS_all_sp.multi) 
-
-lm.COG.7 <- lm(log(pNpS_gene_consensus) ~ methylo_sp * COG20_CATEGORY, data = pNpS_all_sp.multi) 
-
-lm.COG.8 <- lm(log(pNpS_gene_consensus) ~ type * methylo_sp * COG20_CATEGORY, data = pNpS_all_sp.multi) 
-
-lm.COG.9 <- lm(log(pNpS_gene_consensus) ~ type * host_species * methylo_sp + COG20_CATEGORY, data = pNpS_all_sp.multi) 
-
-lm.COG.10 <- lm(log(pNpS_gene_consensus) ~ type * host_species * methylo_sp + COG20_CATEGORY + type:COG20_CATEGORY, data = pNpS_all_sp.multi) 
-
-lm.COG.11 <- lmer(log(pNpS_gene_consensus) ~ type * COG20_CATEGORY + (1|host_species) + (1|methylo_sp), data = pNpS_all_sp.multi)
-
-lm.COG.12 <- lmer(log(pNpS_gene_consensus) ~ type * COG20_CATEGORY + (1|host_species*methylo_sp), data = pNpS_all_sp.multi)
-
-lm.COG.13 <- lm(log(pNpS_gene_consensus) ~ host_species + methylo_sp + host_species:methylo_sp + type + COG20_CATEGORY + type:COG20_CATEGORY, data = pNpS_all_sp.multi)
-
-lm.COG.14 <- lm(log(pNpS_gene_consensus) ~ type + host_species + methylo_sp + host_species:methylo_sp + type:host_species + type:methylo_sp + type:host_species:methylo_sp + COG20_CATEGORY + type:COG20_CATEGORY, data = pNpS_all_sp.multi)
-
-model.sel(lm,lm.COG.1,lm.COG.2,lm.COG.3,lm.COG.4,lm.COG.5,lm.COG.6,lm.COG.7,lm.COG.8,lm.COG.9,lm.COG.10,lm.COG.11,lm.COG.12,lm.COG.13,lm.COG.14)
-```
-
-### Plot - Exploration
-```{r}
-pred.COG <- ggemmeans(lm.COG.10, terms = c("COG20_CATEGORY", "host_species", "methylo_sp"), back.transform = TRUE, interval = "confidence")
-
-pred.COG <- ggemmeans(lm.COG.10, terms = "COG20_CATEGORY")
-
-pred.COG.2 <- ggemmeans(lm.COG.2, terms = c("COG20_CATEGORY", "type"))
-pred.COG.9 <- ggemmeans(lm.COG.9, terms = c("COG20_CATEGORY"))
-pred.COG.10.1 <- ggemmeans(lm.COG.10, terms = c("COG20_CATEGORY"))
-pred.COG.10.2 <- ggemmeans(lm.COG.10, terms = c("COG20_CATEGORY", "type"))
-pred.COG.11 <- ggemmeans(lm.COG.11, terms = c("COG20_CATEGORY", "type"))
-pred.COG.12 <- ggemmeans(lm.COG.12, terms = c("COG20_CATEGORY", "type"))
-pred.COG.13 <- ggemmeans(lm.COG.13, terms = c("COG20_CATEGORY", "type"))
-pred.COG.14 <- ggemmeans(lm.COG.14, terms = c("COG20_CATEGORY", "type"))
-plot(pred.COG.2)
-plot(pred.COG.9)
-plot(pred.COG.10.1)
-plot(pred.COG.10.2)
-plot(pred.COG.11)
-plot(pred.COG.12)
-plot(pred.COG.13)
-plot(pred.COG.14)
-
-pred.COG <- ggemmeans(lm.COG.10, terms = c("COG20_CATEGORY", "host_species"))
-
-pred.COG <- ggemmeans(lm.COG.10, terms = c("COG20_CATEGORY","host_species", "type", "methylo_sp"))
-
-pred.COG <- ggemmeans(lm.COG.10, terms = c("COG20_CATEGORY", "type","methylo_sp"))
-
-
-pred.COG <- ggemmeans(lm.COG.10, terms = c("COG20_CATEGORY"))
-
-```
- 
-## Linear Model with COG category (!! important to run all the block!!)
 ```{r}
 lm.COG <- lm(log(pNpS_gene_consensus) ~ type * host_species * methylo_sp + COG20_CATEGORY + type:COG20_CATEGORY, data = pNpS_all_sp.multi) 
-
 summary(lm.COG) 
-anova(lm.COG) # type I ... type III does not work
+anova(lm.COG) # type I
 
 # Get the levels of factor 'COG20_CATEGORY' based on decreasing EMM averaged across type, methylo_sp and host_species
-emm.cat.COG.means <-emmeans(lm.COG, specs = pairwise ~ COG20_CATEGORY, adjust = "bonferroni", type = "response")
+emm.cat.COG.means <- emmeans(lm.COG, specs = pairwise ~ COG20_CATEGORY, adjust = "bonferroni", type = "response")
 emm.cat.COG.means$emmeans
 emm.cat.COG.means <- as.data.frame(emm.cat.COG.means$emmeans)
 emm.cat.COG.means[6,2] <- 0
+
+rm(mean)
 
 emm.cat.COG.means.decr <- emm.cat.COG.means %>%
   mutate(COG20_CATEGORY = fct_reorder(COG20_CATEGORY, response, .fun = mean, .desc = TRUE))
 levels(emm.cat.COG.means.decr$COG20_CATEGORY)
 
-# !!! IMPORTANT TO RERUN THE MODEL
-
-## re-run model with good factor order
+# Now re-run model with good factor order (important)
 pNpS_all_sp.multi$COG20_CATEGORY <- factor(pNpS_all_sp.multi$COG20_CATEGORY, levels = levels(emm.cat.COG.means.decr$COG20_CATEGORY))
 
 lm.COG <- lm(log(pNpS_gene_consensus) ~ type * host_species * methylo_sp + COG20_CATEGORY + type:COG20_CATEGORY, data = pNpS_all_sp.multi) 
@@ -1285,7 +1154,7 @@ anova(lm.COG)
 emm.cat.COG <-emmeans(lm.COG, specs = pairwise ~ COG20_CATEGORY|type, adjust = "bonferroni", type = "response")
 emm.cat.COG$emmeans
 
-# Table to report in supp mat
+# Table to report in supp mat (Table S4b)
 emm.COG.df <- merge(emm.cat.COG$emmeans[1:23],emm.cat.COG$emmeans[24:46], by = "COG20_CATEGORY")
 emm.COG.df <- emm.COG.df[c(1:3,6:9,12:13)]
 emm.COG.df$response.x <- round(emm.COG.df$response.x, 3)
@@ -1295,11 +1164,12 @@ emm.COG.df$response.y <- round(emm.COG.df$response.y, 3)
 emm.COG.df$lower.CL.y <- round(emm.COG.df$lower.CL.y, 3)
 emm.COG.df$upper.CL.y <- round(emm.COG.df$upper.CL.y, 3)
 emm.COG.df <- emm.COG.df[order(emm.COG.df$COG20_CATEGORY), ]
-rownames(emm.COG.df) <- NULL
+rownames(emm.COG.df) <- NULL 
 ```
 
 ### Plot
 ```{r}
+# Model predictions
 pred.COG <- ggemmeans(lm.COG, terms = c("COG20_CATEGORY", "type"))
 
 COG.plot <- plot(pred.COG, dodge = 0.25)
@@ -1309,7 +1179,7 @@ COG.plot +
   ylab(expression(bold("Model-predicted") ~ bolditalic("pN/pS")^bold("(gene)"))) +
   scale_color_manual(values=c("gray25","red3"), name = expression(bold("Gene type")), labels = c("Core genes" = "Core genes", "Accessory genes" = "Accessory genes")) +
   theme_bw() +
-  theme(text = element_text(family = "Arial"),
+  theme(text = element_text(),
       legend.justification = c(0.5, 0),  
       legend.text = element_text(size = 9),
       panel.grid.major = element_blank(), 
@@ -1322,57 +1192,7 @@ COG.plot +
       axis.title.x = element_text(color = "black", size = 13, angle = 0, hjust = 0.5, vjust = -1),
       axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2)
       )
-ggsave("../figures/predicted_pNpS_COG.tiff", width = 10, height = 8)
+ggsave("../figures/figure_7C_pNpS.pdf", width = 10, height = 8)
 ```
 
-
-## Linear Model for testing plant clade
-```{r}
-lm.clade <- lm(log(pNpS_gene_consensus) ~ type * methylo_sp * plant_clade, data = pNpS_all_sp[pNpS_all_sp$host_species != "COCO",])
-summary(lm.clade)
-anova(lm.clade)
-Anova(lm.clade, type = 2)
-Anova(lm.clade, type = 3)
-
-emm.clade <- emmeans(lm.clade, ~ type * methylo_sp * plant_clade)
-emm.clade
-
-pred.type.cl <- ggpredict(lm.clade, terms = c("type"))
-plot(pred.type.cl)
-
-pred.meth_sp.cl <- ggpredict(lm.clade, terms = c("methylo_sp"))
-plot(pred.meth_sp.cl)
-
-pred.clade.cl <- ggpredict(lm.clade, terms = c("plant_clade"))
-plot(pred.clade.cl)
-
-pred.all.clade <- ggpredict(lm.clade, terms = c("methylo_sp", "plant_clade", "type"), back.transform = TRUE)
-plot(pred.all.clade)
-```
-
-
-## Linear Model for testing plant_type (form)
-```{r}
-lm.form <- lm(log(pNpS_gene_consensus) ~ type * methylo_sp * plant_type, data = pNpS_all_sp)
-summary(lm.form)
-anova(lm.form)
-Anova(lm.form, type = 2)
-Anova(lm.form, type = 3)
-
-emm.form <- emmeans(lm.form, ~ type * methylo_sp * plant_type)
-emm.form
-
-pred.type.frm <- ggpredict(lm.form, terms = c("type"))
-plot(pred.type.frm)
-
-pred.meth_sp.frm <- ggpredict(lm.form, terms = c("methylo_sp"))
-plot(pred.meth_sp.frm)
-
-pred.form.frm <- ggpredict(lm.form, terms = c("plant_type"))
-plot(pred.form.frm)
-
-pred.all.form <- ggpredict(lm.form, terms = c("methylo_sp", "plant_type", "type"), back.transform = TRUE)
-plot(pred.all.form)
-```
-
-################################################################################
+-################################################################################
