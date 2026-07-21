@@ -1,12 +1,10 @@
 ---
-title: "selection_analyses"
+title: "pN/pS analyses"
 output: html_document
 date: "2024-11-14"
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+-################################################################################
 
 # Libraries
 ```{r}
@@ -19,6 +17,8 @@ library(ggeffects)
 library(MuMIn)
 #library(tls)
 ```
+
+-################################################################################
 
 # Import function table
 ```{r}
