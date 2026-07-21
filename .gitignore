@@ -51,10 +51,6 @@ po/*~
 # RStudio Connect folder
 rsconnect/
 
-# csv files
-#*.csv
-!all_pos_sel_genes.csv
-
 # html files
 *.html
 
