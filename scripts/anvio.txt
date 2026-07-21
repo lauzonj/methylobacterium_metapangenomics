@@ -997,7 +997,7 @@ anvi-gen-variability-profile \
                  -o var_cdn_sp_018_THOC
 
 ## Combine the five variability profiles in R (see script 'combine_var_prof.Rmd')
-## In this Rmd script, the file 'variability_profile_all_samples_M_sp_018.txt' is created. It is available 
+## In the 'combine_var_prof.Rmd' script, the file 'variability_profile_all_samples_M_sp_018.txt' is created. It is available 
 ## in the github repository in '../data/anvio_inputs/' and must be copied to 'anvio/analysis/'.
 
 ## Calculate pN/pS ratio
