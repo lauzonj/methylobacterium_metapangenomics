@@ -48,5 +48,10 @@ DAGCs_analyses.Rmd
 Differentially abundant gene clusters analyses.
 Creation of DAGCs tables and figures.
 
+combine_var_prof.Rmd
+Preparation for the pN/pS analyses.
+For each of the 4 Methylobacterium species, combine variability profiles generated in anvio, 
+and export files for subsequent analyses in anvio.
+
 pN_pS.Rmd
 Analyses of pN/pS ratio and positively selected genes by host species.
