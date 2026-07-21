@@ -996,45 +996,22 @@ anvi-gen-variability-profile \
                  --engine CDN \
                  -o var_cdn_sp_018_THOC
 
+## Combine the five variability profiles in R (see script 'combine_var_prof.Rmd')
+## In this Rmd script, the file 'variability_profile_all_samples_M_sp_018.txt' is created. It is available 
+## in the github repository in '../data/anvio_inputs/' and must be copied to 'anvio/analysis/'.
 
+## Calculate pN/pS ratio
 
+cd anvio_analysis/
 
----- Import 5 var. profiles in R to combine
-
-# See script 'selection.Rmd'.
-
-
----- pN/pS ratio (M.Sc.)
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_018.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db -o pNpS_sp_018 --min-coverage 10
-
-
----- pN/pS ratio (article)
-
-The '-o pNpS_sp_018-03' is the best setting, to be used for other Methylo species.
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_018.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0.05 --min-coverage 10 --minimum-num-variants 10 --comparison consensus -o pNpS_sp_018-03
-
-
-
-Below are tests :
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_018.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0.05 --min-coverage 10 --minimum-num-variants 10 --comparison popular_consensus -o pNpS_sp_018-02
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_018.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0.05 --min-coverage 10 --comparison popular_consensus -o pNpS_sp_018-04
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_018.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-coverage 10 --comparison consensus -o pNpS_sp_018-05
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_018.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0.05 --min-coverage 10 --comparison consensus -o pNpS_sp_018-06
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_018.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0.05 --min-coverage 10 --minimum-num-variants 20 --comparison consensus -o pNpS_sp_018-07
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_018.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0 --min-coverage 10 --minimum-num-variants 20 --comparison consensus -o pNpS_sp_018-08
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_018.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0 --min-coverage 10 --minimum-num-variants 30 --comparison consensus -o pNpS_sp_018-09
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_018.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0.05 --min-coverage 10 --minimum-num-variants 15 --comparison consensus -o pNpS_sp_018-10
-
+anvi-get-pn-ps-ratio \
+                 -V variability_profile_all_samples_M_sp_018.txt \
+                 -c ../anvio_artifacts/all_genomes-CONTIGS.db \
+                 --min-departure-from-consensus 0.05 \
+                 --min-coverage 10 \
+                 --minimum-num-variants 10 \
+                 --comparison consensus \
+                 -o pNpS_sp_018-03
 
 #########################################################################################################
 
