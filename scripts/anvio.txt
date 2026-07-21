@@ -997,8 +997,8 @@ anvi-gen-variability-profile \
                  -o var_cdn_sp_018_THOC
 
 ## Combine the five variability profiles in R (see script 'combine_var_prof.Rmd')
-## In the 'combine_var_prof.Rmd' script, the file 'variability_profile_all_samples_M_sp_018.txt' is created. It is available 
-## in the github repository in '../data/anvio_inputs/' and must be copied to 'anvio/analysis/'.
+## In the 'combine_var_prof.Rmd' script, the file 'variability_profile_all_samples_M_sp_018.txt' is created. It is available as
+## a zipped file in the github repository in '../data/anvio_inputs/'. It must be copied to 'anvio/anvio_analysis/' and unzipped.
 
 ## Calculate pN/pS ratio
 
@@ -1013,108 +1013,261 @@ anvi-get-pn-ps-ratio \
                  --comparison consensus \
                  -o pNpS_sp_018-03
 
-#########################################################################################################
+################################################################################
 
+# M. sp. 021
 
--- Selection analyses on M. sp. 021
+## Generate variability profiles ('variability-profile-txt') for each host_species samples
 
+cd anvio_analysis/
 
----- Generate variability profiles ('variability-profile-txt') for each host_species samples
+### ABBA
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ABBA$ anvi-gen-variability-profile -p ABBA-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_ABBA -b M_sp_021 --engine CDN -o var_cdn_sp_021_ABBA
+cd ABBA/
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ACSA$ anvi-gen-variability-profile -p ACSA-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_ACSA -b M_sp_021 --engine CDN -o var_cdn_sp_021_ACSA
+anvi-gen-variability-profile \
+                 -p ABBA-MERGED/PROFILE.db \
+                 -c ../../anvio_artifacts/all_genomes-CONTIGS.db \ 
+                 -C Methylobacterium_Species_for_ABBA \
+                 -b M_sp_021 \
+                 --engine CDN \
+                 -o var_cdn_sp_021_ABBA
+                 
+### ACSA
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/COCO$ anvi-gen-variability-profile -p COCO-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_COCO -b M_sp_021 --engine CDN -o var_cdn_sp_021_COCO
+cd ../ACSA/
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/FAGR$ anvi-gen-variability-profile -p FAGR-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_FAGR -b M_sp_021 --engine CDN -o var_cdn_sp_021_FAGR
+anvi-gen-variability-profile \
+               -p ACSA-MERGED/PROFILE.db \
+               -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+               -C Methylobacterium_Species_for_ACSA \
+               -b M_sp_021 \
+               --engine CDN \
+               -o var_cdn_sp_021_ACSA
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/THOC$ anvi-gen-variability-profile -p THOC-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_THOC -b M_sp_021 --engine CDN -o var_cdn_sp_021_THOC
+### COCO
 
+cd ../COCO/
 
----- Import 5 var. profiles in R to combine
+anvi-gen-variability-profile \
+                 -p COCO-MERGED/PROFILE.db \
+                 -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+                 -C Methylobacterium_Species_for_COCO \
+                 -b M_sp_021 \
+                 --engine CDN \
+                 -o var_cdn_sp_021_COCO
 
-# See script 'selection.Rmd'.
+### FAGR
 
+cd ../FAGR/
 
----- pN/pS ratio (M.Sc.)
+anvi-gen-variability-profile \
+                 -p FAGR-MERGED/PROFILE.db \
+                 -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+                 -C Methylobacterium_Species_for_FAGR \
+                 -b M_sp_021 \
+                 --engine CDN \
+                 -o var_cdn_sp_021_FAGR
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_021.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db -o pNpS_sp_021 --min-coverage 10
+### THOC
 
+cd ../THOC/
 
----- pN/pS ratio (article)
+anvi-gen-variability-profile \
+                 -p THOC-MERGED/PROFILE.db \
+                 -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+                 -C Methylobacterium_Species_for_THOC \
+                 -b M_sp_021 \
+                 --engine CDN \
+                 -o var_cdn_sp_021_THOC
 
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_021.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0.05 --min-coverage 10 --minimum-num-variants 10 --comparison consensus -o pNpS_sp_021-03
+## Combine the five variability profiles in R (see script 'combine_var_prof.Rmd')
+## In the 'combine_var_prof.Rmd' script, the file 'variability_profile_all_samples_M_sp_021.txt' is created. It is available as
+## a zipped file in the github repository in '../data/anvio_inputs/'. It must be copied to 'anvio/anvio_analysis/' and unzipped.
 
+## Calculate pN/pS ratio
 
+cd anvio_analysis/
 
-#########################################################################################################
-
-
--- Selection analyses on M. sp. 022
-
-
----- Generate variability profiles ('variability-profile-txt') for each host_species samples
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ABBA$ anvi-gen-variability-profile -p ABBA-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_ABBA -b M_sp_022 --engine CDN -o var_cdn_sp_022_ABBA
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ACSA$ anvi-gen-variability-profile -p ACSA-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_ACSA -b M_sp_022 --engine CDN -o var_cdn_sp_022_ACSA
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/COCO$ anvi-gen-variability-profile -p COCO-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_COCO -b M_sp_022 --engine CDN -o var_cdn_sp_022_COCO
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/FAGR$ anvi-gen-variability-profile -p FAGR-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_FAGR -b M_sp_022 --engine CDN -o var_cdn_sp_022_FAGR
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/THOC$ anvi-gen-variability-profile -p THOC-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_THOC -b M_sp_022 --engine CDN -o var_cdn_sp_022_THOC
-
-
----- Import 5 var. profiles in R to combine
-
-# See script 'selection.Rmd'.
-
-
----- pN/pS ratio (M.Sc.)
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_022.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db -o pNpS_sp_022 --min-coverage 10
-
-
----- pN/pS ratio (article)
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_022.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0.05 --min-coverage 10 --minimum-num-variants 10 --comparison consensus -o pNpS_sp_022-03
-
-
-#########################################################################################################
-
-
--- Selection analyses on M. sp. 024
-
----- Generate variability profiles ('variability-profile-txt') for each host_species samples
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ABBA$ anvi-gen-variability-profile -p ABBA-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_ABBA -b M_sp_024 --engine CDN -o var_cdn_sp_024_ABBA
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/ACSA$ anvi-gen-variability-profile -p ACSA-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_ACSA -b M_sp_024 --engine CDN -o var_cdn_sp_024_ACSA
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/COCO$ anvi-gen-variability-profile -p COCO-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_COCO -b M_sp_024 --engine CDN -o var_cdn_sp_024_COCO
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/FAGR$ anvi-gen-variability-profile -p FAGR-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_FAGR -b M_sp_024 --engine CDN -o var_cdn_sp_024_FAGR
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis/THOC$ anvi-gen-variability-profile -p THOC-MERGED/PROFILE.db -c ../../anvio_artifacts/all_genomes-CONTIGS.db -C Methylobacterium_Species_for_THOC -b M_sp_024 --engine CDN -o var_cdn_sp_024_THOC
-
-
----- Import 5 var. profiles in R to combine
-
-# See script 'selection.Rmd'.
-
-
----- pN/pS ratio (M.Sc.)
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_024.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db -o pNpS_sp_024 --min-coverage 10
-
-
----- pN/pS ratio (article)
-
-(anvio8) jocelyn@betula:/mnt/storage/jocelyn/msc/anvio_analysis$ anvi-get-pn-ps-ratio -V variability_profile_all_samples_M_sp_024.txt -c ../anvio_artifacts/all_genomes-CONTIGS.db --min-departure-from-consensus 0.05 --min-coverage 10 --minimum-num-variants 10 --comparison consensus -o pNpS_sp_024-03
-
+anvi-get-pn-ps-ratio \
+                 -V variability_profile_all_samples_M_sp_021.txt \
+                 -c ../anvio_artifacts/all_genomes-CONTIGS.db \
+                 --min-departure-from-consensus 0.05 \
+                 --min-coverage 10 \
+                 --minimum-num-variants 10 \
+                 --comparison consensus \
+                 -o pNpS_sp_021-03
 
 ################################################################################
 
+# M. sp. 022
+
+## Generate variability profiles ('variability-profile-txt') for each host_species samples
+
+cd anvio_analysis/
+
+### ABBA
+
+cd ABBA/
+
+anvi-gen-variability-profile \
+                 -p ABBA-MERGED/PROFILE.db \
+                 -c ../../anvio_artifacts/all_genomes-CONTIGS.db \ 
+                 -C Methylobacterium_Species_for_ABBA \
+                 -b M_sp_022 \
+                 --engine CDN \
+                 -o var_cdn_sp_022_ABBA
+                 
+### ACSA
+
+cd ../ACSA/
+
+anvi-gen-variability-profile \
+               -p ACSA-MERGED/PROFILE.db \
+               -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+               -C Methylobacterium_Species_for_ACSA \
+               -b M_sp_022 \
+               --engine CDN \
+               -o var_cdn_sp_022_ACSA
+
+### COCO
+
+cd ../COCO/
+
+anvi-gen-variability-profile \
+                 -p COCO-MERGED/PROFILE.db \
+                 -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+                 -C Methylobacterium_Species_for_COCO \
+                 -b M_sp_022 \
+                 --engine CDN \
+                 -o var_cdn_sp_022_COCO
+
+### FAGR
+
+cd ../FAGR/
+
+anvi-gen-variability-profile \
+                 -p FAGR-MERGED/PROFILE.db \
+                 -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+                 -C Methylobacterium_Species_for_FAGR \
+                 -b M_sp_022 \
+                 --engine CDN \
+                 -o var_cdn_sp_022_FAGR
+
+### THOC
+
+cd ../THOC/
+
+anvi-gen-variability-profile \
+                 -p THOC-MERGED/PROFILE.db \
+                 -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+                 -C Methylobacterium_Species_for_THOC \
+                 -b M_sp_022 \
+                 --engine CDN \
+                 -o var_cdn_sp_022_THOC
+
+## Combine the five variability profiles in R (see script 'combine_var_prof.Rmd')
+## In the 'combine_var_prof.Rmd' script, the file 'variability_profile_all_samples_M_sp_022.txt' is created. It is available as
+## a zipped file in the github repository in '../data/anvio_inputs/'. It must be copied to 'anvio/anvio_analysis/' and unzipped.
+
+## Calculate pN/pS ratio
+
+cd anvio_analysis/
+
+anvi-get-pn-ps-ratio \
+                 -V variability_profile_all_samples_M_sp_022.txt \
+                 -c ../anvio_artifacts/all_genomes-CONTIGS.db \
+                 --min-departure-from-consensus 0.05 \
+                 --min-coverage 10 \
+                 --minimum-num-variants 10 \
+                 --comparison consensus \
+                 -o pNpS_sp_022-03
+
+################################################################################
+
+# M. sp. 024
+
+## Generate variability profiles ('variability-profile-txt') for each host_species samples
+
+cd anvio_analysis/
+
+### ABBA
+
+cd ABBA/
+
+anvi-gen-variability-profile \
+                 -p ABBA-MERGED/PROFILE.db \
+                 -c ../../anvio_artifacts/all_genomes-CONTIGS.db \ 
+                 -C Methylobacterium_Species_for_ABBA \
+                 -b M_sp_024 \
+                 --engine CDN \
+                 -o var_cdn_sp_024_ABBA
+                 
+### ACSA
+
+cd ../ACSA/
+
+anvi-gen-variability-profile \
+               -p ACSA-MERGED/PROFILE.db \
+               -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+               -C Methylobacterium_Species_for_ACSA \
+               -b M_sp_024 \
+               --engine CDN \
+               -o var_cdn_sp_024_ACSA
+
+### COCO
+
+cd ../COCO/
+
+anvi-gen-variability-profile \
+                 -p COCO-MERGED/PROFILE.db \
+                 -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+                 -C Methylobacterium_Species_for_COCO \
+                 -b M_sp_024 \
+                 --engine CDN \
+                 -o var_cdn_sp_024_COCO
+
+### FAGR
+
+cd ../FAGR/
+
+anvi-gen-variability-profile \
+                 -p FAGR-MERGED/PROFILE.db \
+                 -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+                 -C Methylobacterium_Species_for_FAGR \
+                 -b M_sp_024 \
+                 --engine CDN \
+                 -o var_cdn_sp_024_FAGR
+
+### THOC
+
+cd ../THOC/
+
+anvi-gen-variability-profile \
+                 -p THOC-MERGED/PROFILE.db \
+                 -c ../../anvio_artifacts/all_genomes-CONTIGS.db \
+                 -C Methylobacterium_Species_for_THOC \
+                 -b M_sp_024 \
+                 --engine CDN \
+                 -o var_cdn_sp_024_THOC
+
+## Combine the five variability profiles in R (see script 'combine_var_prof.Rmd')
+## In the 'combine_var_prof.Rmd' script, the file 'variability_profile_all_samples_M_sp_024.txt' is created. It is available as
+## a zipped file in the github repository in '../data/anvio_inputs/'. It must be copied to 'anvio/anvio_analysis/' and unzipped.
+
+## Calculate pN/pS ratio
+
+cd anvio_analysis/
+
+anvi-get-pn-ps-ratio \
+                 -V variability_profile_all_samples_M_sp_024.txt \
+                 -c ../anvio_artifacts/all_genomes-CONTIGS.db \
+                 --min-departure-from-consensus 0.05 \
+                 --min-coverage 10 \
+                 --minimum-num-variants 10 \
+                 --comparison consensus \
+                 -o pNpS_sp_024-03
+
+################################################################################
+# SCRIPT END
 ################################################################################
