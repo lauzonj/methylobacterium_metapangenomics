@@ -906,16 +906,43 @@ sig.pos.sel.genes_sp_024.fct <- readRDS("../rds/sig.pos.sel.genes_sp_024.fct.rds
 
 -################################################################################
 
-# Combine pN/pS data for the 4 methylo species
+# Create table for positively selected genes
 
 ## Import data
 ```{r}
-pNpS_sp_018 <- readRDS("../rds/pNpS_sp_018.rds")
-pNpS_sp_021 <- readRDS("../rds/pNpS_sp_021.rds")
-pNpS_sp_022 <- readRDS("../rds/pNpS_sp_022.rds")
-pNpS_sp_024 <- readRDS("../rds/pNpS_sp_024.rds")
+sig.pos.sel.genes_sp_018.fct <- readRDS("../rds/sig.pos.sel.genes_sp_018.fct.rds")
+sig.pos.sel.genes_sp_021.fct <- readRDS("../rds/sig.pos.sel.genes_sp_021.fct.rds")
+sig.pos.sel.genes_sp_024.fct <- readRDS("../rds/sig.pos.sel.genes_sp_024.fct.rds")
 ```
 
+## Edit table
+```{r}
+all(colnames(sig.pos.sel.genes_sp_018.fct)==colnames(sig.pos.sel.genes_sp_021.fct))
+all(colnames(sig.pos.sel.genes_sp_018.fct)==colnames(sig.pos.sel.genes_sp_024.fct))
+
+all.pos.sel.genes <- rbind(sig.pos.sel.genes_sp_018.fct, 
+                           sig.pos.sel.genes_sp_021.fct, 
+                           sig.pos.sel.genes_sp_024.fct)
+colnames(all.pos.sel.genes)[4] <- "CI_lower.log"
+all.pos.sel.genes <- all.pos.sel.genes[,c(1,10,12,11,9,14,13,2,3,4,16,18,20,22,24,26,28,30)]
+
+all.pos.sel.genes$host_species <- factor(x = all.pos.sel.genes$host_species, levels = c("THOC","FAGR","COCO"))
+all.pos.sel.genes <- all.pos.sel.genes[order(all.pos.sel.genes$genome_name, all.pos.sel.genes$host_species, -all.pos.sel.genes$mean_pNpS),]
+
+
+saveRDS(all.pos.sel.genes,"../rds/all.pos.sel.genes_251217.rds")
+
+```
+
+## Write table
+```{r}
+#write_delim(all.pos.sel.genes, file = "../all.pos.sel.genes.txt", delim = "\t")
+#write_csv(all.pos.sel.genes, file = "../all_pos_sel_genes.csv")
+```
+
+-################################################################################
+
+# Combine pN/pS data for the 4 methylo species
 
 ## Edit tables
 ```{r}
@@ -934,13 +961,10 @@ contrasts(pNpS_all_sp$host_species) <- contr.sum
 str(pNpS_all_sp) # 14,566 genes
 ```
 
-# Make second table with COG category
+## Make second table with COG category
 ```{r}
 data.fct.cov <- readRDS("../rds/data.fct.cov.rds")
 pNpS_all_sp <- merge(pNpS_all_sp, data.fct.cov[c(2,7)], by = "gene_callers_id")
-
-# Change NA values (COG20 Categories) for "No COG annotation"
-#DAGCs$COG20_CATEGORY <- factor(ifelse(is.na(DAGCs$COG20_CATEGORY == TRUE), "No COG annotation", as.character(DAGCs$COG20_CATEGORY)))
 
 # For every gene call that have multiple (n) COG categories, make n rows, one row per category.
 pNpS_all_sp.temp <- pNpS_all_sp
@@ -971,9 +995,6 @@ str(pNpS_all_sp.multi) ## 11,711 genes
 ```{r}
 lm <- lm(log(pNpS_gene_consensus) ~ type * methylo_sp * host_species, data = pNpS_all_sp) # report
 summary(lm) # report p and adj.R2
-#sigma(lm)
-#anova(lm)
-#Anova(lm, type = 2)
 Anova(lm, type = 3) # report supp mat
 joint_tests(lm) # corresponds to type III ANOVA
 
@@ -1356,41 +1377,3 @@ plot(pred.all.form)
 ```
 
 ################################################################################
-
-# Combine positively selected genes
-
-## Import data
-```{r}
-sig.pos.sel.genes_sp_018.fct <- readRDS("../rds/sig.pos.sel.genes_sp_018.fct_251216.rds")
-sig.pos.sel.genes_sp_021.fct <- readRDS("../rds/sig.pos.sel.genes_sp_021.fct_251217.rds")
-sig.pos.sel.genes_sp_024.fct <- readRDS("../rds/sig.pos.sel.genes_sp_024.fct_251217.rds")
-```
-
-## Edit table
-```{r}
-all(colnames(sig.pos.sel.genes_sp_018.fct)==colnames(sig.pos.sel.genes_sp_021.fct))
-all(colnames(sig.pos.sel.genes_sp_018.fct)==colnames(sig.pos.sel.genes_sp_024.fct))
-
-all.pos.sel.genes <- rbind(sig.pos.sel.genes_sp_018.fct, 
-                           sig.pos.sel.genes_sp_021.fct, 
-                           sig.pos.sel.genes_sp_024.fct)
-colnames(all.pos.sel.genes)[4] <- "CI_lower.log"
-colnames(all.pos.sel.genes)[26] <- "KEGG_Module"
-all.pos.sel.genes <- all.pos.sel.genes[,c(1,10,12,11,9,14,13,2,3,4,16,18,20,22,24,26,28,30)]
-
-all.pos.sel.genes$host_species <- factor(x = all.pos.sel.genes$host_species, levels = c("THOC","FAGR","COCO"))
-all.pos.sel.genes <- all.pos.sel.genes[order(all.pos.sel.genes$genome_name, all.pos.sel.genes$host_species, -all.pos.sel.genes$mean_pNpS),]
-
-
-saveRDS(all.pos.sel.genes,"../rds/all.pos.sel.genes_251217.rds")
-
-```
-
-## Write table
-```{r}
-#write_delim(all.pos.sel.genes, file = "../all.pos.sel.genes.txt", delim = "\t")
-#write_csv(all.pos.sel.genes, file = "../all_pos_sel_genes.csv")
-```
-
-
-
