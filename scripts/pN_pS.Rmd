@@ -906,7 +906,9 @@ sig.pos.sel.genes_sp_024.fct <- readRDS("../rds/sig.pos.sel.genes_sp_024.fct.rds
 
 -################################################################################
 
-# Create table for positively selected genes
+# Supplementary File D
+
+Create table for positively selected genes
 
 ## Import data
 ```{r}
@@ -929,15 +931,12 @@ all.pos.sel.genes <- all.pos.sel.genes[,c(1,10,12,11,9,14,13,2,3,4,16,18,20,22,2
 all.pos.sel.genes$host_species <- factor(x = all.pos.sel.genes$host_species, levels = c("THOC","FAGR","COCO"))
 all.pos.sel.genes <- all.pos.sel.genes[order(all.pos.sel.genes$genome_name, all.pos.sel.genes$host_species, -all.pos.sel.genes$mean_pNpS),]
 
-
-saveRDS(all.pos.sel.genes,"../rds/all.pos.sel.genes_251217.rds")
-
+saveRDS(all.pos.sel.genes,"../rds/all.pos.sel.genes.rds")
 ```
 
 ## Write table
 ```{r}
-#write_delim(all.pos.sel.genes, file = "../all.pos.sel.genes.txt", delim = "\t")
-#write_csv(all.pos.sel.genes, file = "../all_pos_sel_genes.csv")
+#write_csv(all.pos.sel.genes, file = "../supplementary_files/Suppl_file_D-pNpS.csv")
 ```
 
 -################################################################################
