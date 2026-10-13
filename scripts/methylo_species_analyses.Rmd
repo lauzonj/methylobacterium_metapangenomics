@@ -58,7 +58,8 @@ reads.data <- read.delim("../data/nb_reads.txt", header = TRUE, sep = "\t", dec 
 ```{r}
 metadata <- read.delim("../data/samples_metadata.txt", header = TRUE, sep = "\t", dec = ".", row.names = 1)
 metadata <- metadata %>% arrange(row.names(.))
-metadata <- metadata %>% mutate(across(c(plant_clade,plant_order,plant_family,host_species,tree), as.factor))
+metadata <- metadata %>% mutate(across(c(plant_clade,plant_order,plant_family,host_species,tree,plot), as.factor))
+reads.data$plot <- metadata$plot
 reads.data$host_species <- metadata$host_species
 metadata$host_species <- factor(x = metadata$host_species, levels = c("ABBA","THOC","ACSA","FAGR","COCO"))
 reads.data$host_species <- factor(x = reads.data$host_species, levels = c("ABBA","THOC","ACSA","FAGR","COCO"))
@@ -478,6 +479,18 @@ ggsave("../figures/figure_2_Methylo_species_barplot.pdf", width = 8, height = 5.
 genomes.cov.beta <- adespatial::beta.div.comp(genomes.cov.comm, coef = "BS", quant = TRUE)
 genomes.bray.dist <- genomes.cov.beta[["D"]]
 ```
+
+## Mantel test
+```{r}
+# Import sample physical distances
+
+# create distance matrix
+
+
+# test species-level community distances ~ plot distances
+
+```
+
 
 ## PERMANOVA
 ```{r}
