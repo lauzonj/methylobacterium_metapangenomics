@@ -1,26 +1,26 @@
-"ID"	"plant_clade"	"plant_order"	"plant_family"	"host_species"	"tree"
-"COCO_M01"	"Angiospermae"	"Fagales"	"Betulaceae"	"COCO"	1
-"COCO_M02"	"Angiospermae"	"Fagales"	"Betulaceae"	"COCO"	2
-"COCO_M03"	"Angiospermae"	"Fagales"	"Betulaceae"	"COCO"	3
-"COCO_M04"	"Angiospermae"	"Fagales"	"Betulaceae"	"COCO"	4
-"COCO_M05"	"Angiospermae"	"Fagales"	"Betulaceae"	"COCO"	5
-"THOC_M06"	"Gymnospermae"	"Pinales"	"Cupressaceae"	"THOC"	6
-"THOC_M07"	"Gymnospermae"	"Pinales"	"Cupressaceae"	"THOC"	7
-"THOC_M08"	"Gymnospermae"	"Pinales"	"Cupressaceae"	"THOC"	8
-"THOC_M09"	"Gymnospermae"	"Pinales"	"Cupressaceae"	"THOC"	9
-"THOC_M10"	"Gymnospermae"	"Pinales"	"Cupressaceae"	"THOC"	10
-"ABBA_M11"	"Gymnospermae"	"Pinales"	"Pinaceae"	"ABBA"	11
-"ABBA_M12"	"Gymnospermae"	"Pinales"	"Pinaceae"	"ABBA"	12
-"ABBA_M13"	"Gymnospermae"	"Pinales"	"Pinaceae"	"ABBA"	13
-"ABBA_M14"	"Gymnospermae"	"Pinales"	"Pinaceae"	"ABBA"	14
-"ABBA_M15"	"Gymnospermae"	"Pinales"	"Pinaceae"	"ABBA"	15
-"FAGR_M16"	"Angiospermae"	"Fagales"	"Fagaceae"	"FAGR"	16
-"FAGR_M17"	"Angiospermae"	"Fagales"	"Fagaceae"	"FAGR"	17
-"FAGR_M18"	"Angiospermae"	"Fagales"	"Fagaceae"	"FAGR"	18
-"FAGR_M19"	"Angiospermae"	"Fagales"	"Fagaceae"	"FAGR"	19
-"FAGR_M20"	"Angiospermae"	"Fagales"	"Fagaceae"	"FAGR"	20
-"ACSA_M21"	"Angiospermae"	"Sapindales"	"Sapindaceae"	"ACSA"	21
-"ACSA_M22"	"Angiospermae"	"Sapindales"	"Sapindaceae"	"ACSA"	22
-"ACSA_M23"	"Angiospermae"	"Sapindales"	"Sapindaceae"	"ACSA"	23
-"ACSA_M24"	"Angiospermae"	"Sapindales"	"Sapindaceae"	"ACSA"	24
-"ACSA_M25"	"Angiospermae"	"Sapindales"	"Sapindaceae"	"ACSA"	25
+"ID"	"plant_clade"	"plant_order"	"plant_family"	"host_species"	"tree"	"plot"
+"COCO_M01"	"Angiospermae"	"Fagales"	"Betulaceae"	"COCO"	1	"D"
+"COCO_M02"	"Angiospermae"	"Fagales"	"Betulaceae"	"COCO"	2	"B"
+"COCO_M03"	"Angiospermae"	"Fagales"	"Betulaceae"	"COCO"	3	"B"
+"COCO_M04"	"Angiospermae"	"Fagales"	"Betulaceae"	"COCO"	4	"A"
+"COCO_M05"	"Angiospermae"	"Fagales"	"Betulaceae"	"COCO"	5	"A"
+"THOC_M06"	"Gymnospermae"	"Pinales"	"Cupressaceae"	"THOC"	6	"C"
+"THOC_M07"	"Gymnospermae"	"Pinales"	"Cupressaceae"	"THOC"	7	"D"
+"THOC_M08"	"Gymnospermae"	"Pinales"	"Cupressaceae"	"THOC"	8	"A"
+"THOC_M09"	"Gymnospermae"	"Pinales"	"Cupressaceae"	"THOC"	9	"A"
+"THOC_M10"	"Gymnospermae"	"Pinales"	"Cupressaceae"	"THOC"	10	"A"
+"ABBA_M11"	"Gymnospermae"	"Pinales"	"Pinaceae"	"ABBA"	11	"A"
+"ABBA_M12"	"Gymnospermae"	"Pinales"	"Pinaceae"	"ABBA"	12	"B"
+"ABBA_M13"	"Gymnospermae"	"Pinales"	"Pinaceae"	"ABBA"	13	"C"
+"ABBA_M14"	"Gymnospermae"	"Pinales"	"Pinaceae"	"ABBA"	14	"D"
+"ABBA_M15"	"Gymnospermae"	"Pinales"	"Pinaceae"	"ABBA"	15	"D"
+"FAGR_M16"	"Angiospermae"	"Fagales"	"Fagaceae"	"FAGR"	16	"A"
+"FAGR_M17"	"Angiospermae"	"Fagales"	"Fagaceae"	"FAGR"	17	"A"
+"FAGR_M18"	"Angiospermae"	"Fagales"	"Fagaceae"	"FAGR"	18	"B"
+"FAGR_M19"	"Angiospermae"	"Fagales"	"Fagaceae"	"FAGR"	19	"B"
+"FAGR_M20"	"Angiospermae"	"Fagales"	"Fagaceae"	"FAGR"	20	"D"
+"ACSA_M21"	"Angiospermae"	"Sapindales"	"Sapindaceae"	"ACSA"	21	"A"
+"ACSA_M22"	"Angiospermae"	"Sapindales"	"Sapindaceae"	"ACSA"	22	"A"
+"ACSA_M23"	"Angiospermae"	"Sapindales"	"Sapindaceae"	"ACSA"	23	"B"
+"ACSA_M24"	"Angiospermae"	"Sapindales"	"Sapindaceae"	"ACSA"	24	"B"
+"ACSA_M25"	"Angiospermae"	"Sapindales"	"Sapindaceae"	"ACSA"	25	"C"
