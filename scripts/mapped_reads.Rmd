@@ -27,7 +27,7 @@ Metadata
 ```{r}
 metadata <- read.delim("../data/samples_metadata.txt", header = TRUE, sep = "\t", dec = ".", row.names = 1)
 metadata <- metadata %>% arrange(row.names(.))
-metadata <- metadata %>% mutate(across(c(plant_clade,plant_order,plant_family,host_species,tree), as.factor))
+metadata <- metadata %>% mutate(across(c(plant_clade,plant_order,plant_family,host_species,tree,plot), as.factor))
 reads.data$host_species <- metadata$host_species
 metadata$host_species <- factor(x = metadata$host_species, levels = c("ABBA","THOC","ACSA","FAGR","COCO"))
 reads.data$host_species <- factor(x = reads.data$host_species, levels = c("ABBA","THOC","ACSA","FAGR","COCO"))
@@ -37,8 +37,13 @@ reads.data$host_species <- factor(x = reads.data$host_species, levels = c("ABBA"
 
 # Filtered paired-end reads ~ host species
 
-Check if number of quality filtered reads differ by host species
+Check if number of quality filtered reads differ by plot or host species
 ```{r}
+# plot
+summary(lm(reads.data$filtered_pairs ~ metadata$plot))
+plot(lm(reads.data$filtered_pairs ~ metadata$plot))
+plot(reads.data$filtered_pairs ~ metadata$plot)
+# host species
 summary(lm(reads.data$filtered_pairs ~ reads.data$host_species))
 plot(lm(reads.data$filtered_pairs ~ reads.data$host_species))
 ```
@@ -77,8 +82,15 @@ ggsave("../figures/figure_S4_filtered_read_pairs_by_host.pdf", width = 6, height
 
 # % Mapped reads ~ host species
 
-Check if % of mapped reads differ by host species
+Check if % of mapped reads differ by plot or host species
 ```{r}
+# plot
+summary(lm(reads.data$mapped_reads_. ~ metadata$plot))
+plot(lm(reads.data$mapped_reads_. ~ metadata$plot))
+plot(reads.data$mapped_reads_. ~ metadata$plot)
+shapiro.test(residuals(lm(reads.data$mapped_reads_. ~ metadata$plot)))
+kruskal.test(reads.data$mapped_reads_. ~ metadata$plot)
+# host species
 summary(lm(reads.data$mapped_reads_. ~ reads.data$host_species))
 plot(lm(reads.data$mapped_reads_. ~ reads.data$host_species))
 shapiro.test(residuals(lm(reads.data$mapped_reads_. ~ reads.data$host_species)))
