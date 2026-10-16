@@ -789,6 +789,7 @@ DAGCs.curated <- droplevels(DAGCs.curated)
 DAGCs.curated <- DAGCs.curated %>%
   distinct(gene_cluster_id, COG20_FUNCTION, KOfam, Pfam, .keep_all = TRUE)
 length(unique(DAGCs.curated$gene_cluster_id)) # 757 annotated DAGCs
+# 757 annotated DAGCs - 38 DAGC corresponding to "Family/Domain/Protein of unknow function" or "Uncharacterized protein") = 719 DAGC with known function
 length(unique(DAGCs.curated$gene_cluster_id[DAGCs.curated$type == "accessory"])) # 650 annotated accessory GC
 length(unique(DAGCs.curated$gene_cluster_id[DAGCs.curated$type == "core"])) # 107 annotated accessory GC
 # at this step 'DAGCs.curated' contains all COG, KOfam and Pfam annotations.
