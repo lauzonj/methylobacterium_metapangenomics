@@ -18,6 +18,8 @@ library(geosphere)
 ## Metadata
 ```{r}
 metadata.sp.comm <- readRDS("../rds/metadata.sp.comm.rds")
+metadata.gene.rar <- readRDS("../rds/metadata.rar.rds")
+metadata.gene.rar$plot <- metadata.sp.comm$plot[c(1:16,18:24)]
 ```
 
 ## Spatial distances between plots
@@ -32,81 +34,115 @@ species.bray.dist <- readRDS("../rds/genomes.bray.dist.rds")
 
 ## Bray-curtis distance matrix on Methylobacterium gene composition
 ```{r}
- <- readRDS("../rds/......rds")
+genes.bray.dist <- readRDS("../rds/GC.dist.rar.rds")
 ```
 
 
 -################################################################################
 
-# Rearrange order of samples in 'plots' to match the 'species.bray.dist' order
+# Species composition ~ space (plot and distance)
+
+## Rearrange order of samples in 'plots' to match the 'species.bray.dist' order
 
 ```{r}
-#species.bray.df <- data.frame(as.matrix(species.bray.dist))
 rownames(plots) <- plots$sample
-plots2 <- plots[match(rownames(metadata.sp.comm), rownames(plots)),]
+plots.sp <- plots[match(rownames(metadata.sp.comm), rownames(plots)),]
 ```
 
-# Create between plots distance matrix
+## Create between plots distance matrix
 
 ```{r}
-dist_plots <- distm(plots2[, c("longitude", "latitude")], fun = distGeo)
-dist_plots <- round(dist_plots, 0)
-rownames(dist_plots) <- plots2$sample
-colnames(dist_plots) <- plots2$sample
+dist_plots.sp <- distm(plots.sp[, c("longitude", "latitude")], fun = distGeo)
+dist_plots.sp <- round(dist_plots.sp, 0)
+rownames(dist_plots.sp) <- plots.sp$sample
+colnames(dist_plots.sp) <- plots.sp$sample
 ```
 
-# Add random distance between samples of same plots (between 2 and 10 meters)
+## Add random distance between samples of same plots (between 2 and 10 meters)
 
 ```{r}
 set.seed(123456)
 # number of plots
-n <- nrow(dist_plots)
+n <- nrow(dist_plots.sp)
 # create matrix of random distances between 2 and 10
-rand_dist <- matrix(0, nrow = n, ncol = n)
-i <- upper.tri(rand_dist) 
-rand_dist[i] <- runif(sum(i), min = 2, max = 10)
-rand_dist <- rand_dist + t(rand_dist) # copy values to lower triangle
+rand_dist.sp <- matrix(0, nrow = n, ncol = n)
+i <- upper.tri(rand_dist.sp) 
+rand_dist.sp[i] <- runif(sum(i), min = 2, max = 10)
+rand_dist.sp <- rand_dist.sp + t(rand_dist.sp) # copy values to lower triangle
 # add the randomly generated distances to between plots distance matrix
-dist_plots2 <- dist_plots + rand_dist
-isSymmetric(dist_plots2)
-all(diag(dist_plots2) == 0)
+dist_plots2.sp <- dist_plots.sp + rand_dist.sp
+isSymmetric(dist_plots2.sp)
+all(diag(dist_plots2.sp) == 0)
 # round the final plot distance matrix
-dist_plots2 <- round(dist_plots2, 0)
+dist_plots2.sp <- round(dist_plots2.sp, 0)
 ```
 
-
--################################################################################
-
-# PERMANOVA test on species composition
+## PERMANOVA test on species composition
 
 ```{r}
 species.plots.perm <- adonis2(species.bray.dist ~ plot, data = metadata.sp.comm)
 species.plots.perm
 species.plots.disper <- betadisper(species.bray.dist, metadata.sp.comm$plot)
 anova(species.plots.disper)
-plot(species.plots.disper)
 ```
 
-
-# Mantel test on species composition
+## Mantel test on species composition
 
 ```{r}
-mantel(dist_plots2, species.bray.dist, method = "spearman", permutations = 9999)
+mantel(dist_plots2.sp, species.bray.dist, method = "spearman", permutations = 9999)
 ```
 
 -################################################################################
 
+# Gene composition ~ space (plot and distance)
+
+## Rearrange order of samples in 'plots' to match the 'genes.bray.dist' order
+
+```{r}
+plots.genes <- plots[match(rownames(metadata.gene.rar), rownames(plots)),]
+```
+
+## Create between plots distance matrix
+
+```{r}
+dist_plots.genes <- distm(plots.genes[, c("longitude", "latitude")], fun = distGeo)
+dist_plots.genes <- round(dist_plots.genes, 0)
+rownames(dist_plots.genes) <- plots.genes$sample
+colnames(dist_plots.genes) <- plots.genes$sample
+```
+
+## Add random distance between samples of same plots (between 2 and 10 meters)
+
+```{r}
+set.seed(654321)
+# number of plots
+n <- nrow(dist_plots.genes)
+# create matrix of random distances between 2 and 10
+rand_dist.genes <- matrix(0, nrow = n, ncol = n)
+i <- upper.tri(rand_dist.genes) 
+rand_dist.genes[i] <- runif(sum(i), min = 2, max = 10)
+rand_dist.genes <- rand_dist.genes + t(rand_dist.genes) # copy values to lower triangle
+# add the randomly generated distances to between plots distance matrix
+dist_plots2.genes <- dist_plots.genes + rand_dist.genes
+isSymmetric(dist_plots2.genes)
+all(diag(dist_plots2.genes) == 0)
+# round the final plot distance matrix
+dist_plots2.genes <- round(dist_plots2.genes, 0)
+```
+
 # PERMANOVA test on gene composition
 
 ```{r}
-
+genes.plots.perm <- adonis2(genes.bray.dist ~ plot, data = metadata.gene.rar)
+genes.plots.perm
+genes.plots.disper <- betadisper(genes.bray.dist, metadata.gene.rar$plot)
+anova(genes.plots.disper)
 ```
-
 
 # Mantel test on gene composition
 
 ```{r}
-
+mantel(dist_plots2.genes, genes.bray.dist, method = "spearman", permutations = 9999)
 ```
 
 
