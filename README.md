@@ -42,6 +42,9 @@ Analyses of genome openness.
 genes_diversity.Rmd
 Alpha and beta diversity analyses on gene clusters.
 
+plot_spatial_analyses.Rmd
+Spatial analyses to test the effect of plot distance on species and genes community composition.
+
 DAGCs_analyses.Rmd
 Differentially abundant gene clusters analyses with DESeq2.
 Creation of DAGCs tables and figures.
