@@ -64,10 +64,10 @@ colnames(dist_plots.sp) <- plots.sp$sample
 set.seed(123456)
 # number of plots
 n <- nrow(dist_plots.sp)
-# create matrix of random distances between 2 and 10
+# create matrix of random distances between 2 and 20
 rand_dist.sp <- matrix(0, nrow = n, ncol = n)
 i <- upper.tri(rand_dist.sp) 
-rand_dist.sp[i] <- runif(sum(i), min = 2, max = 10)
+rand_dist.sp[i] <- runif(sum(i), min = 2, max = 20)
 rand_dist.sp <- rand_dist.sp + t(rand_dist.sp) # copy values to lower triangle
 # add the randomly generated distances to between plots distance matrix
 dist_plots2.sp <- dist_plots.sp + rand_dist.sp
@@ -117,10 +117,10 @@ colnames(dist_plots.genes) <- plots.genes$sample
 set.seed(654321)
 # number of plots
 n <- nrow(dist_plots.genes)
-# create matrix of random distances between 2 and 10
+# create matrix of random distances between 2 and 20
 rand_dist.genes <- matrix(0, nrow = n, ncol = n)
 i <- upper.tri(rand_dist.genes) 
-rand_dist.genes[i] <- runif(sum(i), min = 2, max = 10)
+rand_dist.genes[i] <- runif(sum(i), min = 2, max = 20)
 rand_dist.genes <- rand_dist.genes + t(rand_dist.genes) # copy values to lower triangle
 # add the randomly generated distances to between plots distance matrix
 dist_plots2.genes <- dist_plots.genes + rand_dist.genes
