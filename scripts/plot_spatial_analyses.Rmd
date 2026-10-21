@@ -15,66 +15,99 @@ library(geosphere)
 
 # Import data
 
+## Metadata
+```{r}
+metadata.sp.comm <- readRDS("../rds/metadata.sp.comm.rds")
+```
+
+## Spatial distances between plots
 ```{r}
 plots <- read.csv2("../data/sample_plots_coordinates.csv", header = T, sep = ";", dec = ",")
 ```
 
+## Bray-curtis distance matrix on Methylobacterium species composition
+```{r}
+species.bray.dist <- readRDS("../rds/genomes.bray.dist.rds")
+```
+
+## Bray-curtis distance matrix on Methylobacterium gene composition
+```{r}
+ <- readRDS("../rds/......rds")
+```
+
+
 -################################################################################
 
+# Rearrange order of samples in 'plots' to match the 'species.bray.dist' order
+
+```{r}
+#species.bray.df <- data.frame(as.matrix(species.bray.dist))
+rownames(plots) <- plots$sample
+plots2 <- plots[match(rownames(metadata.sp.comm), rownames(plots)),]
+```
+
+# Create between plots distance matrix
+
+```{r}
+dist_plots <- distm(plots2[, c("longitude", "latitude")], fun = distGeo)
+dist_plots <- round(dist_plots, 0)
+rownames(dist_plots) <- plots2$sample
+colnames(dist_plots) <- plots2$sample
+```
+
+# Add random distance between samples of same plots (between 2 and 10 meters)
+
+```{r}
+set.seed(123456)
+# number of plots
+n <- nrow(dist_plots)
+# create matrix of random distances between 2 and 10
+rand_dist <- matrix(0, nrow = n, ncol = n)
+i <- upper.tri(rand_dist) 
+rand_dist[i] <- runif(sum(i), min = 2, max = 10)
+rand_dist <- rand_dist + t(rand_dist) # copy values to lower triangle
+# add the randomly generated distances to between plots distance matrix
+dist_plots2 <- dist_plots + rand_dist
+isSymmetric(dist_plots2)
+all(diag(dist_plots2) == 0)
+# round the final plot distance matrix
+dist_plots2 <- round(dist_plots2, 0)
+```
+
+
+-################################################################################
+
+# PERMANOVA test on species composition
+
+```{r}
+species.plots.perm <- adonis2(species.bray.dist ~ plot, data = metadata.sp.comm)
+species.plots.perm
+species.plots.disper <- betadisper(species.bray.dist, metadata.sp.comm$plot)
+anova(species.plots.disper)
+plot(species.plots.disper)
+```
+
+
+# Mantel test on species composition
+
+```{r}
+mantel(dist_plots2, species.bray.dist, method = "spearman", permutations = 9999)
+```
+
+-################################################################################
+
+# PERMANOVA test on gene composition
 
 ```{r}
 
 ```
 
 
-dist_plots <- distm(plots[, c("longitude", "latitude")], fun = distGeo)
-dist_plots <- round(dist_plots, 4)
-rownames(dist_plots ) <- plots$sample
-colnames(dist_plots ) <- plots$sample
+# Mantel test on gene composition
 
- 
+```{r}
 
-set.seed(123)
-
-# Nombre de sites
-n <- nrow(dist_plots)
-
-# Cr?er une matrice de bruit initialis?e ?? z?ro
-bruit <- matrix(0, nrow = n, ncol = n)
-
-# G?n?rer un bruit al?atoire uniquement pour le triangle sup?rieur
-i <- upper.tri(bruit)
-
-bruit[i] <- runif(sum(i), min = 2, max = 10)
-
-# Reproduire les m??mes valeurs dans le triangle inf?rieur
-bruit <- bruit + t(bruit)
-
-# Ajouter le bruit ?? la matrice originale
-dist_plots_mod <- dist_plots + bruit
-
-# Garantir une diagonale nulle
-diag(dist_plots_mod) <- 0
-
-# V?rifier la sym?trie
-isSymmetric(dist_plots_mod)
-
-# V?rifier que la diagonale est nulle
-all(diag(dist_plots_mod) == 0)
-
-# V?rifier que chaque perturbation est comprise entre 1 et 10 m
-diff_dist <- dist_plots_mod - dist_plots
-range(diff_dist[upper.tri(diff_dist)])
-
-#Les deux premi??res v?rifications doivent renvoyer TRUE, et la derni??re doit donner des valeurs comprises entre 1 et 10.
+```
 
 
-
-
-
-mantel(
-  dist_bacteries,
-  dist_sites,
-  method = "spearman",
-  permutations = 9999
-)
+-################################################################################
