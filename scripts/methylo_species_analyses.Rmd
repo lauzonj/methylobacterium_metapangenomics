@@ -171,6 +171,12 @@ metadata.comm$richness <- rowSums(genomes.PA.comm)
 metadata.comm$shannon <- vegan::diversity(genomes.cov.comm, index = "shannon")
 ```
 
+## Save metadata.comm
+```{r}
+#saveRDS(metadata.comm, "../rds/metadata.sp.comm.rds")
+```
+
+
 -################################################################################
 
 # Correlation between richness and number of filtered pairs.
@@ -478,17 +484,7 @@ ggsave("../figures/figure_2_Methylo_species_barplot.pdf", width = 8, height = 5.
 ```{r}
 genomes.cov.beta <- adespatial::beta.div.comp(genomes.cov.comm, coef = "BS", quant = TRUE)
 genomes.bray.dist <- genomes.cov.beta[["D"]]
-```
-
-## Mantel test
-```{r}
-# Import sample physical distances
-
-# create distance matrix
-
-
-# test species-level community distances ~ plot distances
-
+#saveRDS(genomes.bray.dist, "../rds/genomes.bray.dist.rds")
 ```
 
 
