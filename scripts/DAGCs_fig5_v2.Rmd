@@ -11,11 +11,365 @@ date: "2026-10-23"
 library(tidyverse)
 library(patchwork)
 library(viridis)
-library(DESeq2)
 library(scales)
 library(picante)
 ```
 
 -################################################################################
 
-# Import data
+# Import DAGCs data
+
+Import Supplementary File B containing 757 DAGC, with DESeq2 stats and functional annotations
+```{r}
+Suppl_B_DAGCs <- read_delim("../supplementary_files/Suppl_file_B-DAGCs.csv")
+str(Suppl_B_DAGCs)
+```
+
+
+-################################################################################
+
+# Calculate raw abundances of COG categories by comparison types. 
+
+This next block of the script have been copied from script 'DAGC_analyses.Rmd'.
+
+```{r}
+DAGCs <- Suppl_B_DAGCs # This table have all 757 functionally annotated DAGCs (annotation from COG, KEGG and Pfam)
+
+# Preparation of comparison types: by combining focal and reference columns into a new vector 'comp'
+DAGCs$comp <- apply(DAGCs[,c(2:3)], 1, function(x) {
+  paste(x, collapse = "_vs_")
+})
+DAGCs$comp <- factor(DAGCs$comp, levels = unique(DAGCs$comp))
+str(DAGCs)
+levels(DAGCs$comp)
+
+# Change NA values (COG20 Categories) for "No COG annotation"
+DAGCs$COG20_CATEGORY <- factor(ifelse(is.na(DAGCs$COG20_CATEGORY == TRUE), "No COG annotation", as.character(DAGCs$COG20_CATEGORY)))
+
+# For every gene call that have multiple (n) COG categories, make n rows, one row per category.
+DAGCs.temp <- DAGCs
+DAGCs.temp$COG20_CATEGORY <- as.character(DAGCs.temp$COG20_CATEGORY)
+# Add row number column
+df_split1 <- DAGCs.temp %>%
+  rowid_to_column()  # Add a column representing the original row number
+# Change '_or_' by '|'
+df_split1$COG20_CATEGORY <- str_replace_all(df_split1$COG20_CATEGORY, "_or_", "|")
+# Split rows based on "|" and unnest
+df_split2 <- df_split1 %>%
+  mutate(COG20_CATEGORY = strsplit(COG20_CATEGORY, "\\|")) %>%
+  unnest(cols = COG20_CATEGORY)
+# Remove duplicates within rows (sanity check, there should not be any duplicate)
+df_split3 <- df_split2 %>%
+  distinct(gene_cluster_id, COG20_CATEGORY, .keep_all = TRUE) 
+# Remove rowid column
+df_split4 <- df_split3 %>%
+  select(-rowid)
+DAGCs.multi <- as.data.frame(df_split4)
+rm(DAGCs.temp, df_split1, df_split2, df_split3, df_split4)
+# arrange vectors
+DAGCs.multi$COG20_CATEGORY <- as.factor(DAGCs.multi$COG20_CATEGORY)
+DAGCs.multi$comp <- factor(DAGCs.multi$comp, levels = unique(DAGCs.multi$comp))
+str(DAGCs.multi)
+
+# Count each COG categories 'hits' for each comparison type
+DAGCs.counts = DAGCs.multi %>% 
+  group_by(comp, COG20_CATEGORY) %>% 
+  summarise(COG.counts.per.cat.per.comp=n())
+
+# Calculate total hits per comparison type, across COG categories
+comp.counts.ORIG <- DAGCs.counts %>%
+  group_by(comp) %>%
+  summarise(total.COG.counts.per.comp = sum(COG.counts.per.cat.per.comp))
+# Note : 'comp.counts.ORIG' informs on the number of hits per comparison types, across COG categories, BUT before removing categories "No COG annotation" and "Function unknown".
+
+# Calculate total hits for each COG category across comparisons type
+COG.c.ORIG <- DAGCs.counts %>%
+  group_by(COG20_CATEGORY) %>%
+  summarise(total.COG.counts.per.cat = sum(COG.counts.per.cat.per.comp)) %>% 
+  ungroup()
+# Note : 'COG.c.ORIG' informs on the number of hits per COG category, across comparison types, including "No COG annotation" and "Function unknown".
+# There is 85 counts of "No COG Annotation" (i.e., these are DAGCs only annotated by KEGG or Pfam)
+# There is 47 counts of "Function unknown"
+
+# Remove "No COG annotation" and "Function unknown"
+DAGCs.counts <- subset(DAGCs.counts, !(COG20_CATEGORY %in% c("No COG annotation", "Function unknown")))
+
+# Re-calculate total hits per comparison type, across COG categories, without "function unknown" nor "no COG annotation" 
+# (Data for Figure 5 top panel, teal color)
+comp.counts <- DAGCs.counts %>%
+  group_by(comp) %>%
+  summarise(total.COG.counts.per.comp = sum(COG.counts.per.cat.per.comp))
+
+# Re-calculate total hits for each COG category across comparisons type, without "function unknown" nor "no COG annotation" 
+# (Data for Figure 5 right panel)
+COG.c <- DAGCs.counts %>%
+  group_by(COG20_CATEGORY) %>%
+  summarise(total.COG.counts.per.cat = sum(COG.counts.per.cat.per.comp)) %>% 
+  ungroup()
+COG.c <- COG.c[order(-COG.c$total.COG.counts.per.cat), ]
+COG.c$COG20_CATEGORY <- factor(COG.c$COG20_CATEGORY, levels = unique(COG.c$COG20_CATEGORY))
+levels(COG.c$COG20_CATEGORY)
+
+# sanity check (both should = 720)
+sum(comp.counts$total.COG.counts.per.comp)
+sum(COG.c$total.COG.counts.per.cat)
+
+DAGCs.counts$COG20_CATEGORY <- factor(DAGCs.counts$COG20_CATEGORY, levels = levels(factor(COG.c$COG20_CATEGORY)))
+all(levels(DAGCs.counts$COG20_CATEGORY)==levels(COG.c$COG20_CATEGORY))
+```
+
+
+-################################################################################
+
+# Calculate the abundances of detected gene clusters (on rarefied data) belonging to each COG categories.
+
+## Import rarefied and filtered gene cluster community table
+
+```{r}
+GC.rar.filt <- readRDS("../rds/GC.rar.filt.rds")
+```
+
+## Import function table
+
+```{r}
+data.fct.cov.c <- readRDS("../rds/data.fct.cov.c.rds")
+data.fct <- data.fct.cov.c[,c(1:24)] # remove coverage values
+```
+
+## In function table, keep only gene clusters that are detected after rarefaction and filtering
+
+```{r}
+data.fct.gc_detected <- data.fct[data.fct$gene_cluster_id %in% colnames(GC.rar.filt), ]
+length(unique(data.fct.gc_detected$gene_cluster_id))
+data.fct.gc_detected <- droplevels(data.fct.gc_detected)
+str(data.fct.gc_detected)
+```
+
+## Calculate the abundances of detected gene clusters (on rarefied data) belonging to each COG categories.
+
+```{r}
+
+# Change empty values (COG20 Categories) for "No COG annotation"
+data.fct.gc_detected$COG20_CATEGORY <- as.character(data.fct.gc_detected$COG20_CATEGORY)
+data.fct.gc_detected$COG20_CATEGORY[data.fct.gc_detected$COG20_CATEGORY == ""] <- "No COG annotation"
+temp0 <- as.data.frame(table(data.fct.gc_detected$COG20_CATEGORY))
+
+# Remove gene callers without a COG annotation, or with "function unknown"
+data.fct.gc_detected.clean <- data.fct.gc_detected[data.fct.gc_detected$COG20_CATEGORY != "No COG annotation",]
+length(unique(data.fct.gc_detected.clean$gene_cluster_id))
+data.fct.gc_detected.clean <- droplevels(data.fct.gc_detected.clean)
+str(data.fct.gc_detected.clean)
+temp0.1 <- as.data.frame(table(data.fct.gc_detected.clean$COG20_CATEGORY))
+
+# For every gene call that have multiple (n) COG categories, make n rows, one row per category.
+data.fct.temp <- data.fct.gc_detected.clean
+# Add row number column
+df_split1 <- data.fct.temp %>%
+  rowid_to_column()  # Add a column representing the original row number
+# Split rows based on "|" and unnest
+df_split2 <- df_split1 %>%
+  mutate(COG20_CATEGORY = strsplit(COG20_CATEGORY, "\\|")) %>%
+  unnest(cols = COG20_CATEGORY)
+# Remove duplicates within rows
+df_split3 <- df_split2 %>%
+  distinct(gene_cluster_id, COG20_CATEGORY, .keep_all = TRUE) 
+# Remove rows corresponding to "function unknown"
+df_split3.2 <- df_split3[df_split3$COG20_CATEGORY != "Function unknown",]
+# Remove rowid column
+df_split4 <- df_split3.2 %>%
+  select(-rowid)
+data.fct.multi <- as.data.frame(df_split4)
+rm(data.fct.temp, df_split1, df_split2, df_split3, df_split3.2, df_split4)
+# arrange vectors
+data.fct.multi$COG20_CATEGORY <- as.factor(data.fct.multi$COG20_CATEGORY)
+str(data.fct.multi)
+levels(data.fct.multi$COG20_CATEGORY)
+
+# Count the number of gene clusters annotated to each COG category
+COG.gc <- as.data.frame(table(data.fct.multi$COG20_CATEGORY))
+colnames(COG.gc) <- c("COG20_CATEGORY","num_GC")
+COG.gc <- COG.gc[COG.gc$COG20_CATEGORY %in% COG.c$COG20_CATEGORY,]
+COG.gc <- droplevels(COG.gc)
+levels(COG.gc$COG20_CATEGORY) <- levels(COG.c$COG20_CATEGORY)
+str(COG.c)
+str(COG.gc)
+str(DAGCs.counts)
+
+# Add the number of gene clusters annotated to each COG category to dataframe 'DAGCs.counts'
+DAGCs.counts.num.GC <- DAGCs.counts
+DAGCs.counts.num.GC$num_GC <- COG.gc$num_GC[match(DAGCs.counts.num.GC$COG20_CATEGORY, COG.gc$COG20_CATEGORY)]
+
+# Calculate, for every comp+category the proportion of DAGCs according to number of GC detected in category
+DAGCs.counts.num.GC$DAGC_prop <- DAGCs.counts.num.GC$COG.counts.per.cat.per.comp/DAGCs.counts.num.GC$num_GC
+```
+
+
+# Figure 5 v2.1
+
+```{r}
+# Plot hits of each COG category in each comparison type
+gg_heat.DAGC.prop <- ggplot(DAGCs.counts.num.GC, aes(x = comp, y = COG20_CATEGORY)) + 
+  geom_tile(aes(fill=DAGC_prop)) + 
+  scale_fill_viridis(name = "Number of COG annotations\nin DAGCs proportional to the\nnumber of GC detected in \nthe metapangenome\nassociated with each\ncategory", option="mako", direction = -1, limits = c(0, 0.22)) +
+  theme(legend.position="none") +
+  scale_y_discrete(limits=rev) +
+  labs(x = "Comparisons") +
+    theme_bw() +
+      theme(
+      text = element_text(),
+      legend.justification = c(0.5, 0),
+      legend.title = element_text(size = 11, margin = margin(b = 15), face = "bold"),
+      legend.text = element_text(size = 11),
+      legend.key.size = unit(0.7, "cm"),
+      legend.spacing.y = unit(0.3, "cm"),
+      legend.position = "right", 
+      panel.grid.major = element_blank(), 
+      panel.background = element_blank(),
+      #panel.grid.minor = element_line(color = "lightgray", size = 0.25), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 11, angle = 90, vjust = 0.35, hjust = 1),
+      axis.text.y = element_text(color = "black", size = 11),
+      axis.title.x = element_text(color = "black", size = 11, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_blank(),
+      axis.ticks.x = element_blank()      
+      ) + coord_fixed(ratio = 1)
+gg_heat.DAGC.prop
+```
+
+# Figure 5 v2.2
+
+```{r}
+# Plot hits of each COG category in each comparison type
+gg_heat.bubble <- ggplot(DAGCs.counts.num.GC, aes(x = comp, y = COG20_CATEGORY)) + 
+  geom_point(aes(fill = COG.counts.per.cat.per.comp, size = DAGC_prop), shape = 21, color = "black", stroke = 0.2) +
+  scale_fill_viridis(name = "Number of\nCOG-annotated DAGCs", option="mako", direction = -1, limits = c(1, 27)) +
+  theme(legend.position="none") +
+  scale_y_discrete(limits=rev) +
+  scale_size_continuous(name = "Proportion of COG-annotated\nDAGCs among detected\ngene cluster annotated\nto corresponding COG category", range = c(0.5, 5)) +
+  labs(x = "Comparisons") +
+    theme_bw() +
+      theme(
+      text = element_text(),
+      legend.justification = c(0.5, 0),
+      legend.title = element_text(size = 10, margin = margin(b = 15), face = "bold"),
+      legend.text = element_text(size = 10),
+      legend.key.size = unit(0.7, "cm"),
+      legend.spacing.y = unit(0.3, "cm"),
+      legend.position = "right", 
+      panel.grid.major = element_blank(), 
+      panel.background = element_blank(),
+      #panel.grid.minor = element_line(color = "lightgray", size = 0.25), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 10, angle = 90, vjust = 0.35, hjust = 1),
+      axis.text.y = element_text(color = "black", size = 10),
+      axis.title.x = element_text(color = "black", size = 10, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_blank(),
+      axis.ticks.x = element_blank()      
+      ) + coord_fixed(ratio = 1)
+gg_heat.bubble
+
+# Plot the number of DAGCs per COG category across comparison types
+gg_COG.c <-  ggplot(COG.c, aes(x = total.COG.counts.per.cat, y = COG20_CATEGORY)) + 
+  geom_col(fill = "black", width = 0.75) + 
+  theme(legend.position="none") +
+  scale_y_discrete(limits=rev) +
+  labs(x = "Number of\nCOG annotations\nper category") +
+  coord_cartesian(xlim = c(0,70))+
+  scale_x_continuous(breaks = seq(0, 70, by = 10))+
+    theme_bw() +
+      theme(
+      text = element_text(),
+      legend.justification = c(0.5, 0),
+      legend.title = element_text(size = 10, margin = margin(b = 15)),
+      legend.text = element_text(size = 10),
+      legend.key.size = unit(0.7, "cm"),
+      legend.spacing.y = unit(0.3, "cm"),
+      legend.position = "right", 
+      panel.grid.major.x = element_line(color = "gray", size = 0.25), 
+      panel.grid.major.y = element_blank(),
+      panel.background = element_blank(),
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 10, angle = 0, vjust = 0.35, hjust = 0.5),
+#      axis.text.y = element_text(color = "black", size = 12),
+      axis.title.x = element_text(color = "black", size = 10, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+#      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold"),
+      axis.text.y = element_blank(),
+      axis.title.y = element_blank(),
+      axis.ticks.y = element_blank()
+      ) + coord_fixed(ratio = 6)
+gg_COG.c
+
+(gg_heat.bubble + gg_COG.c)
+
+ggsave("../figures/figure_5_v2.2_COG_categories_center_right_panels.pdf", width = 11, height = 8)
+```
+
+# Figure 5 v2.3
+
+```{r}
+# Plot hits of each COG category in each comparison type
+gg_heat.bubble <- ggplot(DAGCs.counts.num.GC, aes(x = comp, y = COG20_CATEGORY)) + 
+  geom_point(aes(fill = DAGC_prop, size = COG.counts.per.cat.per.comp), shape = 21, color = "black", stroke = 0.2) +
+  scale_fill_viridis(name = "Proportion of COG-annotated\nDAGCs among detected\ngene cluster annotated\nto corresponding COG category", option="mako", direction = -1, limits = c(0, 0.22)) +
+  theme(legend.position="none") +
+  scale_y_discrete(limits=rev) +
+  scale_size_continuous(name = "Number of\nCOG-annotated DAGCs", range = c(0.5, 5)) +
+  labs(x = "Comparisons") +
+    theme_bw() +
+      theme(
+      text = element_text(),
+      legend.justification = c(0.5, 0),
+      legend.title = element_text(size = 10, margin = margin(b = 15), face = "bold"),
+      legend.text = element_text(size = 10),
+      legend.key.size = unit(0.7, "cm"),
+      legend.spacing.y = unit(0.3, "cm"),
+      legend.position = "right", 
+      panel.grid.major = element_blank(), 
+      panel.background = element_blank(),
+      #panel.grid.minor = element_line(color = "lightgray", size = 0.25), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 10, angle = 90, vjust = 0.35, hjust = 1),
+      axis.text.y = element_text(color = "black", size = 10),
+      axis.title.x = element_text(color = "black", size = 10, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+      axis.title.y = element_blank(),
+      axis.ticks.x = element_blank()      
+      ) + coord_fixed(ratio = 1)
+gg_heat.bubble
+
+# Plot the number of DAGCs per COG category across comparison types
+gg_COG.c <-  ggplot(COG.c, aes(x = total.COG.counts.per.cat, y = COG20_CATEGORY)) + 
+  geom_col(fill = "black", width = 0.75) + 
+  theme(legend.position="none") +
+  scale_y_discrete(limits=rev) +
+  labs(x = "Number of\nCOG annotations\nper category") +
+  coord_cartesian(xlim = c(0,70))+
+  scale_x_continuous(breaks = seq(0, 70, by = 10))+
+    theme_bw() +
+      theme(
+      text = element_text(),
+      legend.justification = c(0.5, 0),
+      legend.title = element_text(size = 10, margin = margin(b = 15)),
+      legend.text = element_text(size = 10),
+      legend.key.size = unit(0.7, "cm"),
+      legend.spacing.y = unit(0.3, "cm"),
+      legend.position = "right", 
+      panel.grid.major.x = element_line(color = "gray", size = 0.25), 
+      panel.grid.major.y = element_blank(),
+      panel.background = element_blank(),
+      panel.grid.minor = element_blank(), 
+      plot.title = element_text(hjust = 0.5),
+      axis.text.x = element_text(color = "black", size = 10, angle = 0, vjust = 0.35, hjust = 0.5),
+#      axis.text.y = element_text(color = "black", size = 12),
+      axis.title.x = element_text(color = "black", size = 10, angle = 0, hjust = 0.5, vjust = -1, face = "bold"),
+#      axis.title.y = element_text(color = "black", size = 13, angle = 90, hjust = 0.5, vjust = 2, face = "bold"),
+      axis.text.y = element_blank(),
+      axis.title.y = element_blank(),
+      axis.ticks.y = element_blank()
+      ) + coord_fixed(ratio = 6)
+gg_COG.c
+
+(gg_heat.bubble + gg_COG.c)
+
+ggsave("../figures/figure_5_v2.3_COG_categories_center_right_panels.pdf", width = 11, height = 8)
+```
