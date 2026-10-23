@@ -1,0 +1,21 @@
+---
+title: "DAGCs_fig5_v2"
+output: html_document
+date: "2026-10-23"
+---
+
+-################################################################################
+
+# Libraries
+```{r}
+library(tidyverse)
+library(patchwork)
+library(viridis)
+library(DESeq2)
+library(scales)
+library(picante)
+```
+
+-################################################################################
+
+# Import data
