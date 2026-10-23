@@ -49,6 +49,9 @@ DAGCs_analyses.Rmd
 Differentially abundant gene clusters analyses with DESeq2.
 Creation of DAGCs tables and figures.
 
+DAGCs_fig5_v2.Rmd
+Creation of a second version of Figure 5 (v2), that include visual information on both raw DAGCs counts and DAGCs proportions.
+
 combine_var_prof.Rmd
 Preparation for the pN/pS analyses.
 For each of the 4 Methylobacterium species, combine variability profiles generated in anvio, 
