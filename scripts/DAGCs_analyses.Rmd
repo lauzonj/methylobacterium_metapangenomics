@@ -905,7 +905,7 @@ Import Supplementary File B for subsequent analyses and plotting.
 Suppl_B_DAGCs <- read_delim("../supplementary_files/Suppl_file_B-DAGCs.csv")
 ```
 
-Plot relative abundances of COG categories by comparison types.
+Plot abundances of COG categories by comparison types.
 
 ## Prepare data
 ```{r}
