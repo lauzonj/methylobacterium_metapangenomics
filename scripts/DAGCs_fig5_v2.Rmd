@@ -234,6 +234,8 @@ gg_heat.DAGC.prop <- ggplot(DAGCs.counts.num.GC, aes(x = comp, y = COG20_CATEGOR
       axis.ticks.x = element_blank()      
       ) + coord_fixed(ratio = 1)
 gg_heat.DAGC.prop
+
+ggsave("../figures/figure_5_v2.1_COG_categories_center_panel.pdf", width = 11, height = 8)
 ```
 
 # Figure 5 v2.2
